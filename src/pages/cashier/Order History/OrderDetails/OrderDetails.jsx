@@ -1,6 +1,6 @@
 import React from 'react'
 import OrderInformation from './OrderInformation'
-import CustomerInformation from './CustomerInformation'
+import CustomerInformation from './OrderDetails/CustomerInformation'
 import OrderItemTable from './OrderItemTable'
 
 const OrderDetails = ({selectedOrder}) => {
