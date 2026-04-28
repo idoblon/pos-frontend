@@ -16,28 +16,30 @@ const shiftData={
 const RefundsTable = () => {
     return (
          <Card>
-        <CardContent>
-            <h2 className='text-xl font-semiblod mb-4'>Recent Order</h2>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[150px]">Refund Id</TableHead>
-                        <TableHead className="w-[150px]">Order ID</TableHead>
-                        <TableHead className="w-[150px]">Reason</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {shiftData.recentOrders.map((refund)) => (
-                        <TableRow key={refund.id}>
-                            <TableCell>RED - {refund.id}</TableCell>
-                            <TableCell>ORD - {refund.orderId}</TableCell>
-                            <TableCell>{refund.reason}</TableCell>
-                            <TableCell className="text-right">रु {refund.amount}</TableCell>
+        <CardContent className="p-6">
+            <h2 className='text-lg font-semibold mb-4 text-gray-900'>Refunds</h2>
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Refund ID</TableHead>
+                            <TableHead>Order ID</TableHead>
+                            <TableHead>Reason</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {shiftData.refunds.map((refund) => (
+                            <TableRow key={refund.id}>
+                                <TableCell className="font-medium">REF-{refund.id}</TableCell>
+                                <TableCell>ORD-{refund.orderId}</TableCell>
+                                <TableCell className="max-w-xs truncate">{refund.reason}</TableCell>
+                                <TableCell className="text-right font-semibold text-red-600">रु {refund.amount.toLocaleString()}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </CardContent>
        </Card>
     )

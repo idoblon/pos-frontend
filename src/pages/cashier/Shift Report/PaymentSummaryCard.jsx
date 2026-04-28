@@ -25,26 +25,28 @@ const shiftData={
 
 const PaymentSummaryCard = () => {
     return (
-        <Card>
+        <Card className="h-full">
           <CardContent className={"p-6"}>
-            <h2 className='text-xl font-semibold mb-4'>Payment Summary</h2>
+            <h2 className='text-lg font-semibold mb-4 text-gray-900'>Payment Summary</h2>
             <div className='space-y-4'>
               {
-                shiftData.paymentSummaries:((payment)=>
-                <div className="flex itmes-center" key={payment.type}>
-                  <div className="w-10 h-10 roudned-full bg-primary/10 flex items-cneter justify-center mr-4">
-                  <CreditCard/>
+                shiftData.paymentSummaries.map((payment) => (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg" key={payment.type}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <CreditCard className="h-5 w-5 text-blue-600"/>
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">{payment.type}</div>
+                      <div className="text-xs text-gray-500">{payment.transactionCount} transactions</div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex-justify-between"
-                    <span className="font-medium">{Payment.type}</span>
-                    <span className="font-bold">रु{payment.totalAmount}</span>
+                  <div className="text-right">
+                    <div className="font-bold text-gray-900">रु{payment.totalAmount.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">{((payment.totalAmount/shiftData.totalSales) * 100).toFixed(1)}%</div>
                   </div>
-                  <div className="flex justify-betwee text-sm text-muted-foreground">
-                    <span>{payment.transactionCount}transactions</span>
-                    <span>{((paymetn.totalAmount/shiftData.totalSales) * 100).toFixed(1)}%</span>
-                  </div>
-                </div>)
+                </div>
+                ))
               }
             </div>
           </CardContent>

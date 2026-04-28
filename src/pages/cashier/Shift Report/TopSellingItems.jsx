@@ -18,24 +18,24 @@ const shiftData={
 
 const TopSellingItems = () => {
     return (
-       <Card>
-        <CardContent>
-            <h2 className='text-x1 font-semibold mb-4'>Top Selling Items</h2>
+       <Card className="h-full">
+        <CardContent className="p-6">
+            <h2 className='text-lg font-semibold mb-4 text-gray-900'>Top Selling Items</h2>
             <div className='space-y-3'>
-                {shiftData.TopSellingProducts.map((product)=>
-                <div key={product.id} className="flex items-center">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mr-3 text-sm font-medium">
-                    {index+1}
-                    <div className="flex-0">
-                        <div className='flex justify-between'>
-                            <span>{product.name}</span>
-                            <span>रु{product.sellingPrice}</span>
+                {shiftData.TopSellingProducts.map((product, index) => (
+                <div key={product.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
+                        {index+1}
                     </div>
-                    <div className="flex justify-betwenn text-sm text-muted-foreground">
-                        <span>{product.quantity} units sold</span>
+                    <div className="flex-1">
+                        <div className='flex justify-between items-center'>
+                            <span className="font-medium text-gray-900">{product.name}</span>
+                            <span className="font-semibold text-gray-900">रु{product.sellingPrice.toLocaleString()}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                            {product.quantity} units sold
+                        </div>
                     </div>
-                    </div>
-
                 </div>
                 ))}
             </div>

@@ -63,50 +63,47 @@ export default function Login() {
     try {
       const loginResult = await dispatch(login(formData)).unwrap();
       
-      if (loginResult.token) {
+      if (loginResult.jwt) {
         // Store auth data
-        localStorage.setItem("token", loginResult.token);
-        localStorage.setItem("userId", loginResult.userId);
+        localStorage.setItem("token", loginResult.jwt);
         
-        // Get user profile to determine role and routing
-        const profileResult = await dispatch(getUserProfile()).unwrap();
+        // User data is in loginResult.user
+        const user = loginResult.user;
+        localStorage.setItem("userId", user.id);
         
-        if (profileResult) {
-          const role = profileResult.role;
-          
-          // Store additional data based on role
-          if (profileResult.storeId) {
-            localStorage.setItem("storeId", profileResult.storeId);
-          }
-          if (profileResult.branchId) {
-            localStorage.setItem("branchId", profileResult.branchId);
-          }
-          
-          // Route based on role
-          switch (role) {
-            case "ADMIN":
-              navigate("/admin");
-              break;
-            case "STORE_ADMIN":
-              navigate("/store");
-              break;
-            case "STORE_MANAGER":
-              navigate("/store");
-              break;
-            case "BRANCH_MANAGER":
-              navigate("/branch");
-              break;
-            case "BRANCH_CASHIER":
-            case "CASHIER":
-            case "ROLE_BRANCH_CASHIER":
-              navigate("/cashier");
-              break;
-            case "USER":
-              navigate("/user");
-              break;
-            default:
-              navigate("/");
-          }
+        // Store additional data based on role
+        if (user.storeId) {
+          localStorage.setItem("storeId", user.storeId);
+        }
+        if (user.branchId) {
+          localStorage.setItem("branchId", user.branchId);
+        }
+        
+        // Route based on role
+        const role = user.role;
+        switch (role) {
+          case "ADMIN":
+            navigate("/admin");
+            break;
+          case "STORE_ADMIN":
+            navigate("/store");
+            break;
+          case "STORE_MANAGER":
+            navigate("/store");
+            break;
+          case "BRANCH_MANAGER":
+            navigate("/branch");
+            break;
+          case "BRANCH_CASHIER":
+          case "CASHIER":
+          case "ROLE_BRANCH_CASHIER":
+            navigate("/cashier");
+            break;
+          case "USER":
+            navigate("/user");
+            break;
+          default:
+            navigate("/");
         }
       }
     } catch (error) {

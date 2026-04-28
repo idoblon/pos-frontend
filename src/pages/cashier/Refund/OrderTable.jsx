@@ -1,87 +1,103 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 
 export default function OrderTable({ onOrderSelect }) {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
   const { orders, loading } = useSelector((state) => state.order);
-  const branchId = localStorage.getItem("branchId");
+
+  const [branchId] = useState(() => localStorage.getItem("branchId"));
 
   useEffect(() => {
-    if (branchId) {
-      dispatch(getOrdersByBranch({ branchId }));
-    }
+    if (branchId) dispatch(getOrdersByBranch({ branchId }));
   }, [dispatch, branchId]);
 
-  // Filter only completed orders for refund
-  const refundableOrders = orders?.filter(
-    (order) => 
-      order.status === "COMPLETED" &&
-      (order.id?.toString().includes(searchTerm) ||
-       order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()))
+  const refundableOrders = useMemo(
+    () =>
+      orders?.filter((order) => {
+        const matchesStatus = order.status === "completed";
+        const matchesSearch =
+          order.id?.toString().includes(searchTerm) ||
+          order.customer?.firstName
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          order.customer?.lastName
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase());
+        return matchesStatus && matchesSearch;
+      }),
+    [orders, searchTerm],
   );
 
-  if (loading) {
-    return <div className="text-center py-4">Loading orders...</div>;
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Select Order for Refund</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search by order ID or customer..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+    <div>
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        Select Order for Refund
+      </h2>
+      <div className="relative mb-4">
+        <svg
+          className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Search by order ID or customer..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+        />
+      </div>
 
-          <div className="max-h-[400px] overflow-y-auto">
-            {refundableOrders?.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No refundable orders found</p>
-            ) : (
-              <div className="space-y-2">
-                {refundableOrders?.map((order) => (
-                  <div
-                    key={order.id}
-                    className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                    onClick={() => onOrderSelect(order)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-semibold">Order #{order.id}</p>
-                        <p className="text-sm text-gray-600">
-                          Customer: {order.customerName || "Walk-in"}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold">${order.totalAmount}</p>
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                          {order.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+      {loading ? (
+        <p className="text-center text-gray-400 py-10 text-sm">
+          Loading orders...
+        </p>
+      ) : refundableOrders?.length === 0 ? (
+        <p className="text-center text-gray-400 py-10 text-sm">
+          No completed orders found
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {refundableOrders?.map((order) => (
+            <div
+              key={order.id}
+              onClick={() => onOrderSelect(order)}
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    Order #{order.id}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {order.customer
+                      ? `${order.customer.firstName} ${order.customer.lastName}`
+                      : "Walk-in"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {new Date(order.createdAt).toLocaleString()} ·{" "}
+                    {order.paymentType}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900">
+                    ${order.totalAmount?.toFixed(2)}
+                  </p>
+                  <button className="mt-1.5 text-xs px-3 py-1 bg-gray-900 text-white rounded hover:bg-gray-700 transition-colors">
+                    Select
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
