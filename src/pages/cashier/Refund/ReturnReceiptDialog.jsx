@@ -1,123 +1,122 @@
-import { useRef } from "react";
-import { Printer, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import React from "react";
 
-export default function ReturnReceiptDialog({ refundData, onClose }) {
-  const printRef = useRef(null);
-
-  if (!refundData) return null;
-
-  const customerName = refundData.order.customer
-    ? `${refundData.order.customer.firstName} ${refundData.order.customer.lastName}`
-    : "Walk-in";
-
-  const handlePrint = () => window.print();
-
+const ReturnReceiptDialog = ({
+  showReturnReciptDialog,
+  setShowReturnReciptDialog,
+  selectedOrder,
+}) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
-        {/* Dialog header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">
-            Refund Receipt
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Receipt body */}
-        <div ref={printRef} className="px-5 py-5 space-y-4 text-sm">
-          <div className="text-center pb-4 border-b border-dashed border-gray-200">
-            <p className="font-bold text-gray-900 text-base tracking-wide">
-              REFUND RECEIPT
-            </p>
-            <p className="text-gray-500 text-xs mt-1">
-              Refund ID: #{refundData.id}
-            </p>
-            <p className="text-gray-400 text-xs">
-              {new Date().toLocaleString()}
-            </p>
+    <Dialog
+      open={showReturnReciptDialog}
+      onOpenChange={setShowReturnReciptDialog}
+    >
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">
+            Return Receipt
+          </DialogTitle>
+        </DialogHeader>
+        <div className="bg-background">
+          <div className="mb-4">
+            <h3 className="font-bold text-lg">Divya D-mart</h3>
+            <p>1123 RingRoad</p>
+            <p>Tel : 3546-557367573</p>
           </div>
-
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Original Order</span>
-              <span className="font-medium text-gray-800">
-                #{refundData.order.id}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Customer</span>
-              <span className="font-medium text-gray-800">{customerName}</span>
-            </div>
-            {refundData.processedBy && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">Cashier</span>
-                <span className="font-medium text-gray-800">
-                  {refundData.processedBy}
-                </span>
-              </div>
-            )}
+          <div className="text-center mb-4">
+            <h4 className="font-bold">Return Receipt</h4>
           </div>
-
-          <div>
-            <p className="text-xs font-semibold text-gray-700 mb-2">
-              Refunded Items
-            </p>
-            <div className="space-y-1.5">
-              {refundData.items.map((item) => (
-                <div key={item.id} className="flex justify-between text-xs">
-                  <span className="text-gray-600">
-                    {item.product?.name} × {item.refundQuantity}
-                  </span>
-                  <span className="font-medium text-gray-800">
-                    ₹{item.refundAmount?.toFixed(2)}
-                  </span>
-                </div>
+          <div className="mb-4">
+            <p>Return #: RTN-{Date.now().toString().substring(8)}</p>
+            <p>Original Order : {selectedOrder?.id}</p>
+            <p>Date : {new Date().toLocaleDateString()}</p>
+            <p>Customer : {selectedOrder?.customer?.fullName || "Walk-in"}</p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-100">
+                <TableHead className="w-12 p-1.5 text-xs">Image</TableHead>
+                <TableHead className="p-1.5 text-xs">Product</TableHead>
+                <TableHead className="w-16 text-center p-1.5 text-xs">
+                  Qty
+                </TableHead>
+                <TableHead className="w-24 text-right p-1.5 text-xs">
+                  Price
+                </TableHead>
+                <TableHead className="w-24 text-right p-1.5 text-xs">
+                  Total
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {selectedOrder?.items?.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="p-1.5">
+                    <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
+                      {item.product?.image ? (
+                        <img
+                          src={item.product.image}
+                          className="w-8 h-8 object-cover"
+                          alt={item.product?.name || "Product"}
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="p-1.5">
+                    <div className="font-medium text-xs text-gray-900">
+                      {item.product?.name || "Unknown"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {item.product?.sku || "N/A"}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center font-medium text-xs p-1.5">
+                    {item.quantity}
+                  </TableCell>
+                  <TableCell className="text-right text-xs p-1.5">
+                    रु{item.price?.toFixed(2) || "0.00"}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold text-xs p-1.5">
+                    रु{((item.price || 0) * (item.quantity || 0)).toFixed(2)}
+                  </TableCell>
+                </TableRow>
               ))}
+            </TableBody>
+          </Table>
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex justify-between font-bold text-lg">
+              <span>Total Refund Amount:</span>
+              <span>रु {selectedOrder?.totalAmount?.toFixed(2)}</span>
             </div>
           </div>
-
-          <div className="border-t border-dashed border-gray-200 pt-3">
-            <div className="flex justify-between font-bold text-gray-900">
-              <span>Total Refund</span>
-              <span className="text-green-600">
-                ₹{refundData.refundAmount?.toFixed(2)}
-              </span>
-            </div>
-          </div>
-
-          <div className="text-xs">
-            <span className="text-gray-500">Reason: </span>
-            <span className="text-gray-700">{refundData.reason}</span>
-          </div>
-
-          <div className="text-center text-xs text-gray-400 border-t border-dashed border-gray-200 pt-3">
-            <p>Thank you for your business</p>
-            <p>Please keep this receipt for your records</p>
-          </div>
         </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 px-5 pb-5">
-          <button
-            onClick={handlePrint}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            Print
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button onClick={() => window.print()} className="w-full">
+            <Printer className="h-4 w-4 mr-2" />
+            Print & Complete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
-}
+};
+
+export default ReturnReceiptDialog;

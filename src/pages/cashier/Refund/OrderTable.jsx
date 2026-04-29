@@ -1,103 +1,187 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import React, { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 
-export default function OrderTable({ onOrderSelect }) {
-  const dispatch = useDispatch();
-  const [searchTerm, setSearchTerm] = useState("");
-  const { orders, loading } = useSelector((state) => state.order);
+// Mock data for testing when no user is logged in
+const mockOrders = [
+  {
+    id: 1,
+    createdAt: "Jul 8, 2025, 12:37 PM",
+    customer: {
+      fullName: "Pablo Escobar",
+      phone: "123243435",
+    },
+    totalAmount: 2134,
+    paymentType: "CASH",
+    status: "COMPLETED",
+    items: [
+      {
+        id: 1,
+        quantity: 2,
+        price: 500,
+        product: {
+          id: 101,
+          image:
+            "https://np.harringtonwear.com/cdn/shop/files/1_92992c7e-c7f9-4ce0-82cc-706e277a1396_370x.jpg?v=1775304465",
+          name: "Premium T-Shirt",
+          sku: "PROD001",
+        },
+      },
+      {
+        id: 2,
+        quantity: 1,
+        price: 1134,
+        product: {
+          id: 102,
+          image:
+            "https://np.harringtonwear.com/cdn/shop/files/1_92992c7e-c7f9-4ce0-82cc-706e277a1396_370x.jpg?v=1775304465",
+          name: "Designer Jeans",
+          sku: "PROD002",
+        },
+      },
+    ],
+  },
+  {
+    id: 2,
+    createdAt: "Jul 8, 2025, 1:15 PM",
+    customer: null,
+    totalAmount: 1500,
+    paymentType: "CARD",
+    status: "COMPLETED",
+    items: [
+      {
+        id: 3,
+        quantity: 3,
+        price: 500,
+        product: {
+          id: 103,
+          image:
+            "https://np.harringtonwear.com/cdn/shop/files/1_92992c7e-c7f9-4ce0-82cc-706e277a1396_370x.jpg?v=1775304465",
+          name: "Cotton Hoodie",
+          sku: "PROD003",
+        },
+      },
+    ],
+  },
+];
 
-  const [branchId] = useState(() => localStorage.getItem("branchId"));
+const OrderTable = ({ handleSelectOrder }) => {
+  const dispatch = useDispatch();
+  const { orders, loading } = useSelector((state) => state.order);
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (branchId) dispatch(getOrdersByBranch({ branchId }));
-  }, [dispatch, branchId]);
+    console.log("User:", user);
+    console.log("Orders:", orders);
+    if (user?.branchId) {
+      console.log("Fetching orders for branch:", user.branchId);
+      dispatch(getOrdersByBranch({ branchId: user.branchId }));
+    } else {
+      console.log("No branchId found in user - using mock data");
+    }
+  }, [dispatch, user?.branchId]);
 
-  const refundableOrders = useMemo(
-    () =>
-      orders?.filter((order) => {
-        const matchesStatus = order.status === "completed";
-        const matchesSearch =
-          order.id?.toString().includes(searchTerm) ||
-          order.customer?.firstName
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          order.customer?.lastName
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase());
-        return matchesStatus && matchesSearch;
-      }),
-    [orders, searchTerm],
-  );
+  const getStatusVariant = (status) => {
+    switch (status?.toUpperCase()) {
+      case "COMPLETED":
+        return "success";
+      case "PENDING":
+        return "warning";
+      case "CANCELLED":
+        return "destructive";
+      default:
+        return "info";
+    }
+  };
+
+  const refundableOrders = useMemo(() => {
+    // Use mock data if no real orders and no user logged in
+    const orderList =
+      orders && orders.length > 0 ? orders : !user ? mockOrders : [];
+    console.log("Order list:", orderList);
+    return (
+      orderList?.filter((o) => o.status?.toUpperCase() === "COMPLETED") ?? []
+    );
+  }, [orders, user]);
+
+  console.log("Refundable orders:", refundableOrders);
+
+  if (loading) {
+    return <div className="p-4 text-center">Loading orders...</div>;
+  }
 
   return (
-    <div>
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        Select Order for Refund
-      </h2>
-      <div className="relative mb-4">
-        <svg
-          className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.35-4.35" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search by order ID or customer..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
-        />
+    <div className="flex-1 p-4 overflow-auto">
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-100">
+              <TableHead>Order ID</TableHead>
+              <TableHead>Date/Time</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Payment Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {refundableOrders.length > 0 ? (
+              refundableOrders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell>
+                    {new Date(order.createdAt).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    {order.customer?.fullName ||
+                      (order.customer?.firstName && order.customer?.lastName
+                        ? `${order.customer.firstName} ${order.customer.lastName}`
+                        : "Walk-in")}
+                  </TableCell>
+                  <TableCell>रु {order.totalAmount?.toFixed(2)}</TableCell>
+                  <TableCell>{order.paymentType}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(order.status)}>
+                      {order.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      onClick={() => handleSelectOrder(order)}
+                      variant="default"
+                      size="sm"
+                    >
+                      Select for Refund
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-gray-400 py-8"
+                >
+                  No completed orders available for return
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
-
-      {loading ? (
-        <p className="text-center text-gray-400 py-10 text-sm">
-          Loading orders...
-        </p>
-      ) : refundableOrders?.length === 0 ? (
-        <p className="text-center text-gray-400 py-10 text-sm">
-          No completed orders found
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {refundableOrders?.map((order) => (
-            <div
-              key={order.id}
-              onClick={() => onOrderSelect(order)}
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    Order #{order.id}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {order.customer
-                      ? `${order.customer.firstName} ${order.customer.lastName}`
-                      : "Walk-in"}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {new Date(order.createdAt).toLocaleString()} ·{" "}
-                    {order.paymentType}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">
-                    ${order.totalAmount?.toFixed(2)}
-                  </p>
-                  <button className="mt-1.5 text-xs px-3 py-1 bg-gray-900 text-white rounded hover:bg-gray-700 transition-colors">
-                    Select
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
-}
+};
+
+export default OrderTable;
