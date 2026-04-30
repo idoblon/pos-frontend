@@ -1,18 +1,14 @@
 import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
-import { Button } from "./components/ui/button";
-import ShiftSummaryPage from "./pages/cashier/Shift Report/ShiftSummaryPage";
-import OrderHistory from "./pages/cashier/Order History/OrderHistory";
-import RefundPage from "./pages/cashier/Refund/RefundPage";
+import CashierRoutes from "./routes/CashierRoutes";
 
 function App() {
   return (
-    <>
-      {/*<ShiftSummaryPage/> */}
-      {/*  <OrderHistory />*/}
-      <RefundPage />
-    </>
+    <Routes>
+      <Route path="/" element={<Navigate to="/cashier" replace />} />
+      <Route path="/cashier/*" element={<CashierRoutes />} />
+    </Routes>
   );
 }
-
 export default App;

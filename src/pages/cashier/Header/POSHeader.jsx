@@ -1,22 +1,23 @@
-import { useSelector } from "react-redux";
-import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { useSidebar } from "@/context/hook/useSidbar";
+import POSHeader from "pos-frontend/src/pages/cashier/Header/POSHeader";
 
-export default function POSHeader({ onLogout }) {
-  const { userProfile } = useSelector((state) => state.user);
-
+const POSHeader = () => {
+  const{setSidebarOpen}=useSidebar();
   return (
-    <div className="bg-white border-b px-6 py-4 flex justify-between items-center">
-      <div>
-        <h1 className="text-2xl font-bold">POS System</h1>
-        <p className="text-sm text-gray-500">
-          Cashier: {userProfile?.firstName} {userProfile?.lastName}
-        </p>
+    <div className="bg-card border-b px-6 py-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <Button onClick={()=> setSidebarOpen(true)}>
+            <AlignJustify />
+          </Button>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text"></h1>
+          <p className="text-sm text-muted-foreground"></p>
+        </div>
       </div>
-      <Button variant="outline" onClick={onLogout}>
-        <LogOut className="mr-2 h-4 w-4" />
-        Logout
-      </Button>
     </div>
   );
-}
+};
+
+export default POSHeader;

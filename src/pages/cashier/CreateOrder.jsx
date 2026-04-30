@@ -40,20 +40,24 @@ export default function CreateOrder() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Create Order</h1>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <ProductSection onAddToCart={handleAddToCart} />
-        </div>
-        <div className="space-y-6">
-          <CartSection
-            cart={cart}
-            onUpdateQuantity={handleUpdateQuantity}
-            onRemoveItem={handleRemoveItem}
-          />
-          <CustomerPaymentSection cart={cart} onOrderComplete={handleOrderComplete} />
-        </div>
+    <div className="h-full flex gap-4 p-4">
+      {/* Left: Product Search & Display */}
+      <div className="flex-1">
+        <ProductSection onAddToCart={handleAddToCart} />
+      </div>
+
+      {/* Middle: Cart */}
+      <div className="w-96">
+        <CartSection
+          cart={cart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+        />
+      </div>
+
+      {/* Right: Customer & Payment */}
+      <div className="w-80">
+        <CustomerPaymentSection cart={cart} onOrderComplete={handleOrderComplete} />
       </div>
     </div>
   );
