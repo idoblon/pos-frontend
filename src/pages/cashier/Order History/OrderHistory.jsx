@@ -21,13 +21,13 @@ const OrderHistory = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Order History</h1>
-            <p className="text-gray-600 mt-1">View and manage all orders</p>
-          </div>
+    <div className="h-full flex flex-col">
+      <div className="p-4 bg-card border-b">
+        <h1 className="text-2xl font-bold">Order History</h1>
+        <p className="text-gray-600 text-sm mt-1">View and manage all orders</p>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <div className="p-6">
           <OrderTable handleViewOrderDetails={handleViewOrderDetails} />
         </div>
       </div>

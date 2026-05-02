@@ -5,16 +5,16 @@ import React from 'react'
 const ShiftReportHeader = () => {
     return (
         <div className='bg-white border-b shadow-sm'>
-          <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="px-4 py-3">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Shift Summary</h1>
-                <p className="text-sm text-gray-500 mt-1">Monitor your current shift performance</p>
+                <h1 className="text-xl font-bold text-gray-900">Shift Summary</h1>
+                <p className="text-xs text-gray-500 mt-0.5">Monitor your current shift performance</p>
               </div>
               <div className='flex gap-2'>
-                <Button variant={"destructive"} size="lg">
-                  <ArrowRight className="mr-2 h-4 w-4" />
+                <Button variant={"destructive"} size="sm">
                   End Shift & Logout
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>

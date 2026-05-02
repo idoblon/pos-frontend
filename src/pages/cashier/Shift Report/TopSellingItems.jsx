@@ -19,20 +19,20 @@ const shiftData={
 const TopSellingItems = () => {
     return (
        <Card className="h-full">
-        <CardContent className="p-6">
-            <h2 className='text-lg font-semibold mb-4 text-gray-900'>Top Selling Items</h2>
-            <div className='space-y-3'>
+        <CardContent className="p-4">
+            <h2 className='text-base font-semibold mb-3 text-gray-900'>Top Selling Items</h2>
+            <div className='space-y-2'>
                 {shiftData.TopSellingProducts.map((product, index) => (
-                <div key={product.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
+                <div key={product.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
                         {index+1}
                     </div>
                     <div className="flex-1">
                         <div className='flex justify-between items-center'>
-                            <span className="font-medium text-gray-900">{product.name}</span>
-                            <span className="font-semibold text-gray-900">रु{product.sellingPrice.toLocaleString()}</span>
+                            <span className="font-medium text-gray-900 text-sm">{product.name}</span>
+                            <span className="font-semibold text-gray-900 text-sm">रु{product.sellingPrice.toLocaleString()}</span>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-gray-500 mt-0.5">
                             {product.quantity} units sold
                         </div>
                     </div>

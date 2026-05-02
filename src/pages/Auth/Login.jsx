@@ -1,188 +1,136 @@
-import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ShoppingCart } from "lucide-react";
+import { Label } from "@radix-ui/react-label";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { login } from "@/Redux Toolkit/Features/auth/authThunk";
-import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
-
-export default function Login() {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.auth);
-  
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+const Login = () => {
+  const [forgotPasswordEmail, setForgotPasswordEmail]= useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear validation error when user starts typing
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
-    }
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const validateForm = () => {
-    const errors = {};
-    
-    if (!formData.email.trim()) {
-      errors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = "Please enter a valid email";
-    }
-    
-    if (!formData.password.trim()) {
-      errors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
-
-    try {
-      const loginResult = await dispatch(login(formData)).unwrap();
-      
-      if (loginResult.jwt) {
-        // Store auth data
-        localStorage.setItem("token", loginResult.jwt);
-        
-        // User data is in loginResult.user
-        const user = loginResult.user;
-        localStorage.setItem("userId", user.id);
-        
-        // Store additional data based on role
-        if (user.storeId) {
-          localStorage.setItem("storeId", user.storeId);
-        }
-        if (user.branchId) {
-          localStorage.setItem("branchId", user.branchId);
-        }
-        
-        // Route based on role
-        const role = user.role;
-        switch (role) {
-          case "ADMIN":
-            navigate("/admin");
-            break;
-          case "STORE_ADMIN":
-            navigate("/store");
-            break;
-          case "STORE_MANAGER":
-            navigate("/store");
-            break;
-          case "BRANCH_MANAGER":
-            navigate("/branch");
-            break;
-          case "BRANCH_CASHIER":
-          case "CASHIER":
-          case "ROLE_BRANCH_CASHIER":
-            navigate("/cashier");
-            break;
-          case "USER":
-            navigate("/user");
-            break;
-          default:
-            navigate("/");
-        }
-      }
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
+    console.log("Login:", formData);
   };
 
+  const handleForgotPassword = (e) => {
+    e.preventDefault();
+    console.log("Forgot Password:", forgotPasswordEmail);
+  };
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">POS System Login</CardTitle>
-          <p className="text-gray-600">Sign in to your account</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <Input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Enter your email"
-                className={validationErrors.email ? "border-red-500" : ""}
-              />
-              {validationErrors.email && (
-                <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
-              )}
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center p-4 relative">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <ShoppingCart className="w-6 h-6 text-primary-foreground" />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
-              <div className="relative">
+            <span className="text-2xl font-bold text-foreground">POS Pro</span>
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {showForgotPassword ? "Reset Password" : "Welcome Back"}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {showForgotPassword
+              ? "Enter your email to reset your password"
+              : "Sign in to your account"}
+          </p>
+        </div>
+        {!showForgotPassword && (
+          <div className="bg-card rounded-2xl shadow-xl p-8">
+            <form className="space-y-5" onSubmit={handleLogin}>
+              <div className="space-y-3">
+                <Label>Email Address</Label>
                 <Input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Enter your email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                />
+              </div>
+              <div className="space-y-3">
+                <Label>Password</Label>
+                <Input
                   onChange={handleInputChange}
                   placeholder="Enter your password"
-                  className={validationErrors.password ? "border-red-500" : ""}
+                  type="password"
+                  name="password"
+                  value={formData.password}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    name="remember-me"
+                    type={"checkbox"}
+                    className={
+                      "h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                    }
+                  />
+                  <Label>Remember me</Label>
+                </div>
+                <Button
+                  onClick={() => setShowForgotPassword(true)}
+                  variant={"ghost"}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                  Forgot Password
+                </Button>
               </div>
-              {validationErrors.password && (
-                <p className="text-red-500 text-sm mt-1">{validationErrors.password}</p>
-              )}
+              <div>
+                <Button className="py-4 w-full" type="submit">
+                  Login
+                </Button>
+              </div>
+            </form>
+            <div className="my-6 border-t border-gray-200"></div>
+            <div className="mt-6 p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground text-center">
+                <strong>Demo Account :</strong>
+                <br />
+                Email : demo@pospro.com <br />
+                Password : demo@123
+              </p>
             </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Demo Credentials:</p>
-            <p className="text-xs mt-1">
-              Cashier: cashier@example.com / password123<br />
-              Manager: manager@example.com / password123
-            </p>
           </div>
-        </CardContent>
-      </Card>
+        )}
+        {showForgotPassword && (
+          <div className="bg-card rounded-2xl shadow-xl p-8">
+            <form className="space-y-5" onSubmit={handleForgotPassword}>
+              <div className="space-y-3">
+                <Label>Email Address</Label>
+                <Input
+                  onChange={(e)=>setForgotPasswordEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  type="email"
+                  id="email"
+                  name="forgotPasswordEmail"
+                  value={forgotPasswordEmail}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setShowForgotPassword(false)} className="py-4 flex-1" type="button">
+                  Back to Login
+                </Button>
+                <Button className="py-4 flex-1" type="submit">
+                  Send Reset Link
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default Login;

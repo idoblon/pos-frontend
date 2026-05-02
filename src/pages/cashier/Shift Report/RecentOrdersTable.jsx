@@ -27,29 +27,29 @@ const shiftData = {
 const RecentOrdersTable = () => {
     return (
        <Card>
-        <CardContent className="p-6">
-            <h2 className='text-lg font-semibold mb-4 text-gray-900'>Recent Orders</h2>
+        <CardContent className="p-4">
+            <h2 className='text-base font-semibold mb-3 text-gray-900'>Recent Orders</h2>
             <div className="overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Order ID</TableHead>
-                            <TableHead>Time</TableHead>
-                            <TableHead>Payment</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="text-xs">Order ID</TableHead>
+                            <TableHead className="text-xs">Time</TableHead>
+                            <TableHead className="text-xs">Payment</TableHead>
+                            <TableHead className="text-right text-xs">Amount</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {shiftData.recentOrders.map((order)=>(
                             <TableRow key={order.id}>
-                                <TableCell className="font-medium">#{order.id}</TableCell>
-                                <TableCell>{order.createdAt}</TableCell>
+                                <TableCell className="font-medium text-sm">#{order.id}</TableCell>
+                                <TableCell className="text-sm">{order.createdAt}</TableCell>
                                 <TableCell>
-                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
                                         {order.paymentType}
                                     </span>
                                 </TableCell>
-                                <TableCell className="text-right font-semibold">रु {order.totalAmount.toLocaleString()}</TableCell>
+                                <TableCell className="text-right font-semibold text-sm">रु {order.totalAmount.toLocaleString()}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

@@ -9,13 +9,11 @@ import ShiftSummaryPage from "@/pages/cashier/Shift Report/ShiftSummaryPage";
 const CashierRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<CashierDashboardLayout />}>
-        <Route index element={<CreateOrder />} />
-        <Route path="orders" element={<OrderHistory />} />
-        <Route path="customers" element={<CustomersLookup />} />
-        <Route path="returns" element={<RefundPage />} />
-        <Route path="shift-summary" element={<ShiftSummaryPage />} />
-      </Route>
+      <Route path="/" element={<CashierDashboardLayout />} />
+      <Route path="orders" element={<OrderHistory />} />
+      <Route path="customers" element={<CustomersLookup />} />
+      <Route path="returns" element={<RefundPage />} />
+      <Route path="shift-summary" element={<ShiftSummaryPage />} />
     </Routes>
   );
 };
