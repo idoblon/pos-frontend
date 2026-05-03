@@ -38,14 +38,14 @@ const orderSlice = createSlice({
         state.error = action.payload;
       })
       // order by id
-      .addCase(getOrdersById.pending, (state) => {
+      .addCase(getOrderById.pending, (state) => {
         state.loading = true;
       })
-      .addCase(getOrdersById.fulfilled, (state, action) => {
+      .addCase(getOrderById.fulfilled, (state, action) => {
         state.loading = false;
         state.selectedOrder = action.payload;
       })
-      .addCase(getOrdersById.rejected, (state, action) => {
+      .addCase(getOrderById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -79,7 +79,7 @@ const orderSlice = createSlice({
       })
       .addCase(getTodayOrdersByBranch.fulfilled, (state, action) => {
         state.loading = false;
-        state.todyaOrders = action.payload;
+        state.todayOrders = action.payload;
       })
       .addCase(getTodayOrdersByBranch.rejected, (state, action) => {
         state.loading = false;
@@ -103,6 +103,18 @@ const orderSlice = createSlice({
         state.recentOrders = action.payload;
       })
       .addCase(getRecentOrdersByBranch.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // orders by customer
+      .addCase(getOrdersByCustomer.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getOrdersByCustomer.fulfilled, (state, action) => {
+        state.loading = false;
+        state.customerOrders = action.payload;
+      })
+      .addCase(getOrdersByCustomer.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

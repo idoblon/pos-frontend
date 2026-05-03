@@ -5,7 +5,7 @@ import {
   getAllCashier,
   getUserById,
   logout,
-} from "./user/userThunk";
+} from "./userThunk";
 
 const initialState = {
   users: null,
@@ -25,14 +25,17 @@ const userSlice = createSlice({
       state.user = [];
       state.userProfile = null;
       state.selectedUser = null;
-      ((state.customers = []), (state.cashiers = []), (state.error = null));
+      state.customers = [];
+      state.cashiers = [];
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(getUserProfile.pending, (state) => {
         state.loading = true;
-        ((state.error = null), (state.userProfile = null));
+        state.error = null;
+        state.userProfile = null;
       })
       .addCase(getUserProfile.fulfilled, (state, action) => {
         state.loading = false;
@@ -59,7 +62,7 @@ const userSlice = createSlice({
       // get all cashier
       .addCase(getAllCashier.pending, (state) => {
         state.loading = true;
-        state.error = action.payload;
+        state.error = null;
       })
       .addCase(getAllCashier.fulfilled, (state, action) => {
         state.loading = false;

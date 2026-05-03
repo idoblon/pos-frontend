@@ -39,14 +39,14 @@ export const getRefundsByCashier = createAsyncThunk(
   async (cashierId, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.post(`/api/refunds/cashier/${cashierId}`, {
+      const res = await api.get(`/api/refunds/cashier/${cashierId}`, {
         headers,
       });
-      console.log("create refund success", res.data);
+      console.log("get refund by cashier success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to create refund",
+        error.response?.data?.message || "Failed to get refund by cashier",
       );
     }
   },
@@ -73,7 +73,7 @@ export const getRefundsByShift = createAsyncThunk(
   async (shiftReportId, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.post(`/api/refunds/shift/${shiftReportId}`, {
+      const res = await api.get(`/api/refunds/shift/${shiftReportId}`, {
         headers,
       });
       console.log("get refund by shift success", res.data);
@@ -93,7 +93,7 @@ export const getRefundByCashierAndDateRange = createAsyncThunk(
       const headers = getAuthHeaders();
       const formattedFrom = encodeURIComponent(from);
       const formattedTo = encodeURIComponent(to);
-      const res = await api.post(
+      const res = await api.get(
         `/api/refunds/branch/${cashierId}/range?from=${formattedFrom}&to=${formattedTo}`,
         { headers },
       );
@@ -112,7 +112,7 @@ export const getRefundById = createAsyncThunk(
   async (refundId, { rejectWithValue }) => {
     try {
       const headers=getAuthHeaders();
-      const res = await api.post(`/api/refunds/${refundId}`, {headers});
+      const res = await api.get(`/api/refunds/${refundId}`, {headers});
       console.log("get refund by id  success", res.data);
       return res.data;
     } catch (error) {
