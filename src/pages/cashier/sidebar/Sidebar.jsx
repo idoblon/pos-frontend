@@ -9,6 +9,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navItems = [
     { path: "/cashier", label: "POS Terminal", icon: <ShoppingCart className="h-5 w-5" /> },
     { path: "/cashier/orders", label: "Order History", icon: <History className="h-5 w-5" /> },
+    { path: "/cashier/customers", label: "Customers", icon: <Users className="h-5 w-5" /> },
     { path: "/cashier/returns", label: "Returns", icon: <RotateCcw className="h-5 w-5" /> },
     { path: "/cashier/shift-summary", label: "Shift Summary", icon: <FileText className="h-5 w-5" /> },
   ];
