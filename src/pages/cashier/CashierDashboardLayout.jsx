@@ -1,19 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import {
-  Menu,
-  ShoppingCart,
-  User,
-  Tag,
-  FileText,
-  Trash2,
-  Minus,
-  Plus,
-  CreditCard,
-  PauseCircle,
-  Barcode,
-  History,
-  RotateCcw,
+  Menu, ShoppingCart, User, Tag, FileText, Trash2,
+  Minus, Plus, CreditCard, History, RotateCcw,
 } from "lucide-react";
 import Sidebar from "./sidebar/Sidebar";
 import "./cashier-styles.css";
@@ -75,8 +66,19 @@ export default function CashierDashboardLayout() {
   const [discountType, setDiscountType] = useState("%");
   const [note, setNote] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
+  const dispatch = useDispatch();
+  const { userProfile } = useSelector((s) => s.user);
+
+  const initials = userProfile
+    ? `${userProfile.firstName?.[0] ?? ""}${userProfile.lastName?.[0] ?? ""}`.toUpperCase()
+    : "U";
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
 
   const navItems = [
     { path: "/cashier", label: "POS Terminal", icon: ShoppingCart },
@@ -134,7 +136,38 @@ export default function CashierDashboardLayout() {
           <p className="header-sub">Create new Order</p>
         </div>
 
-        <div className="avatar">A</div>
+        <div style={{ position: "relative" }}>
+          <div
+            className="avatar"
+            onClick={() => setProfileOpen((o) => !o)}
+            style={{ cursor: "pointer" }}
+          >
+            {initials}
+          </div>
+          {profileOpen && (
+            <div style={{
+              position: "absolute", right: 0, top: "calc(100% + 8px)",
+              width: 200, background: "white", border: "1px solid #e2e5e9",
+              borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+              zIndex: 100, overflow: "hidden",
+            }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #e2e5e9" }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1d23" }}>
+                  {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Cashier"}
+                </p>
+                <p style={{ margin: "2px 0 0", fontSize: 11, color: "#8a909c" }}>
+                  {userProfile?.email ?? ""}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "#e53e3e", fontFamily: "inherit" }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       {/* ── BODY ── */}
@@ -154,10 +187,6 @@ export default function CashierDashboardLayout() {
             <span className="prod-count">
               {filteredProducts.length} product founds
             </span>
-            <button className="scan-btn">
-              <Barcode size={13} />
-              scan
-            </button>
           </div>
 
           <div className="prod-grid">
@@ -185,10 +214,6 @@ export default function CashierDashboardLayout() {
               Cart ( {totalItems} ) item
             </div>
             <div className="cart-actions">
-              <button className="cart-btn">
-                <PauseCircle size={13} />
-                Held
-              </button>
               <button className="cart-btn" onClick={clearCart}>
                 <Trash2 size={13} />
                 Clear
@@ -313,10 +338,6 @@ export default function CashierDashboardLayout() {
             <button className="pay-btn">
               <CreditCard size={15} />
               Proccess Payment
-            </button>
-            <button className="hold-btn">
-              <PauseCircle size={15} />
-              Hold Order
             </button>
           </div>
         </div>

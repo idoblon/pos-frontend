@@ -1,5 +1,5 @@
-import store from "@/Redux Toolkit/globalStore";
 import api from "@/util/api";
+import { getAuthHeaders } from "@/util/getAuthHeader";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 export const createStore = createAsyncThunk(
@@ -9,23 +9,23 @@ export const createStore = createAsyncThunk(
       const headers = getAuthHeaders();
       const res = await api.post(`/api/stores`, storeData, { headers });
       console.log("create store success", res.data);
+      return res.data;
     } catch (error) {
-      console.log("error", error);
-      return rejectWithValue(error.response?.data.message);
+      return rejectWithValue(error.response?.data?.message);
     }
   },
 );
 
 export const getStoreById = createAsyncThunk(
   "/store/getById",
-  async (_, { rejectWithValue }) => {
+  async (id, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
       const res = await api.get(`/api/stores/${id}`, { headers });
       console.log("get store success", res.data);
+      return res.data;
     } catch (error) {
-      console.log("error", error);
-      return rejectWithValue(error.response?.data.message);
+      return rejectWithValue(error.response?.data?.message);
     }
   },
 );
@@ -35,42 +35,42 @@ export const getAllStores = createAsyncThunk(
   async (status, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/stores/${id}`, {
+      const res = await api.get(`/api/stores`, {
         headers,
         params: status ? { status } : undefined,
       });
-      console.log("get store success", res.data);
+      console.log("get all stores success", res.data);
+      return res.data;
     } catch (error) {
-      console.log("error", error);
-      return rejectWithValue(error.response?.data.message);
+      return rejectWithValue(error.response?.data?.message);
     }
   },
 );
 
 export const updateStore = createAsyncThunk(
   "/store/update",
-  async (id, storeData, { rejectWithValue }) => {
+  async ({ id, storeData }, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
       const res = await api.put(`/api/stores/${id}`, storeData, { headers });
       console.log("update store success", res.data);
+      return res.data;
     } catch (error) {
-      console.log("error", error);
-      return rejectWithValue(error.response?.data.message);
+      return rejectWithValue(error.response?.data?.message);
     }
   },
 );
 
 export const getStoreByAdmin = createAsyncThunk(
   "/store/getByAdmin",
-  async (id, storeData, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
       const res = await api.get(`/api/stores/admin`, { headers });
       console.log("get admin store success", res.data);
+      return res.data;
     } catch (error) {
-      console.log("error", error);
-      return rejectWithValue(error.response?.data.message);
+      return rejectWithValue(error.response?.data?.message);
     }
   },
 );
@@ -80,27 +80,29 @@ export const getStoreByEmployee = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/stores//employee`,storeData, {headers})
+      const res = await api.get(`/api/stores/employee`, { headers });
       console.log("get employee store success", res.data);
+      return res.data;
     } catch (error) {
-      console.log("error", error);
-      return rejectWithValue(error.response?.data.message);
+      return rejectWithValue(error.response?.data?.message);
     }
   },
 );
 
 export const moderateStore = createAsyncThunk(
   "/store/moderateStore",
-  async ({storeData, action}, { rejectWithValue }) => {
+  async ({ storeId, action }, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.put(`/api/stores/${storeId}/moderate`,{headers,
-        params: {action}
-      })
+      const res = await api.put(
+        `/api/stores/${storeId}/moderate`,
+        {},
+        { headers, params: { action } },
+      );
       console.log("moderate store success", res.data);
+      return res.data;
     } catch (error) {
-      console.log("error", error);
-      return rejectWithValue(error.response?.data.message);
+      return rejectWithValue(error.response?.data?.message);
     }
   },
 );

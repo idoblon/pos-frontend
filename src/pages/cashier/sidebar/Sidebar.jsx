@@ -2,6 +2,7 @@ import { X, ShoppingCart, History, Users, RotateCcw, FileText } from "lucide-rea
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import posLogo from "@/logo/pos.png";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -17,9 +18,10 @@ const Sidebar = ({ isOpen, onClose }) => {
   return (
     <div className="w-64 border-r border-gray-200 bg-white p-4 flex flex-col h-screen shadow-xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-900">
-          POS SYSTEM
-        </h1>
+        <div className="flex items-center gap-2">
+          <img src={posLogo} alt="POS" style={{ width: 28, height: 28, objectFit: "contain" }} />
+          <h1 className="text-xl font-bold text-gray-900">POS SYSTEM</h1>
+        </div>
         {onClose && (
           <Button size="icon" variant="ghost" onClick={onClose} className="text-gray-600 hover:bg-gray-100">
             <X />
@@ -33,9 +35,9 @@ const Sidebar = ({ isOpen, onClose }) => {
               if (onClose) onClose();
             }}
             className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
-              location.pathname === item.path 
-                ? "bg-blue-600 text-white shadow-md" 
-                : "text-gray-700 hover:bg-gray-100"
+              location.pathname === item.path
+                ? "text-gray-900 font-semibold"
+                : "text-gray-600 hover:bg-gray-100"
             }`}
             key={item.path}
             to={item.path}

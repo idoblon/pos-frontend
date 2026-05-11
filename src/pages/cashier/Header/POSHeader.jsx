@@ -1,20 +1,18 @@
-import { useSidebar } from "@/context/hook/useSidbar";
-import POSHeader from "pos-frontend/src/pages/cashier/Header/POSHeader";
+import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-const POSHeader = () => {
-  const{setSidebarOpen}=useSidebar();
+const POSHeader = ({ title, subtitle, onMenuClick }) => {
   return (
     <div className="bg-card border-b px-6 py-4">
       <div className="flex items-center justify-between">
-        <div>
-          <Button onClick={()=> setSidebarOpen(true)}>
-            <AlignJustify />
-          </Button>
+        <Button variant="ghost" size="icon" onClick={onMenuClick}>
+          <Menu className="h-5 w-5" />
+        </Button>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">{title}</h1>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text"></h1>
-          <p className="text-sm text-muted-foreground"></p>
-        </div>
+        <div className="w-9" />
       </div>
     </div>
   );

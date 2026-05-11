@@ -1,17 +1,16 @@
 import { getAuthHeaders } from "@/util/getAuthHeader";
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { redirect } from "react-router-dom";
+import api from "@/util/api";
 
 export const createCategory = createAsyncThunk(
   "/category/create",
   async ({ dto }, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.post("/api/categories", dot, { headers });
+      const res = await api.post("/api/categories", dto, { headers });
       console.log("create category success", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
       return rejectWithValue(error.response?.data?.message);
     }
   },
@@ -22,13 +21,10 @@ export const getCategoriesByStore = createAsyncThunk(
   async ({ storeId }, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/categories/store/${storeid}`, {
-        headers,
-      });
+      const res = await api.get(`/api/categories/store/${storeId}`, { headers });
       console.log("get category success", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
       return rejectWithValue(error.response?.data?.message);
     }
   },
@@ -39,11 +35,10 @@ export const updateCategory = createAsyncThunk(
   async ({ id, dto }, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.put(`/api/categories/${id}`, dot, { headers });
+      const res = await api.put(`/api/categories/${id}`, dto, { headers });
       console.log("update category success", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
       return rejectWithValue(error.response?.data?.message);
     }
   },
@@ -58,7 +53,6 @@ export const deleteCategory = createAsyncThunk(
       console.log("delete category success", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
       return rejectWithValue(error.response?.data?.message);
     }
   },
