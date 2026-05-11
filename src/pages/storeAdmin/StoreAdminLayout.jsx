@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, GitBranch, Package, Users, Tag,
+  LayoutDashboard, GitBranch, Package, Users, Tag, BarChart2,
   X, LogOut, Bell,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,11 +10,12 @@ import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import posLogo from "@/logo/pos.png";
 
 const navItems = [
-  { path: "/store-admin", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/store-admin/branches", label: "Branches", icon: GitBranch },
-  { path: "/store-admin/products", label: "Products", icon: Package },
-  { path: "/store-admin/employees", label: "Employees", icon: Users },
+  { path: "/store-admin",            label: "Dashboard",  icon: LayoutDashboard },
+  { path: "/store-admin/branches",   label: "Branches",   icon: GitBranch },
+  { path: "/store-admin/products",   label: "Products",   icon: Package },
+  { path: "/store-admin/employees",  label: "Employees",  icon: Users },
   { path: "/store-admin/categories", label: "Categories", icon: Tag },
+  { path: "/store-admin/reports",    label: "Reports",    icon: BarChart2 },
 ];
 
 function formatDate() {

@@ -68,6 +68,15 @@ export default function StoreDashboard() {
 
   const activeBranches = branches?.filter((b) => b.status === "active" || !b.status).length ?? 0;
 
+  const displayBranches   = branches?.length   ? branches   : [{ _id:"b1" }, { _id:"b2" }, { _id:"b3" }, { _id:"b4" }];
+  const displayProducts   = products?.length   ? products   : Array(8).fill(null);
+  const displayEmployees  = employees?.length  ? employees  : Array(6).fill(null);
+  const displayCategories = categories?.length ? categories : Array(6).fill(null);
+
+  const activeCount = branches?.length
+    ? activeBranches
+    : displayBranches.length;
+
   // Build last-7-days trend — use demo if no real orders
   const trendData = useMemo(() => {
     if (!orders?.length) return DEMO_TREND;
@@ -112,10 +121,10 @@ export default function StoreDashboard() {
   const maxRevenue = branchSales[0]?.revenue ?? 1;
 
   const summaryStats = [
-    { label: "Total Branches", value: branches?.length ?? 0, sub: `${activeBranches} active`, icon: GitBranch, iconColor: "#3b82f6" },
-    { label: "Total Products", value: products?.length ?? 0, sub: `${categories?.length ?? 0} categories`, icon: Package, iconColor: "#8b5cf6" },
-    { label: "Employees", value: employees?.length ?? 0, sub: "across all branches", icon: Users, iconColor: "#f59e0b" },
-    { label: "Categories", value: categories?.length ?? 0, sub: "product groups", icon: Tag, iconColor: "#10b981" },
+    { label: "Total Branches", value: displayBranches.length,   sub: `${activeCount} active`,          icon: GitBranch, iconColor: "#3b82f6" },
+    { label: "Total Products", value: displayProducts.length,   sub: `${displayCategories.length} categories`, icon: Package,   iconColor: "#8b5cf6" },
+    { label: "Employees",      value: displayEmployees.length,  sub: "across all branches",             icon: Users,     iconColor: "#f59e0b" },
+    { label: "Categories",     value: displayCategories.length, sub: "product groups",                  icon: Tag,       iconColor: "#10b981" },
   ];
 
   return (
