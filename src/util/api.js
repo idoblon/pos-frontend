@@ -1,4 +1,6 @@
 import axios from "axios";
+import { store } from "@/Redux Toolkit/globalStore";
+import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 
 const api = axios.create({
   baseURL: "http://localhost:8080",
@@ -16,6 +18,17 @@ api.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      store.dispatch(logout());
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
 );
 
 export default api;

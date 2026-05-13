@@ -6,11 +6,16 @@ export const signup = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/signup", userData);
-      localStorage.setItem("jwt", res.data.jwt);
-      console.log("signup success", res.data);
+      const { jwt, role, storeId, branchId, storeName } = res.data;
+      
+      localStorage.setItem("jwt", jwt);
+      if (role) localStorage.setItem("role", role);
+      if (storeId) localStorage.setItem("storeId", storeId);
+      if (branchId) localStorage.setItem("branchId", branchId);
+      if (storeName) localStorage.setItem("storeName", storeName);
+      
       return res.data;
     } catch (error) {
-      console.log("signup error", error);
       return rejectWithValue(error.response?.data?.message || "signup failed");
     }
   },
@@ -21,11 +26,16 @@ export const login = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/login", userData);
-      localStorage.setItem("jwt", res.data.jwt);
-      console.log("login success", res.data);
+      const { jwt, role, storeId, branchId, storeName } = res.data;
+      
+      localStorage.setItem("jwt", jwt);
+      if (role) localStorage.setItem("role", role);
+      if (storeId) localStorage.setItem("storeId", storeId);
+      if (branchId) localStorage.setItem("branchId", branchId);
+      if (storeName) localStorage.setItem("storeName", storeName);
+      
       return res.data;
     } catch (error) {
-      console.log("signup error", error);
       return rejectWithValue(error.response?.data?.message || "login failed");
     }
   },
