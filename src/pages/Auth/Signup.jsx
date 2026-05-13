@@ -48,7 +48,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
 
         {/* Logo + Title */}
@@ -57,10 +57,10 @@ const Signup = () => {
             <div className="bg-white p-2 rounded-xl shadow-lg">
               <img src={posLogo} alt="POS" style={{ width: 32, height: 32, objectFit: "contain" }} />
             </div>
-            <span className="text-2xl font-bold text-white">POS Pro</span>
+            <span className="text-2xl font-bold text-slate-800">POS Pro</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Create Store Account</h1>
-          <p className="text-gray-400 mt-2">Register as a Store Admin to get started</p>
+          <h1 className="text-2xl font-bold text-slate-800">Create Store Account</h1>
+          <p className="text-slate-600 mt-2">Register as a Store Admin to get started</p>
         </div>
 
         <div className="bg-card rounded-2xl shadow-xl p-8">

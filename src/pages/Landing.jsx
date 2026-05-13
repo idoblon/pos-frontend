@@ -11,6 +11,9 @@ import {
   Zap,
   ArrowRight,
   CheckCircle2,
+  TrendingUp,
+  Clock,
+  Star,
 } from "lucide-react";
 
 const Landing = () => {
@@ -53,154 +56,239 @@ const Landing = () => {
     },
   ];
 
+  const stats = [
+    { value: "10K+", label: "Active Users" },
+    { value: "99.9%", label: "Uptime" },
+    { value: "50M+", label: "Transactions" },
+    { value: "24/7", label: "Support" },
+  ];
+
+  const testimonials = [
+    {
+      name: "Sarah Johnson",
+      role: "Store Owner",
+      content: "POS Pro transformed our business. Sales tracking is effortless and the interface is incredibly intuitive.",
+      rating: 5,
+    },
+    {
+      name: "Michael Chen",
+      role: "Retail Manager",
+      content: "Best investment we've made. The inventory management alone has saved us countless hours.",
+      rating: 5,
+    },
+    {
+      name: "Emily Rodriguez",
+      role: "Cafe Owner",
+      content: "Customer support is amazing and the system never lets us down. Highly recommended!",
+      rating: 5,
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50">
       {/* Header */}
-      <header className="border-b border-emerald-500/20 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-gray-200 bg-white/90 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="bg-white p-2 rounded-xl shadow-lg shadow-emerald-500/20">
+            <div className="bg-white p-2 rounded-xl shadow-md border border-gray-200">
               <img src={posLogo} alt="POS Pro" className="w-8 h-8" />
             </div>
-            <span className="text-2xl font-bold text-white">POS Pro</span>
+            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">POS Pro</span>
           </div>
+          <nav className="hidden md:flex gap-8 text-sm font-medium text-slate-600 absolute left-1/2 transform -translate-x-1/2">
+            <a href="#features" className="hover:text-emerald-600 transition-colors">Features</a>
+            <a href="#pricing" className="hover:text-emerald-600 transition-colors">Pricing</a>
+            <a href="#testimonials" className="hover:text-emerald-600 transition-colors">Testimonials</a>
+            <a href="#support" className="hover:text-emerald-600 transition-colors">Support</a>
+          </nav>
           <div className="flex items-center gap-3">
             <Link to="/login">
-              <Button variant="ghost" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">Login</Button>
+              <Button variant="ghost" className="text-slate-700 hover:text-slate-900 hover:bg-slate-100">Login</Button>
             </Link>
             <Link to="/signup">
-              <Button className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/30">Get Started</Button>
+              <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/30">Get Started Free</Button>
             </Link>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="inline-block px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold mb-4">
-            ✨ Modern POS Solution
+      <section className="container mx-auto px-4 py-16 md:py-24">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 text-sm font-semibold">
+              <TrendingUp className="w-4 h-4" />
+              Trusted by 10,000+ businesses
+            </div>
+            <h1 className="text-4xl md:text-6xl font-bold leading-tight text-slate-900">
+              The Smartest Way to
+              <span className="block bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                Run Your Store
+              </span>
+            </h1>
+            <p className="text-xl text-slate-600 leading-relaxed">
+              All-in-one POS system that helps you sell more, manage inventory, and grow your business with powerful analytics.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Link to="/signup">
+                <Button size="lg" className="text-lg px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-emerald-500/30 w-full sm:w-auto">
+                  Start Free Trial <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="text-lg px-8 border-2 border-slate-300 text-slate-700 hover:bg-slate-50 w-full sm:w-auto">
+                  Watch Demo
+                </Button>
+              </Link>
+            </div>
+            <div className="flex items-center gap-6 pt-4 text-sm text-slate-600">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                No credit card required
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                30-day free trial
+              </div>
+            </div>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold leading-tight text-white">
-            Modern Point of Sale
-            <br />
-            <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-              Built for Growth
-            </span>
-          </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Streamline your retail operations with our powerful, intuitive POS system.
-            Manage sales, inventory, and customers all in one place.
-          </p>
-          <div className="flex items-center justify-center gap-4 pt-4">
-            <Link to="/signup">
-              <Button size="lg" className="text-lg px-8 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-xl shadow-emerald-500/30">
-                Start Free Trial <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button size="lg" variant="outline" className="text-lg px-8 border-2 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10">
-                View Demo
-              </Button>
-            </Link>
+          <div className="relative">
+            <div className="bg-gradient-to-br from-emerald-100 to-teal-100 rounded-3xl p-8 shadow-2xl">
+              <div className="bg-white rounded-2xl p-6 shadow-lg">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-4 border-b">
+                    <div className="text-sm font-semibold text-slate-600">Today's Sales</div>
+                    <div className="text-2xl font-bold text-emerald-600">$12,450</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-emerald-50 rounded-lg p-4">
+                      <div className="text-xs text-slate-600 mb-1">Transactions</div>
+                      <div className="text-xl font-bold text-slate-900">248</div>
+                    </div>
+                    <div className="bg-teal-50 rounded-lg p-4">
+                      <div className="text-xs text-slate-600 mb-1">Items Sold</div>
+                      <div className="text-xl font-bold text-slate-900">1,432</div>
+                    </div>
+                  </div>
+                  <div className="h-32 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-lg flex items-end justify-around p-4">
+                    {[40, 65, 45, 80, 55, 90, 70].map((height, i) => (
+                      <div key={i} className="bg-gradient-to-t from-emerald-500 to-teal-500 rounded-t" style={{ width: '10%', height: `${height}%` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, idx) => (
+              <div key={idx} className="text-center">
+                <div className="text-3xl md:text-4xl font-bold text-white mb-2">{stat.value}</div>
+                <div className="text-emerald-100">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-            Everything You Need to Run Your Store
+      <section id="features" className="container mx-auto px-4 py-20">
+        <div className="text-center mb-16">
+          <div className="inline-block px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 text-sm font-semibold mb-4">
+            Features
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 text-slate-900">
+            Everything You Need in One Place
           </h2>
-          <p className="text-gray-400 text-lg">
-            Powerful features designed for modern retail businesses
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+            Powerful features designed to streamline your operations and boost sales
           </p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, idx) => (
             <div
               key={idx}
-              className="bg-slate-800/50 backdrop-blur-sm p-6 rounded-xl border border-emerald-500/20 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/10 transition-all group"
+              className="bg-white p-8 rounded-2xl border border-gray-200 hover:border-emerald-300 hover:shadow-2xl transition-all group"
             >
-              <div className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
+              <div className={`w-14 h-14 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center text-white mb-5 group-hover:scale-110 transition-transform shadow-lg`}>
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-white">{feature.title}</h3>
-              <p className="text-gray-400">{feature.description}</p>
+              <h3 className="text-xl font-bold mb-3 text-slate-900">{feature.title}</h3>
+              <p className="text-slate-600 leading-relaxed">{feature.description}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-12 border border-emerald-500/20 shadow-2xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
-                Why Choose POS Pro?
-              </h2>
-              <div className="space-y-4">
-                {[
-                  "Easy setup in minutes, no technical knowledge required",
-                  "24/7 customer support from our expert team",
-                  "Regular updates with new features at no extra cost",
-                  "Scalable solution that grows with your business",
-                  "Offline mode - keep selling even without internet",
-                ].map((benefit, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-lg text-gray-300">{benefit}</span>
-                  </div>
-                ))}
+      {/* Testimonials */}
+      <section id="testimonials" className="bg-gradient-to-br from-slate-50 to-gray-100 py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-block px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 text-sm font-semibold mb-4">
+              Testimonials
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-slate-900">
+              Loved by Store Owners
+            </h2>
+            <p className="text-xl text-slate-600">
+              See what our customers have to say
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, idx) => (
+              <div key={idx} className="bg-white p-8 rounded-2xl shadow-lg">
+                <div className="flex gap-1 mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-slate-700 mb-6 leading-relaxed">"{testimonial.content}"</p>
+                <div>
+                  <div className="font-semibold text-slate-900">{testimonial.name}</div>
+                  <div className="text-sm text-slate-600">{testimonial.role}</div>
+                </div>
               </div>
-            </div>
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-8 text-center shadow-xl shadow-emerald-500/30">
-              <div className="text-5xl font-bold mb-2 text-white">30 Days</div>
-              <div className="text-xl text-emerald-100 mb-6">Free Trial</div>
-              <p className="mb-6 text-white/90">No credit card required. Cancel anytime.</p>
-              <Link to="/signup">
-                <Button size="lg" className="w-full bg-white hover:bg-gray-100 text-emerald-700 font-semibold">
-                  Start Your Free Trial
-                </Button>
-              </Link>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-20">
-        <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl p-12 text-center shadow-2xl shadow-emerald-500/40">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-3xl p-12 md:p-16 text-center shadow-2xl">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
             Ready to Transform Your Business?
           </h2>
-          <p className="text-xl mb-8 text-white/90">
-            Join thousands of retailers using POS Pro to grow their business
+          <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
+            Join thousands of retailers using POS Pro to streamline operations and increase revenue
           </p>
-          <Link to="/signup">
-            <Button size="lg" className="text-lg px-8 bg-slate-900 hover:bg-slate-800 text-white font-semibold">
-              Get Started Now <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/signup">
+              <Button size="lg" className="text-lg px-10 bg-white hover:bg-gray-50 text-emerald-700 font-semibold shadow-xl">
+                Start Free Trial <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button size="lg" variant="outline" className="text-lg px-10 border-2 border-white text-white hover:bg-white/10">
+                View Demo
+              </Button>
+            </Link>
+          </div>
+          <p className="text-white/80 text-sm mt-6">No credit card required • 30-day free trial • Cancel anytime</p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-emerald-500/20 bg-slate-900/50 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white p-1.5 rounded-lg">
-                <img src={posLogo} alt="POS Pro" className="w-6 h-6" />
-              </div>
-              <span className="font-semibold text-white">POS Pro</span>
-            </div>
-            <p className="text-sm text-gray-400">
-              © 2024 POS Pro. All rights reserved.
-            </p>
-          </div>
+      <footer className="border-t border-gray-200 bg-white py-8">
+        <div className="container mx-auto px-4">
+          <p className="text-sm text-slate-600 text-center">
+            © 2024 POS Pro. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>
