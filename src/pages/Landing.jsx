@@ -95,7 +95,7 @@ const Landing = () => {
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">POS Pro</span>
           </div>
-          <nav className="hidden md:flex gap-8 text-sm font-medium text-slate-600 absolute left-1/2 transform -translate-x-1/2">
+          <nav className="hidden md:flex gap-8 text-sm font-semibold text-slate-700 absolute left-1/2 transform -translate-x-1/2">
             <a href="#features" className="hover:text-emerald-600 transition-colors">Features</a>
             <a href="#pricing" className="hover:text-emerald-600 transition-colors">Pricing</a>
             <a href="#testimonials" className="hover:text-emerald-600 transition-colors">Testimonials</a>
@@ -103,10 +103,10 @@ const Landing = () => {
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login">
-              <Button variant="ghost" className="text-slate-700 hover:text-slate-900 hover:bg-slate-100">Login</Button>
+              <Button variant="ghost" className="text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-semibold">Login</Button>
             </Link>
             <Link to="/signup">
-              <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/30">Get Started Free</Button>
+              <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/30 font-semibold">Get Started Free</Button>
             </Link>
           </div>
         </div>
@@ -158,7 +158,7 @@ const Landing = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between pb-4 border-b">
                     <div className="text-sm font-semibold text-slate-600">Today's Sales</div>
-                    <div className="text-2xl font-bold text-emerald-600">$12,450</div>
+                    <div className="text-2xl font-bold text-emerald-600">रू 12,450</div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-emerald-50 rounded-lg p-4">

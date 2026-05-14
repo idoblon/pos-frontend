@@ -28,14 +28,14 @@ const TAG_COLORS = [
 ];
 
 const s = {
-  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23" },
-  card: { background: "white", border: "1px solid #e2e5e9", borderRadius: 10 },
-  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #e2e5e9", display: "flex", alignItems: "center", justifyContent: "space-between" },
+  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" },
+  card: { background: "white", border: "1px solid #d1fae5", borderRadius: 10 },
+  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #d1fae5", display: "flex", alignItems: "center", justifyContent: "space-between" },
   cardBody: { padding: 18 },
-  searchInput: { width: "100%", border: "1px solid #e2e5e9", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f5f6f8", outline: "none", boxSizing: "border-box" },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1a5c38", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  searchInput: { width: "100%", border: "1px solid #d1fae5", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f0fdf4", outline: "none", boxSizing: "border-box" },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
   iconBtn: { border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 6, padding: "3px 5px", cursor: "pointer", display: "flex", alignItems: "center" },
-  empty: { textAlign: "center", padding: "40px 0", color: "#8a909c", fontSize: 13 },
+  empty: { textAlign: "center", padding: "40px 0", color: "#6b7280", fontSize: 13 },
 };
 
 export default function CategoryManagement() {
@@ -141,7 +141,7 @@ export default function CategoryManagement() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading} style={{ background: "#1a5c38", color: "white", border: "none" }}>{editing ? "Update" : "Create"}</Button>
+              <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none" }}>{editing ? "Update" : "Create"}</Button>
             </div>
           </form>
         </DialogContent>

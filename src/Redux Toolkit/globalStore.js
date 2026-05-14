@@ -5,13 +5,12 @@ import productReducer from "./Features/product/productSlice";
 import inventoryReducer from "./Features/inventory/inventorySlice";
 import orderReducer from "./Features/order/orderSlice";
 import refundReducer from "./Features/refund/refundSlice";
-import shiftReducer from "./Features/shiftReport/shiftReportSlice"
+import shiftReportReducer from "./Features/shiftReport/shiftReportSlice";
 import customerReducer from "./Features/customer/customerSlice";
 import branchReducer from "./Features/branch/branchSlice";
-import categoryReducer from "./Features/category/categorySlice"
-import shiftReportReducer from "./Features/shiftReport/shiftReportSlice"
-import employeeReducer from "./Features/Employee/employeeSlice"
-import storeReducer from "./Features/Store/storeSlice"
+import categoryReducer from "./Features/category/categorySlice";
+import employeeReducer from "./Features/Employee/employeeSlice";
+import storeReducer from "./Features/Store/storeSlice";
 
 export const store = configureStore({
   reducer: {
@@ -25,10 +24,8 @@ export const store = configureStore({
     shiftReport: shiftReportReducer,
     branch: branchReducer,
     category: categoryReducer,
-    employee:employeeReducer,
-    shift: shiftReducer,
+    employee: employeeReducer,
     store: storeReducer,
-    
   },
 });
 

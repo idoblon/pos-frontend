@@ -16,28 +16,26 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
   
   return (
-    <div className="w-64 border-r border-gray-200 bg-white p-4 flex flex-col h-screen shadow-xl">
+    <div className="w-64 border-r border-emerald-100 bg-white p-4 flex flex-col h-screen shadow-xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <img src={posLogo} alt="POS" style={{ width: 28, height: 28, objectFit: "contain" }} />
-          <h1 className="text-xl font-bold text-gray-900">POS SYSTEM</h1>
+          <h1 className="text-xl font-bold text-slate-800">POS SYSTEM</h1>
         </div>
         {onClose && (
-          <Button size="icon" variant="ghost" onClick={onClose} className="text-gray-600 hover:bg-gray-100">
+          <Button size="icon" variant="ghost" onClick={onClose} className="text-slate-600 hover:bg-emerald-50">
             <X />
           </Button>
         )}
       </div>
-      <nav className="space-y-2 flex-1">
+      <nav className="space-y-1 flex-1">
         {navItems.map((item) => (
           <Link
-            onClick={() => {
-              if (onClose) onClose();
-            }}
+            onClick={() => { if (onClose) onClose(); }}
             className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
               location.pathname === item.path
-                ? "text-gray-900 font-semibold"
-                : "text-gray-600 hover:bg-gray-100"
+                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold shadow-md"
+                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
             }`}
             key={item.path}
             to={item.path}
@@ -47,8 +45,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           </Link>
         ))}
       </nav>
-      <div className="pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500 text-center">© 2025 POS System</p>
+      <div className="pt-4 border-t border-emerald-100">
+        <p className="text-xs text-slate-400 text-center">© 2025 POS System</p>
       </div>
     </div>
   );

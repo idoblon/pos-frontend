@@ -17,16 +17,16 @@ const DEMO_BRANCHES = [
 ];
 
 const s = {
-  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23" },
-  card: { background: "white", border: "1px solid #e2e5e9", borderRadius: 10 },
-  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #e2e5e9", display: "flex", alignItems: "center", justifyContent: "space-between" },
+  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" },
+  card: { background: "white", border: "1px solid #d1fae5", borderRadius: 10 },
+  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #d1fae5", display: "flex", alignItems: "center", justifyContent: "space-between" },
   cardBody: { padding: 18 },
   searchWrap: { position: "relative" },
-  searchInput: { width: "100%", border: "1px solid #e2e5e9", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f5f6f8", outline: "none", boxSizing: "border-box" },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1a5c38", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  branchCard: { border: "1px solid #e2e5e9", borderRadius: 10, padding: "14px 16px", background: "white", transition: "box-shadow 0.15s" },
-  editBtn: { border: "1px solid #e2e5e9", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6b7280" },
-  empty: { textAlign: "center", padding: "40px 0", color: "#8a909c", fontSize: 13 },
+  searchInput: { width: "100%", border: "1px solid #d1fae5", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f0fdf4", outline: "none", boxSizing: "border-box" },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  branchCard: { border: "1px solid #d1fae5", borderRadius: 10, padding: "14px 16px", background: "white", transition: "box-shadow 0.15s" },
+  editBtn: { border: "1px solid #d1fae5", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center", color: "#6b7280" },
+  empty: { textAlign: "center", padding: "40px 0", color: "#6b7280", fontSize: 13 },
 };
 
 export default function BranchManagement() {
@@ -104,8 +104,8 @@ export default function BranchManagement() {
               >
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ padding: 7, borderRadius: 8, background: "#eff6ff" }}>
-                      <GitBranch size={15} color="#3b82f6" />
+                    <div style={{ padding: 7, borderRadius: 8, background: "#d1fae5" }}>
+                      <GitBranch size={15} color="#059669" />
                     </div>
                     <div>
                       <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{b.name}</p>
@@ -160,7 +160,7 @@ export default function BranchManagement() {
             ))}
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading} style={{ background: "#1a5c38", color: "white", border: "none" }}>
+              <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none" }}>
                 {editing ? "Update" : "Create"}
               </Button>
             </div>

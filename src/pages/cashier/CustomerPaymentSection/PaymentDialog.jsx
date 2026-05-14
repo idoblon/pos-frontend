@@ -1,10 +1,5 @@
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,31 +9,35 @@ import api from "@/util/api";
 const PAYMENT_METHODS = [
   { id: "CASH", label: "Cash", icon: Banknote },
   { id: "CARD", label: "Card", icon: CreditCard },
-  { id: "UPI", label: "UPI", icon: Smartphone },
+  { id: "UPI",  label: "UPI",  icon: Smartphone },
 ];
 
-const PaymentDialog = ({ open, onClose, total, cart, customer, discount, discountType, note }) => {
+const PaymentDialog = ({ open, onClose, total, cart, customer, discount, discountType, note, onOrderComplete }) => {
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [amountReceived, setAmountReceived] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
   const change = amountReceived ? Math.max(0, parseFloat(amountReceived) - total) : 0;
 
   const handlePayment = async () => {
-    if (paymentMethod === "CASH" && parseFloat(amountReceived) < total) {
-      alert("Amount received is less than total");
+    setError("");
+    if (cart.length === 0) {
+      setError("Please add items to the cart first.");
       return;
     }
-
+    if (paymentMethod === "CASH" && (!amountReceived || parseFloat(amountReceived) < total)) {
+      setError("Amount received must be at least रु " + total.toFixed(2));
+      return;
+    }
     try {
       setLoading(true);
-      
       const orderData = {
-        customerId: customer?.id || null,
-        items: cart.map(item => ({
-          productId: item.id,
-          quantity: item.qty,
+        customerId: customer?.id || customer?._id || null,
+        items: cart.map((item) => ({
+          productId: item.id || item._id,
+          quantity: item.qty || 1,
           price: item.price,
         })),
         discount: parseFloat(discount) || 0,
@@ -48,137 +47,132 @@ const PaymentDialog = ({ open, onClose, total, cart, customer, discount, discoun
         amountReceived: parseFloat(amountReceived) || total,
         total,
       };
-
-      const response = await api.post("/orders", orderData);
-      
+      await api.post("/orders", orderData);
       setSuccess(true);
       setTimeout(() => {
-        onClose();
-        window.location.reload(); // Refresh to clear cart
+        handleClose();
+        onOrderComplete?.();
       }, 2000);
-    } catch (error) {
-      console.error("Payment error:", error);
-      alert(error.response?.data?.message || "Payment failed");
+    } catch (err) {
+      setError(err.response?.data?.message || "Payment failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    if (!loading) {
-      setAmountReceived("");
-      setPaymentMethod("CASH");
-      setSuccess(false);
-      onClose();
-    }
+    if (loading) return;
+    setAmountReceived("");
+    setPaymentMethod("CASH");
+    setSuccess(false);
+    setError("");
+    onClose();
   };
-
-  if (success) {
-    return (
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md">
-          <div className="text-center py-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Payment Successful!</h2>
-            <p className="text-gray-600">Order has been created</p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Process Payment</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Total Amount */}
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-            <p className="text-3xl font-bold text-green-600">
-              ${total.toFixed(2)}
-            </p>
+        {success ? (
+          <div className="text-center py-10">
+            <CheckCircle className="h-16 w-16 mx-auto mb-4" style={{ color: "#059669" }} />
+            <h2 className="text-2xl font-bold mb-2" style={{ color: "#1a1d23" }}>Payment Successful!</h2>
+            <p style={{ color: "#6b7280" }}>Order has been created successfully</p>
           </div>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Process Payment</DialogTitle>
+            </DialogHeader>
 
-          {/* Payment Method */}
-          <div>
-            <Label className="mb-3 block">Payment Method</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {PAYMENT_METHODS.map((method) => {
-                const Icon = method.icon;
-                return (
-                  <button
-                    key={method.id}
-                    type="button"
-                    className={`p-4 border-2 rounded-lg flex flex-col items-center gap-2 transition ${
-                      paymentMethod === method.id
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => setPaymentMethod(method.id)}
-                  >
-                    <Icon size={24} />
-                    <span className="text-sm font-medium">{method.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            <div className="space-y-5">
+              {/* Total */}
+              <div style={{ background: "#f0fdf4", border: "1px solid #d1fae5", borderRadius: 10, padding: "16px", textAlign: "center" }}>
+                <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Total Amount</p>
+                <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 800, color: "#059669", letterSpacing: "-1px" }}>
+                  रु {total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                </p>
+                {customer && (
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
+                    Customer: <strong>{customer.firstName} {customer.lastName}</strong>
+                  </p>
+                )}
+              </div>
 
-          {/* Amount Received (for Cash) */}
-          {paymentMethod === "CASH" && (
-            <div>
-              <Label htmlFor="amountReceived">Amount Received</Label>
-              <Input
-                id="amountReceived"
-                type="number"
-                step="0.01"
-                value={amountReceived}
-                onChange={(e) => setAmountReceived(e.target.value)}
-                placeholder="Enter amount"
-                className="text-lg"
-              />
-              {amountReceived && (
-                <div className="mt-2 p-3 bg-blue-50 rounded">
-                  <div className="flex justify-between text-sm">
-                    <span>Change:</span>
-                    <span className="font-bold">${change.toFixed(2)}</span>
-                  </div>
+              {/* Payment Method */}
+              <div>
+                <Label className="mb-2 block">Payment Method</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setPaymentMethod(id)}
+                      style={{
+                        padding: "12px 8px",
+                        border: `2px solid ${paymentMethod === id ? "#059669" : "#d1fae5"}`,
+                        borderRadius: 10,
+                        background: paymentMethod === id ? "#f0fdf4" : "white",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 6,
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <Icon size={22} color={paymentMethod === id ? "#059669" : "#6b7280"} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: paymentMethod === id ? "#059669" : "#6b7280" }}>
+                        {label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Amount Received (Cash only) */}
+              {paymentMethod === "CASH" && (
+                <div>
+                  <Label htmlFor="amountReceived" className="mb-1 block">Amount Received (रु)</Label>
+                  <Input
+                    id="amountReceived"
+                    type="number"
+                    min={total}
+                    value={amountReceived}
+                    onChange={(e) => { setAmountReceived(e.target.value); setError(""); }}
+                    placeholder={`Min. रु ${total.toFixed(2)}`}
+                    className="text-lg"
+                    autoFocus
+                  />
+                  {amountReceived && parseFloat(amountReceived) >= total && (
+                    <div style={{ marginTop: 8, padding: "10px 14px", background: "#f0fdf4", border: "1px solid #d1fae5", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                      <span style={{ color: "#6b7280" }}>Change to return:</span>
+                      <span style={{ fontWeight: 700, color: "#059669" }}>रु {change.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Customer Info */}
-          {customer && (
-            <div className="text-sm text-gray-600">
-              <p>Customer: {customer.name}</p>
-              {customer.phone !== "N/A" && <p>Phone: {customer.phone}</p>}
-            </div>
-          )}
+              {error && (
+                <p style={{ fontSize: 13, color: "#e53e3e", textAlign: "center", margin: 0 }}>{error}</p>
+              )}
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={handleClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={handlePayment}
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Complete Payment"}
-            </Button>
-          </div>
-        </div>
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={handleClose} disabled={loading}>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handlePayment}
+                  disabled={loading}
+                  style={{ background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none" }}
+                >
+                  {loading ? "Processing..." : "Complete Payment"}
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

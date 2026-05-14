@@ -121,19 +121,19 @@ export default function StoreDashboard() {
   const maxRevenue = branchSales[0]?.revenue ?? 1;
 
   const summaryStats = [
-    { label: "Total Branches", value: displayBranches.length,   sub: `${activeCount} active`,          icon: GitBranch, iconColor: "#3b82f6" },
-    { label: "Total Products", value: displayProducts.length,   sub: `${displayCategories.length} categories`, icon: Package,   iconColor: "#8b5cf6" },
-    { label: "Employees",      value: displayEmployees.length,  sub: "across all branches",             icon: Users,     iconColor: "#f59e0b" },
-    { label: "Categories",     value: displayCategories.length, sub: "product groups",                  icon: Tag,       iconColor: "#10b981" },
+    { label: "Total Branches", value: displayBranches.length,   sub: `${activeCount} active`,          icon: GitBranch, iconColor: "#059669" },
+    { label: "Total Products", value: displayProducts.length,   sub: `${displayCategories.length} categories`, icon: Package,   iconColor: "#0d9488" },
+    { label: "Employees",      value: displayEmployees.length,  sub: "across all branches",             icon: Users,     iconColor: "#059669" },
+    { label: "Categories",     value: displayCategories.length, sub: "product groups",                  icon: Tag,       iconColor: "#0d9488" },
   ];
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23" }}>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" }}>
 
       {/* Header */}
       <div>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px" }}>Dashboard</h1>
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>Welcome back — here's what's happening in your store</p>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px", color: "#1a1d23" }}>Dashboard</h1>
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>Welcome back — here's what's happening in your store</p>
       </div>
 
       {/* Summary Stats */}
@@ -168,15 +168,15 @@ export default function StoreDashboard() {
             <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1a5c38" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#1a5c38" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#059669" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#8a909c" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: "#8a909c" }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="revenue" stroke="#1a5c38" strokeWidth={2} fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: "#1a5c38" }} />
+              <Area type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2} fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: "#059669" }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -194,7 +194,7 @@ export default function StoreDashboard() {
                 <div key={b.name}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: i === 0 ? "#1a5c38" : "#f5f6f8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: i === 0 ? "linear-gradient(135deg,#059669,#0d9488)" : "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: i === 0 ? "white" : "#8a909c" }}>{i + 1}</span>
                       </div>
                       <div>
@@ -204,8 +204,8 @@ export default function StoreDashboard() {
                     </div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1a1d23" }}>रु {b.revenue.toLocaleString("en-IN")}</p>
                   </div>
-                  <div style={{ height: 4, borderRadius: 4, background: "#f5f6f8" }}>
-                    <div style={{ height: "100%", borderRadius: 4, width: `${pct}%`, background: i === 0 ? "#1a5c38" : "#e2e5e9", transition: "width 0.4s ease" }} />
+                  <div style={{ height: 4, borderRadius: 4, background: "#d1fae5" }}>
+                    <div style={{ height: "100%", borderRadius: 4, width: `${pct}%`, background: i === 0 ? "linear-gradient(90deg,#059669,#0d9488)" : "#6ee7b7", transition: "width 0.4s ease" }} />
                   </div>
                 </div>
               );

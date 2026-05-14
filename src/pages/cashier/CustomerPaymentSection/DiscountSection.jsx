@@ -29,7 +29,7 @@ const DiscountSection = ({ discount, discountType, onDiscountChange, onDiscountT
             className={`disc-tab ${discountType === "$" ? "active" : ""}`}
             onClick={() => onDiscountTypeChange("$")}
           >
-            $
+            रु
           </button>
         </div>
       </div>

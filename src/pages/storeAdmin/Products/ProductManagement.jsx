@@ -29,15 +29,15 @@ const DEMO_PRODUCTS = [
 ];
 
 const s = {
-  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23" },
-  card: { background: "white", border: "1px solid #e2e5e9", borderRadius: 10 },
-  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #e2e5e9", display: "flex", alignItems: "center", justifyContent: "space-between" },
-  searchInput: { width: "100%", border: "1px solid #e2e5e9", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f5f6f8", outline: "none", boxSizing: "border-box" },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1a5c38", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  th: { padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#8a909c", background: "#f5f6f8", textAlign: "left", borderBottom: "1px solid #e2e5e9" },
-  td: { padding: "12px 16px", fontSize: 13, borderBottom: "1px solid #e2e5e9", color: "#1a1d23" },
-  iconBtn: { border: "1px solid #e2e5e9", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center" },
-  empty: { textAlign: "center", padding: "40px 0", color: "#8a909c", fontSize: 13 },
+  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" },
+  card: { background: "white", border: "1px solid #d1fae5", borderRadius: 10 },
+  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #d1fae5", display: "flex", alignItems: "center", justifyContent: "space-between" },
+  searchInput: { width: "100%", border: "1px solid #d1fae5", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f0fdf4", outline: "none", boxSizing: "border-box" },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  th: { padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#6b7280", background: "#f0fdf4", textAlign: "left", borderBottom: "1px solid #d1fae5" },
+  td: { padding: "12px 16px", fontSize: 13, borderBottom: "1px solid #d1fae5", color: "#1a1d23" },
+  iconBtn: { border: "1px solid #d1fae5", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center" },
+  empty: { textAlign: "center", padding: "40px 0", color: "#6b7280", fontSize: 13 },
 };
 
 export default function ProductManagement() {
@@ -121,13 +121,13 @@ export default function ProductManagement() {
               <tbody>
                 {filtered.map((p) => (
                   <tr key={p._id} style={{ background: "white" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f5f6f8"}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f0fdf4"}
                     onMouseLeave={e => e.currentTarget.style.background = "white"}
                   >
                     <td style={{ ...s.td, fontWeight: 600 }}>{p.name}</td>
                     <td style={{ ...s.td, color: "#8a909c" }}>{p.sku ?? "—"}</td>
                     <td style={{ ...s.td, color: "#8a909c" }}>{displayCategories?.find((c) => c._id === p.categoryId)?.name ?? "—"}</td>
-                    <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#1a6b3c" }}>रु {p.price}</td>
+                    <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#059669" }}>रु {p.price}</td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                         <button style={s.iconBtn} onClick={() => openEdit(p)}><Pencil size={13} color="#6b7280" /></button>
@@ -174,7 +174,7 @@ export default function ProductManagement() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading} style={{ background: "#1a5c38", color: "white", border: "none" }}>{editing ? "Update" : "Create"}</Button>
+              <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none" }}>{editing ? "Update" : "Create"}</Button>
             </div>
           </form>
         </DialogContent>

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { User, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { User, Plus, X } from "lucide-react";
 import CustomerDialog from "./CustomerDialog";
 
 const CustomerSection = ({ selectedCustomer, onSelectCustomer }) => {
@@ -12,34 +11,33 @@ const CustomerSection = ({ selectedCustomer, onSelectCustomer }) => {
         <User size={13} />
         Customer
       </div>
-      
+
       {selectedCustomer ? (
-        <div className="p-3 border rounded-lg bg-blue-50">
-          <div className="flex justify-between items-start mb-1">
-            <p className="font-semibold text-sm">{selectedCustomer.name}</p>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 px-2 text-xs"
-              onClick={() => setIsDialogOpen(true)}
+        <div style={{ border: "1px solid #d1fae5", borderRadius: 8, padding: "8px 10px", background: "#f0fdf4" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#1a1d23" }}>
+              {selectedCustomer.firstName} {selectedCustomer.lastName}
+            </p>
+            <button
+              onClick={() => onSelectCustomer(null)}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "#9ca3af", padding: 2, display: "flex" }}
             >
-              Change
-            </Button>
+              <X size={13} />
+            </button>
           </div>
-          <p className="text-xs text-gray-600">{selectedCustomer.phone}</p>
-          {selectedCustomer.email && (
-            <p className="text-xs text-gray-500">{selectedCustomer.email}</p>
-          )}
+          <p style={{ margin: 0, fontSize: 11, color: "#6b7280" }}>{selectedCustomer.phoneNumber}</p>
+          <button
+            onClick={() => setIsDialogOpen(true)}
+            style={{ marginTop: 4, fontSize: 11, color: "#059669", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600 }}
+          >
+            Change
+          </button>
         </div>
       ) : (
-        <Button
-          className="sel-cust w-full"
-          variant="outline"
-          onClick={() => setIsDialogOpen(true)}
-        >
-          <Plus size={14} className="mr-2" />
+        <button className="sel-cust" onClick={() => setIsDialogOpen(true)}>
+          <Plus size={13} style={{ marginRight: 4 }} />
           Select Customer
-        </Button>
+        </button>
       )}
 
       <CustomerDialog

@@ -1,35 +1,26 @@
 import React, { useState } from "react";
-import { CreditCard, PauseCircle } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 
-const PaymentSection = ({ total, cart, customer, discount, discountType, note, onHoldOrder }) => {
+const PaymentSection = ({ total, cart, customer, discount, discountType, note, onOrderComplete }) => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   return (
     <>
       <div className="total-area">
         <div className="total-amt">
-          {total.toLocaleString("en-IN", { maximumFractionDigits: 0 })}$
+          रु {total.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
         </div>
         <div className="total-lbl">Total Amount</div>
       </div>
 
       <div className="r-actions">
-        <button 
+        <button
           className="pay-btn"
           onClick={() => setIsPaymentDialogOpen(true)}
-          disabled={cart.length === 0}
         >
           <CreditCard size={15} />
           Process Payment
-        </button>
-        <button 
-          className="hold-btn"
-          onClick={onHoldOrder}
-          disabled={cart.length === 0}
-        >
-          <PauseCircle size={15} />
-          Hold Order
         </button>
       </div>
 
@@ -42,6 +33,7 @@ const PaymentSection = ({ total, cart, customer, discount, discountType, note, o
         discount={discount}
         discountType={discountType}
         note={note}
+        onOrderComplete={onOrderComplete}
       />
     </>
   );

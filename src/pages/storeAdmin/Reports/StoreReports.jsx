@@ -41,9 +41,9 @@ const BRANCH_PERFORMANCE = [
 ];
 
 const PAYMENT_METHODS = [
-  { name: "Cash",   value: 42, color: "#1a5c38" },
-  { name: "Card",   value: 35, color: "#3b82f6" },
-  { name: "QR/UPI", value: 23, color: "#f59e0b" },
+  { name: "Cash",   value: 42, color: "#059669" },
+  { name: "Card",   value: 35, color: "#0d9488" },
+  { name: "QR/UPI", value: 23, color: "#6ee7b7" },
 ];
 
 const RECENT_TRANSACTIONS = [
@@ -60,9 +60,9 @@ const RECENT_TRANSACTIONS = [
 const RANGES = ["This Month", "Last 3 Months", "Last 6 Months", "This Year"];
 
 // ── Styles ─────────────────────────────────────────────────────────────────
-const card = { background: "white", border: "1px solid #e2e5e9", borderRadius: 10, padding: "18px 20px" };
-const th = { padding: "10px 14px", fontSize: 11, fontWeight: 600, color: "#8a909c", background: "#f5f6f8", textAlign: "left", borderBottom: "1px solid #e2e5e9" };
-const td = { padding: "11px 14px", fontSize: 12, borderBottom: "1px solid #f0f0f0", color: "#1a1d23" };
+const card = { background: "white", border: "1px solid #d1fae5", borderRadius: 10, padding: "18px 20px" };
+const th = { padding: "10px 14px", fontSize: 11, fontWeight: 600, color: "#6b7280", background: "#f0fdf4", textAlign: "left", borderBottom: "1px solid #d1fae5" };
+const td = { padding: "11px 14px", fontSize: 12, borderBottom: "1px solid #d1fae5", color: "#1a1d23" };
 
 function StatCard({ label, value, sub, icon: Icon, iconColor }) {
   return (
@@ -99,7 +99,7 @@ export default function StoreReports() {
   const avgOrder     = Math.round(totalRevenue / totalOrders);
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23" }}>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -115,7 +115,7 @@ export default function StoreReports() {
           >
             {RANGES.map((r) => <option key={r}>{r}</option>)}
           </select>
-          <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#1a5c38", color: "white", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+          <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
             <Download size={13} /> Export
           </button>
         </div>
@@ -123,10 +123,10 @@ export default function StoreReports() {
 
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-        <StatCard label="Total Revenue"   value={`रु ${(totalRevenue / 1000).toFixed(0)}K`} sub="across all branches"  icon={DollarSign}  iconColor="#1a5c38" />
-        <StatCard label="Total Orders"    value={totalOrders}                                sub="completed orders"    icon={ShoppingCart} iconColor="#3b82f6" />
+        <StatCard label="Total Revenue"   value={`रु ${(totalRevenue / 1000).toFixed(0)}K`} sub="across all branches"  icon={DollarSign}  iconColor="#059669" />
+        <StatCard label="Total Orders"    value={totalOrders}                                sub="completed orders"    icon={ShoppingCart} iconColor="#0d9488" />
         <StatCard label="Total Refunds"   value={totalRefunds}                               sub="processed refunds"   icon={RotateCcw}    iconColor="#e53e3e" />
-        <StatCard label="Avg Order Value" value={`रु ${avgOrder.toLocaleString("en-IN")}`}  sub="per transaction"     icon={TrendingUp}   iconColor="#8b5cf6" />
+        <StatCard label="Avg Order Value" value={`रु ${avgOrder.toLocaleString("en-IN")}`}  sub="per transaction"     icon={TrendingUp}   iconColor="#059669" />
       </div>
 
       {/* Sales Trend + Payment Methods */}
@@ -142,15 +142,15 @@ export default function StoreReports() {
             <AreaChart data={MONTHLY_SALES} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="revG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#1a5c38" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#1a5c38" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#059669" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#8a909c" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: "#8a909c" }} axisLine={false} tickLine={false} />
               <Tooltip content={<SalesTooltip />} />
-              <Area type="monotone" dataKey="revenue" stroke="#1a5c38" strokeWidth={2} fill="url(#revG)" dot={false} activeDot={{ r: 4, fill: "#1a5c38" }} />
+              <Area type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2} fill="url(#revG)" dot={false} activeDot={{ r: 4, fill: "#059669" }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -198,7 +198,7 @@ export default function StoreReports() {
                 formatter={(v) => [`${v} units`, "Sales"]}
                 contentStyle={{ fontSize: 12, border: "1px solid #e2e5e9", borderRadius: 8 }}
               />
-              <Bar dataKey="sales" fill="#1a5c38" radius={[0, 4, 4, 0]} barSize={12} />
+              <Bar dataKey="sales" fill="#059669" radius={[0, 4, 4, 0]} barSize={12} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -215,7 +215,7 @@ export default function StoreReports() {
                 <div key={b.name}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: i === 0 ? "#1a5c38" : "#f5f6f8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: i === 0 ? "linear-gradient(135deg,#059669,#0d9488)" : "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <span style={{ fontSize: 9, fontWeight: 700, color: i === 0 ? "white" : "#8a909c" }}>{i + 1}</span>
                       </div>
                       <div>
@@ -225,8 +225,8 @@ export default function StoreReports() {
                     </div>
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 700 }}>रु {b.revenue.toLocaleString("en-IN")}</p>
                   </div>
-                  <div style={{ height: 4, borderRadius: 4, background: "#f5f6f8" }}>
-                    <div style={{ height: "100%", borderRadius: 4, width: `${pct}%`, background: i === 0 ? "#1a5c38" : "#e2e5e9" }} />
+                  <div style={{ height: 4, borderRadius: 4, background: "#d1fae5" }}>
+                    <div style={{ height: "100%", borderRadius: 4, width: `${pct}%`, background: i === 0 ? "linear-gradient(90deg,#059669,#0d9488)" : "#6ee7b7" }} />
                   </div>
                 </div>
               );
@@ -251,10 +251,10 @@ export default function StoreReports() {
             <tbody>
               {RECENT_TRANSACTIONS.map((t) => (
                 <tr key={t.id}
-                  onMouseEnter={e => e.currentTarget.style.background = "#f5f6f8"}
+                  onMouseEnter={e => e.currentTarget.style.background = "#f0fdf4"}
                   onMouseLeave={e => e.currentTarget.style.background = "white"}
                 >
-                  <td style={{ ...td, fontWeight: 600, color: "#3b82f6" }}>{t.id}</td>
+                  <td style={{ ...td, fontWeight: 600, color: "#059669" }}>{t.id}</td>
                   <td style={{ ...td, display: "flex", alignItems: "center", gap: 6 }}>
                     <GitBranch size={12} color="#8a909c" /> {t.branch}
                   </td>
