@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/util/api";
+import secureStorage from "@/util/secureStorage";
 
 export const signup = createAsyncThunk(
   "auth/signup",
@@ -8,11 +9,9 @@ export const signup = createAsyncThunk(
       const res = await api.post("/auth/signup", userData);
       const { jwt, role, storeId, branchId, storeName } = res.data;
       
-      localStorage.setItem("jwt", jwt);
-      if (role) localStorage.setItem("role", role);
-      if (storeId) localStorage.setItem("storeId", storeId);
-      if (branchId) localStorage.setItem("branchId", branchId);
-      if (storeName) localStorage.setItem("storeName", storeName);
+      // Use secure storage instead of localStorage
+      secureStorage.setToken(jwt);
+      secureStorage.setUserData({ role, storeId, branchId, storeName });
       
       return res.data;
     } catch (error) {
@@ -28,11 +27,9 @@ export const login = createAsyncThunk(
       const res = await api.post("/auth/login", userData);
       const { jwt, role, storeId, branchId, storeName } = res.data;
       
-      localStorage.setItem("jwt", jwt);
-      if (role) localStorage.setItem("role", role);
-      if (storeId) localStorage.setItem("storeId", storeId);
-      if (branchId) localStorage.setItem("branchId", branchId);
-      if (storeName) localStorage.setItem("storeName", storeName);
+      // Use secure storage instead of localStorage
+      secureStorage.setToken(jwt);
+      secureStorage.setUserData({ role, storeId, branchId, storeName });
       
       return res.data;
     } catch (error) {

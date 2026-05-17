@@ -1,17 +1,15 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { signup, login } from "./authThunk";
+import secureStorage from "@/util/secureStorage";
 
 const getInitialState = () => {
-  const jwt = localStorage.getItem("jwt");
-  const role = localStorage.getItem("role");
-  const storeId = localStorage.getItem("storeId");
-  const branchId = localStorage.getItem("branchId");
-  const storeName = localStorage.getItem("storeName");
+  const jwt = secureStorage.getToken();
+  const userData = secureStorage.getUserData();
 
   return {
-    user: jwt ? { role, storeId, branchId, storeName } : null,
+    user: jwt && userData ? userData : null,
     jwt,
-    isAuthenticated: !!jwt,
+    isAuthenticated: !!jwt && secureStorage.isTokenValid(),
     loading: false,
     error: null,
   };
@@ -25,23 +23,22 @@ const authSlice = createSlice({
       state.user = null;
       state.jwt = null;
       state.isAuthenticated = false;
-      localStorage.removeItem("jwt");
-      localStorage.removeItem("role");
-      localStorage.removeItem("storeId");
-      localStorage.removeItem("branchId");
-      localStorage.removeItem("storeName");
+      secureStorage.clearAll();
     },
     restoreAuth: (state) => {
-      const jwt = localStorage.getItem("jwt");
-      if (jwt) {
+      const jwt = secureStorage.getToken();
+      const userData = secureStorage.getUserData();
+      
+      if (jwt && secureStorage.isTokenValid()) {
         state.jwt = jwt;
         state.isAuthenticated = true;
-        state.user = {
-          role: localStorage.getItem("role"),
-          storeId: localStorage.getItem("storeId"),
-          branchId: localStorage.getItem("branchId"),
-          storeName: localStorage.getItem("storeName"),
-        };
+        state.user = userData;
+      } else {
+        // Clear invalid tokens
+        secureStorage.clearAll();
+        state.jwt = null;
+        state.isAuthenticated = false;
+        state.user = null;
       }
     },
   },

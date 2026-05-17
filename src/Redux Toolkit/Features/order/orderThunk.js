@@ -1,15 +1,21 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/util/api";
 import { getAuthHeaders } from "@/util/getAuthHeader";
+import { sanitizePathParams } from "@/util/urlValidator";
+import { validateOrderData } from "@/util/inputValidator";
 
 export const createOrder = createAsyncThunk(
   "order/create",
   async (dto, { rejectWithValue }) => {
     try {
+      // Validate order data
+      const validation = validateOrderData(dto);
+      if (!validation.isValid) {
+        return rejectWithValue(`Validation failed: ${Object.values(validation.errors).join(', ')}`);
+      }
+
       const headers = getAuthHeaders();
-      const res = await api.post(`/api/orders`, dto, {
-        headers,
-      });
+      const res = await api.post(`/api/orders`, dto, { headers });
       console.log("create order success", res.data);
       return res.data;
     } catch (error) {
@@ -25,10 +31,10 @@ export const getOrderById = createAsyncThunk(
   "order/getOrderById",
   async (id, { rejectWithValue }) => {
     try {
+      // Sanitize path parameter
+      const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/orders/${id}`, {
-        headers,
-      });
+      const res = await api.get(`/api/orders/${sanitizedParams.id}`, { headers });
       console.log("fetch order success", res.data);
       return res.data;
     } catch (error) {
@@ -47,22 +53,26 @@ export const getOrdersByBranch = createAsyncThunk(
     { rejectWithValue },
   ) => {
     try {
+      // Sanitize all parameters
+      const sanitizedParams = sanitizePathParams({ 
+        branchId, customerId, cashierId, paymentId, status 
+      });
+      
       const headers = getAuthHeaders();
       const param = [];
-      if (customerId) param.push(`customerId=${customerId}`);
-      if (cashierId) param.push(`cashierId=${cashierId}`);
-      if (paymentId) param.push(`paymentId=${paymentId}`);
-      if (status) param.push(`status=${status}`);
+      if (sanitizedParams.customerId) param.push(`customerId=${sanitizedParams.customerId}`);
+      if (sanitizedParams.cashierId) param.push(`cashierId=${sanitizedParams.cashierId}`);
+      if (sanitizedParams.paymentId) param.push(`paymentId=${sanitizedParams.paymentId}`);
+      if (sanitizedParams.status) param.push(`status=${sanitizedParams.status}`);
+      
       const query = param.length ? `?${param.join("&")}` : "";
-      const res = await api.get(`/api/orders/branch/${branchId}${query}`,  {
-        headers,
-      });
+      const res = await api.get(`/api/orders/branch/${sanitizedParams.branchId}${query}`, { headers });
       console.log("fetch branch order success", res.data);
       return res.data;
     } catch (error) {
       console.log("error", error?.response?.data);
       return rejectWithValue(
-        error?.response?.data?.message || "Failed to branch order by id",
+        error?.response?.data?.message || "Failed to fetch branch orders",
       );
     }
   },
@@ -72,76 +82,69 @@ export const getOrdersByCashier = createAsyncThunk(
   "order/getOrderByCashier",
   async (id, { rejectWithValue }) => {
     try {
+      const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/orders/cashier/${id}`, {
-        headers,
-      });
+      const res = await api.get(`/api/orders/cashier/${sanitizedParams.id}`, { headers });
       console.log("fetch cashier order success", res.data);
       return res.data;
     } catch (error) {
       console.log("error", error?.response?.data);
       return rejectWithValue(
-        error?.response?.data?.message || "Failed to cashier order",
+        error?.response?.data?.message || "Failed to fetch cashier orders",
       );
     }
   },
 );
-
 
 export const getTodayOrdersByBranch = createAsyncThunk(
   "order/getTodayByBranch",
   async (id, { rejectWithValue }) => {
     try {
+      const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/orders/today/branch/${id}`,  {
-        headers,
-      });
+      const res = await api.get(`/api/orders/today/branch/${sanitizedParams.id}`, { headers });
       console.log("fetch today branch order success", res.data);
       return res.data;
     } catch (error) {
       console.log("error", error?.response?.data);
       return rejectWithValue(
-        error?.response?.data?.message || "Failed to fetch today branch order ",
+        error?.response?.data?.message || "Failed to fetch today branch orders",
       );
     }
   },
 );
-
 
 export const deleteOrder = createAsyncThunk(
   "order/delete",
   async (id, { rejectWithValue }) => {
     try {
+      const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.delete(`/api/orders/${id}`,{
-        headers,
-      });
+      const res = await api.delete(`/api/orders/${sanitizedParams.id}`, { headers });
       console.log("delete order success", res.data);
       return res.data;
     } catch (error) {
       console.log("error", error?.response?.data);
       return rejectWithValue(
-        error?.response?.data?.message || "Failed to delete order ",
+        error?.response?.data?.message || "Failed to delete order",
       );
     }
   },
 );
 
-
 export const getOrdersByCustomer = createAsyncThunk(
   "order/getById",
   async (id, { rejectWithValue }) => {
     try {
+      const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/orders/customer/${id}`,  {
-        headers,
-      });
-      console.log("fetch customer success", res.data);
+      const res = await api.get(`/api/orders/customer/${sanitizedParams.id}`, { headers });
+      console.log("fetch customer orders success", res.data);
       return res.data;
     } catch (error) {
       console.log("error", error?.response?.data);
       return rejectWithValue(
-        error?.response?.data?.message || "Failed to fetch customer order ",
+        error?.response?.data?.message || "Failed to fetch customer orders",
       );
     }
   },
@@ -151,16 +154,15 @@ export const getRecentOrdersByBranch = createAsyncThunk(
   "order/getRecentByBranch",
   async (id, { rejectWithValue }) => {
     try {
+      const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/orders/recent/${id}`,  {
-        headers,
-      });
+      const res = await api.get(`/api/orders/recent/${sanitizedParams.id}`, { headers });
       console.log("fetch recent branch order success", res.data);
       return res.data;
     } catch (error) {
       console.log("error", error?.response?.data);
       return rejectWithValue(
-        error?.response?.data?.message || "Failed to fetch reent branch order ",
+        error?.response?.data?.message || "Failed to fetch recent branch orders",
       );
     }
   },

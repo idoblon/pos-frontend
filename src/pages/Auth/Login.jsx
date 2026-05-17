@@ -7,6 +7,8 @@ import posLogo from "@/logo/pos.png";
 import { useDispatch, useSelector } from "react-redux";
 import { login } from "@/Redux Toolkit/Features/auth/authThunk";
 import { useNavigate, Link } from "react-router-dom";
+import { sanitizeInput, validateEmail } from "@/util/inputValidator";
+import { mapToBackendRole } from "@/util/roleMapper";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -16,27 +18,79 @@ const Login = () => {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [validationErrors, setValidationErrors] = useState({});
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    const sanitizedValue = sanitizeInput(value);
+    setFormData({ ...formData, [name]: sanitizedValue });
+    
+    // Clear validation error when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors({ ...validationErrors, [name]: "" });
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.email) {
+      errors.email = "Email is required";
+    } else if (!validateEmail(formData.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+    
+    if (!formData.password) {
+      errors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     const result = await dispatch(login(formData));
     if (login.fulfilled.match(result)) {
-      const role = result.payload?.role;
-      if (role === "store_admin" || role === "manager") {
-        navigate("/store-admin");
-      } else {
-        navigate("/cashier");
+      const role = mapToBackendRole(result.payload?.role);
+      
+      // Navigate based on backend role hierarchy
+      switch (role) {
+        case 'ROLE_ADMIN':
+          navigate("/admin");
+          break;
+        case 'ROLE_STORE_ADMIN':
+        case 'ROLE_STORE_MANAGER':
+          navigate("/store-admin");
+          break;
+        case 'ROLE_BRANCH_MANAGER':
+          navigate("/branch");
+          break;
+        case 'ROLE_BRANCH_CASHIER':
+          navigate("/cashier");
+          break;
+        default:
+          navigate("/dashboard");
       }
     }
   };
 
   const handleForgotPassword = (e) => {
     e.preventDefault();
-    console.log("Forgot Password:", forgotPasswordEmail);
+    if (!validateEmail(forgotPasswordEmail)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+    // TODO: Implement forgot password API call
+    console.log("Forgot Password:", sanitizeInput(forgotPasswordEmail));
+    alert("Password reset link sent to your email (Demo mode)");
   };
 
   return (
@@ -71,7 +125,11 @@ const Login = () => {
                   name="email"
                   value={formData.email}
                   required
+                  className={validationErrors.email ? "border-red-500" : ""}
                 />
+                {validationErrors.email && (
+                  <p className="text-sm text-red-500">{validationErrors.email}</p>
+                )}
               </div>
               <div className="space-y-3">
                 <Label>Password</Label>
@@ -82,11 +140,17 @@ const Login = () => {
                   name="password"
                   value={formData.password}
                   required
+                  className={validationErrors.password ? "border-red-500" : ""}
                 />
+                {validationErrors.password && (
+                  <p className="text-sm text-red-500">{validationErrors.password}</p>
+                )}
               </div>
 
               {error && (
-                <p className="text-sm text-red-500 text-center">{error}</p>
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600 text-center">{error}</p>
+                </div>
               )}
 
               <div className="flex items-center justify-between">
@@ -109,14 +173,7 @@ const Login = () => {
             </form>
 
             <div className="my-6 border-t border-gray-200" />
-            <div className="mt-6 p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground text-center">
-                <strong>Demo Account :</strong>
-                <br />
-                Email : demo@pospro.com <br />
-                Password : demo@123
-              </p>
-            </div>
+            
             <p className="text-sm text-center text-muted-foreground mt-4">
               Don't have an account?{" "}
               <Link to="/signup" className="font-semibold text-foreground hover:underline">
@@ -132,7 +189,7 @@ const Login = () => {
               <div className="space-y-3">
                 <Label>Email Address</Label>
                 <Input
-                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  onChange={(e) => setForgotPasswordEmail(sanitizeInput(e.target.value))}
                   placeholder="Enter your email"
                   type="email"
                   name="forgotPasswordEmail"
