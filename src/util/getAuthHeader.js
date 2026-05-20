@@ -1,17 +1,12 @@
-
+import secureStorage from "@/util/secureStorage";
 
 export const getAuthToken = () => {
-  const jwt = localStorage.getItem("jwt");
-  if (!jwt) {
-    throw new Error("No jwt token found");
-  }
+  const jwt = secureStorage.getToken();
+  if (!jwt) throw new Error("No jwt token found");
   return jwt;
 };
 
-export const getAuthHeaders = () => {
-  const jwt = getAuthToken();
-  return {
-    Authorization: `Bearer ${jwt}`,
-    "Content-Type": "application/json",
-  };
-};
+export const getAuthHeaders = () => ({
+  Authorization: `Bearer ${getAuthToken()}`,
+  "Content-Type": "application/json",
+});

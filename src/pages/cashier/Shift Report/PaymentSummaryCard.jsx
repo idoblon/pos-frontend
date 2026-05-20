@@ -15,7 +15,7 @@ const shiftData={
        transactionCount:8
     },
     {
-       type:"Wallet",
+       type:"ESEWA",
        totalAmount:2566564,
        transactionCount:15
     },

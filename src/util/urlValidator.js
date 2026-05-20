@@ -17,13 +17,16 @@ const BLOCKED_IPS = [
 
 export const validateApiUrl = (url) => {
   try {
-    const urlObj = new URL(url, window.location.origin);
-    
+    // Relative paths are handled by axios baseURL — skip domain check
+    if (!url || !url.startsWith('http')) return url;
+
+    const urlObj = new URL(url);
+
     // Check if domain is in allowlist
-    const isAllowedDomain = ALLOWED_DOMAINS.some(domain => 
+    const isAllowedDomain = ALLOWED_DOMAINS.some(domain =>
       urlObj.host === domain || urlObj.hostname === domain
     );
-    
+
     if (!isAllowedDomain) {
       throw new Error(`Domain ${urlObj.host} not in allowlist`);
     }

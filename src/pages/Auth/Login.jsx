@@ -9,6 +9,7 @@ import { login } from "@/Redux Toolkit/Features/auth/authThunk";
 import { useNavigate, Link } from "react-router-dom";
 import { sanitizeInput, validateEmail } from "@/util/inputValidator";
 import { mapToBackendRole } from "@/util/roleMapper";
+import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -59,9 +60,9 @@ const Login = () => {
     
     const result = await dispatch(login(formData));
     if (login.fulfilled.match(result)) {
+      dispatch(getUserProfile(result.payload.jwt))
       const role = mapToBackendRole(result.payload?.role);
       
-      // Navigate based on backend role hierarchy
       switch (role) {
         case 'ROLE_ADMIN':
           navigate("/admin");

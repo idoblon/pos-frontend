@@ -6,6 +6,7 @@ import { mapToBackendRole, getAllowedRoutes } from "./util/roleMapper";
 import "./App.css";
 import CashierRoutes from "./routes/CashierRoutes";
 import StoreAdminRoutes from "./routes/StoreAdminRoutes";
+import BranchRoutes from "./routes/BranchRoutes";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import Landing from "./pages/Landing";
@@ -60,7 +61,7 @@ function App() {
           </ProtectedRoute>
         }
       />
-      {/* Add other role-based routes as needed */}
+      <Route path="/branch/*" element={<BranchRoutes />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       {/* Catch-all route for unauthorized access */}

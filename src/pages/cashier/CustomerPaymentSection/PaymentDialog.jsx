@@ -9,7 +9,7 @@ import api from "@/util/api";
 const PAYMENT_METHODS = [
   { id: "CASH", label: "Cash", icon: Banknote },
   { id: "CARD", label: "Card", icon: CreditCard },
-  { id: "UPI",  label: "UPI",  icon: Smartphone },
+  { id: "ESEWA",  label: "eSewa",  icon: Smartphone },
 ];
 
 const PaymentDialog = ({ open, onClose, total, cart, customer, discount, discountType, note, onOrderComplete }) => {
