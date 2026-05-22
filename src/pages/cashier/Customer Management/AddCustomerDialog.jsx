@@ -37,7 +37,7 @@ const AddCustomerDialog = ({ open, onClose, onSuccess }) => {
     try {
       setLoading(true);
       const branchId = localStorage.getItem("branchId");
-      const response = await api.post("/customers", {
+      const response = await api.post("/api/customers", {
         ...formData,
         branchId,
       });

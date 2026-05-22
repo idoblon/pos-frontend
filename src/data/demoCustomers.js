@@ -1,8 +1,7 @@
 export const demoCustomers = [
   {
     id: 1,
-    firstName: "John",
-    lastName: "Doe",
+    fullName: "John Doe",
     email: "john.doe@email.com",
     phoneNumber: "+1234567890",
     address: "123 Main Street, New York, NY 10001",
@@ -11,8 +10,7 @@ export const demoCustomers = [
   },
   {
     id: 2,
-    firstName: "Jane",
-    lastName: "Smith",
+    fullName: "Jane Smith",
     email: "jane.smith@email.com",
     phoneNumber: "+1234567891",
     address: "456 Oak Avenue, Los Angeles, CA 90001",
@@ -21,8 +19,7 @@ export const demoCustomers = [
   },
   {
     id: 3,
-    firstName: "Michael",
-    lastName: "Johnson",
+    fullName: "Michael Johnson",
     email: "michael.j@email.com",
     phoneNumber: "+1234567892",
     address: "789 Pine Road, Chicago, IL 60601",
@@ -31,8 +28,7 @@ export const demoCustomers = [
   },
   {
     id: 4,
-    firstName: "Emily",
-    lastName: "Williams",
+    fullName: "Emily Williams",
     email: "emily.w@email.com",
     phoneNumber: "+1234567893",
     address: "321 Elm Street, Houston, TX 77001",
@@ -41,8 +37,7 @@ export const demoCustomers = [
   },
   {
     id: 5,
-    firstName: "David",
-    lastName: "Brown",
+    fullName: "David Brown",
     email: "david.brown@email.com",
     phoneNumber: "+1234567894",
     address: "654 Maple Drive, Phoenix, AZ 85001",
@@ -51,8 +46,7 @@ export const demoCustomers = [
   },
   {
     id: 6,
-    firstName: "Sarah",
-    lastName: "Davis",
+    fullName: "Sarah Davis",
     email: "sarah.davis@email.com",
     phoneNumber: "+1234567895",
     address: "987 Cedar Lane, Philadelphia, PA 19101",
@@ -61,8 +55,7 @@ export const demoCustomers = [
   },
   {
     id: 7,
-    firstName: "Robert",
-    lastName: "Miller",
+    fullName: "Robert Miller",
     email: "robert.m@email.com",
     phoneNumber: "+1234567896",
     address: "147 Birch Court, San Antonio, TX 78201",
@@ -71,8 +64,7 @@ export const demoCustomers = [
   },
   {
     id: 8,
-    firstName: "Lisa",
-    lastName: "Wilson",
+    fullName: "Lisa Wilson",
     email: "lisa.wilson@email.com",
     phoneNumber: "+1234567897",
     address: "258 Spruce Street, San Diego, CA 92101",
@@ -81,8 +73,7 @@ export const demoCustomers = [
   },
   {
     id: 9,
-    firstName: "James",
-    lastName: "Moore",
+    fullName: "James Moore",
     email: "james.moore@email.com",
     phoneNumber: "+1234567898",
     address: "369 Willow Way, Dallas, TX 75201",
@@ -91,8 +82,7 @@ export const demoCustomers = [
   },
   {
     id: 10,
-    firstName: "Jennifer",
-    lastName: "Taylor",
+    fullName: "Jennifer Taylor",
     email: "jennifer.t@email.com",
     phoneNumber: "+1234567899",
     address: "741 Ash Boulevard, San Jose, CA 95101",
@@ -101,8 +91,7 @@ export const demoCustomers = [
   },
   {
     id: 11,
-    firstName: "William",
-    lastName: "Anderson",
+    fullName: "William Anderson",
     email: "william.a@email.com",
     phoneNumber: "+1234567800",
     address: "852 Poplar Place, Austin, TX 78701",
@@ -111,8 +100,7 @@ export const demoCustomers = [
   },
   {
     id: 12,
-    firstName: "Mary",
-    lastName: "Thomas",
+    fullName: "Mary Thomas",
     email: "mary.thomas@email.com",
     phoneNumber: "+1234567801",
     address: "963 Hickory Hill, Jacksonville, FL 32099",

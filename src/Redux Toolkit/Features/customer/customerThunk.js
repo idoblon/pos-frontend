@@ -8,8 +8,8 @@ import { sanitizeFormData, validateEmail, validatePhone } from "@/util/inputVali
 const validateCustomerData = (data) => {
   const errors = {};
   
-  if (!data.name || data.name.trim().length < 2) {
-    errors.name = 'Customer name must be at least 2 characters';
+  if (!data.fullName || data.fullName.trim().length < 2) {
+    errors.fullName = 'Customer full name must be at least 2 characters';
   }
   
   if (data.email && !validateEmail(data.email)) {

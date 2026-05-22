@@ -111,13 +111,17 @@ export const getProductsByStore = createAsyncThunk(
   "product/getByStore",
   async (storeId, { rejectWithValue }) => {
     try {
+      console.log("📡 PRODUCT API: Starting getProductsByStore for storeId:", storeId);
       const sanitizedParams = sanitizePathParams({ storeId });
       const headers = getAuthHeaders();
+      
+      console.log("📡 PRODUCT API: Making request to /api/products/store/" + sanitizedParams.storeId);
       const res = await api.get(`/api/products/store/${sanitizedParams.storeId}`, { headers });
-      console.log("get store product success", res.data);
+      
+      console.log("✅ PRODUCT API SUCCESS:", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
+      console.error("❌ PRODUCT API ERROR:", error.response?.status, error.response?.data);
       return rejectWithValue(error.response?.data?.message || "Failed to fetch store products");
     }
   },
@@ -127,13 +131,17 @@ export const getProductsByBranch = createAsyncThunk(
   "product/getByBranch",
   async ({ branchId }, { rejectWithValue }) => {
     try {
+      console.log("📡 PRODUCT API: Starting getProductsByBranch for branchId:", branchId);
       const sanitizedParams = sanitizePathParams({ branchId });
       const headers = getAuthHeaders();
+      
+      console.log("📡 PRODUCT API: Making request to /api/products/branch/" + sanitizedParams.branchId);
       const res = await api.get(`/api/products/branch/${sanitizedParams.branchId}`, { headers });
-      console.log("get branch product success", res.data);
+      
+      console.log("✅ PRODUCT API SUCCESS:", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
+      console.error("❌ PRODUCT API ERROR:", error.response?.status, error.response?.data);
       return rejectWithValue(error.response?.data?.message || "Failed to fetch branch products");
     }
   },

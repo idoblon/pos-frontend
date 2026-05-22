@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import api from "@/util/api";
+import { getAuthHeaders } from "@/util/getAuthHeader";
+import { sanitizeFormData } from "@/util/inputValidator";
 
 const CustomerForm = ({ onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     phone: "",
     email: "",
     address: "",
@@ -22,14 +24,20 @@ const CustomerForm = ({ onSuccess, onCancel }) => {
     e.preventDefault();
     setError("");
 
-    if (!formData.name || !formData.phone) {
-      setError("Name and phone are required");
+    if (!formData.fullName || !formData.phone) {
+      setError("Full name and phone are required");
       return;
     }
 
     try {
       setLoading(true);
-      const response = await api.post("/customers", formData);
+      const branchId = localStorage.getItem("branchId");
+      const sanitizedData = sanitizeFormData({
+        ...formData,
+        branchId
+      });
+      const headers = getAuthHeaders();
+      const response = await api.post("/api/customers", sanitizedData, { headers });
       onSuccess(response.data);
     } catch (error) {
       setError(error.response?.data?.message || "Failed to add customer");
@@ -47,13 +55,13 @@ const CustomerForm = ({ onSuccess, onCancel }) => {
       )}
 
       <div>
-        <Label htmlFor="name">Name *</Label>
+        <Label htmlFor="fullName">Full Name *</Label>
         <Input
-          id="name"
-          name="name"
-          value={formData.name}
+          id="fullName"
+          name="fullName"
+          value={formData.fullName}
           onChange={handleChange}
-          placeholder="Customer name"
+          placeholder="Customer full name"
           required
         />
       </div>

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Search } from "lucide-react";
-import { getProductsByBranch } from "@/Redux Toolkit/Features/product/productThunk";
+import { getProductsByBranch, getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
 import { getInventoryByBranch } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
+import ProductCard from "@/components/ProductCard";
+import secureStorage from "@/util/secureStorage";
 
 const DEMO_PRODUCTS = [
   { id: "p1", _id: "p1", name: "Aloe Vera",          sku: "PLT-001", price: 450,  category: "Succulents" },
@@ -20,14 +22,34 @@ export default function ProductSection({ onAddToCart }) {
   const [searchTerm, setSearchTerm] = useState("");
   const { products } = useSelector((state) => state.product);
   const { inventory } = useSelector((state) => state.inventory);
-  const branchId = localStorage.getItem("branchId");
+  const userData = secureStorage.getUserData();
+  // Handle string 'null' values from backend
+  const branchId = (userData?.branchId && userData.branchId !== 'null') ? userData.branchId : null;
+  const storeId = (userData?.storeId && userData.storeId !== 'null') ? userData.storeId : null;
 
   useEffect(() => {
-    if (branchId) {
-      dispatch(getProductsByBranch({ branchId }));
-      dispatch(getInventoryByBranch({ branchId }));
+    console.log("🔍 ProductSection - Checking API call conditions:");
+    console.log("- Raw StoreId from userData:", userData?.storeId);
+    console.log("- Raw BranchId from userData:", userData?.branchId);
+    console.log("- Processed StoreId:", storeId);
+    console.log("- Processed BranchId:", branchId);
+    console.log("- UserData:", userData);
+    
+    // Only make API calls if we have valid IDs
+    if (storeId) {
+      console.log("📡 API CALL: Fetching products for store:", storeId);
+      dispatch(getProductsByStore(storeId));
+    } else {
+      console.log("⚠️ SKIPPED: No valid storeId - using demo products");
     }
-  }, [dispatch, branchId]);
+    
+    if (branchId) {
+      console.log("📡 API CALL: Fetching inventory for branch:", branchId);
+      dispatch(getInventoryByBranch({ branchId }));
+    } else {
+      console.log("⚠️ SKIPPED: No valid branchId - using demo inventory");
+    }
+  }, [dispatch, branchId, storeId]);
 
   const displayProducts = products?.length ? products : DEMO_PRODUCTS;
 
@@ -62,27 +84,13 @@ export default function ProductSection({ onAddToCart }) {
         {filtered?.map((p) => {
           const id = p.id || p._id;
           const stock = getStock(id);
-          const outOfStock = stock === 0;
           return (
-            <div
+            <ProductCard
               key={id}
-              className="prod-card"
-              onClick={() => !outOfStock && onAddToCart({ ...p, id })}
-              style={{ opacity: outOfStock ? 0.5 : 1, cursor: outOfStock ? "not-allowed" : "pointer" }}
-            >
-              <div className="prod-img">🌿</div>
-              <div className="prod-info">
-                <div className="prod-name">{p.name}</div>
-                <div className="prod-sku">{p.sku}</div>
-                <div className="prod-meta">
-                  <span className="prod-price">रु {p.price}</span>
-                  <span className="prod-tag">{p.category ?? "—"}</span>
-                </div>
-                <div style={{ fontSize: 10, marginTop: 3, color: outOfStock ? "#e53e3e" : stock <= 10 ? "#d97706" : "#059669", fontWeight: 600 }}>
-                  {outOfStock ? "Out of Stock" : `Stock: ${stock}`}
-                </div>
-              </div>
-            </div>
+              product={p}
+              stock={stock}
+              onAddToCart={onAddToCart}
+            />
           );
         })}
       </div>

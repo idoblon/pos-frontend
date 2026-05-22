@@ -1,11 +1,35 @@
 import { X, ShoppingCart, History, Users, RotateCcw, FileText } from "lucide-react";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import secureStorage from "@/util/secureStorage";
 import posLogo from "@/logo/pos.png";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const [branchName, setBranchName] = useState(null);
+  const [branchAddress, setBranchAddress] = useState(null);
+  
+  useEffect(() => {
+    const userData = secureStorage.getUserData();
+    let storeName = userData?.storeName || localStorage.getItem("storeName") || localStorage.getItem("branchName");
+    let storeAddress = userData?.storeAddress || localStorage.getItem("storeAddress") || localStorage.getItem("branchAddress");
+    
+    // Handle string 'null' values
+    if (storeName === 'null' || storeName === null || !storeName) {
+      storeName = null;
+    }
+    if (storeAddress === 'null' || storeAddress === null || !storeAddress) {
+      storeAddress = null;
+    }
+    
+    // Demo data fallback if no branch name found
+    const demoBranchName = storeName || "Downtown Branch";
+    const demoBranchAddress = storeAddress || "123 Main Street, City Center";
+    
+    setBranchName(demoBranchName);
+    setBranchAddress(demoBranchAddress);
+  }, []);
   
   const navItems = [
     { path: "/cashier", label: "POS Terminal", icon: <ShoppingCart className="h-5 w-5" /> },
@@ -46,7 +70,14 @@ const Sidebar = ({ isOpen, onClose }) => {
         ))}
       </nav>
       <div className="pt-4 border-t border-emerald-100">
-        <p className="text-xs text-slate-400 text-center">© 2025 POS System</p>
+        <div className="text-center">
+          <p className="text-xs text-emerald-700 font-semibold">
+            {branchName}
+          </p>
+          <p className="text-xs text-emerald-600 mt-1 leading-relaxed">
+            {branchAddress}
+          </p>
+        </div>
       </div>
     </div>
   );
