@@ -1,19 +1,10 @@
 import React, { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Banknote, Smartphone, CheckCircle } from "lucide-react";
 import api from "@/util/api";
-import {
-  selectCartItems,
-  selectTotal,
-  selectSelectedCustomer,
-  selectDiscount,
-  selectCartNote,
-  clearCart
-} from "@/Redux Toolkit/Features/Cart/cartSlice";
 
 const PAYMENT_METHODS = [
   { id: "CASH", label: "Cash", icon: Banknote },
@@ -21,14 +12,7 @@ const PAYMENT_METHODS = [
   { id: "ESEWA",  label: "eSewa",  icon: Smartphone },
 ];
 
-const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
-  const dispatch = useDispatch();
-  const cartItems = useSelector(selectCartItems);
-  const total = useSelector(selectTotal);
-  const customer = useSelector(selectSelectedCustomer);
-  const discount = useSelector(selectDiscount);
-  const note = useSelector(selectCartNote);
-  
+const PaymentDialog = ({ open, onClose, total, cart, customer, discount, discountType, note, onOrderComplete }) => {
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [amountReceived, setAmountReceived] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,7 +23,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
 
   const handlePayment = async () => {
     setError("");
-    if (cartItems.length === 0) {
+    if (cart.length === 0) {
       setError("Please add items to the cart first.");
       return;
     }
@@ -51,37 +35,33 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       setLoading(true);
       const orderData = {
         customerId: customer?.id || customer?._id || null,
-        items: cartItems.map((item) => ({
+        items: cart.map((item) => ({
           productId: item.id || item._id,
-          quantity: item.quantity || 1,
-          price: item.price || item.sellingPrice,
+          quantity: item.qty || 1,
+          price: item.price,
         })),
-        discount: discount.value || 0,
-        discountType: discount.type || "percentage",
-        note: note || "",
+        discount: parseFloat(discount) || 0,
+        discountType,
+        note,
         paymentMethod,
         amountReceived: parseFloat(amountReceived) || total,
         total,
       };
-      
       console.log("📡 API CALL: Creating order with customer data");
       console.log("📋 Order payload:", orderData);
       console.log("👤 Customer in order:", customer);
-      console.log("🛒 Cart items:", cartItems);
+      console.log("🛍️ Cart items:", cart);
       
-      const response = await api.post("/api/orders", orderData);
+      const response = await api.post("/orders", orderData);
       
       console.log("✅ Order created successfully:", response.data);
       console.log("📡 This was the main API call that uses the selected customer data");
-      
       setSuccess(true);
-      dispatch(clearCart());
       setTimeout(() => {
         handleClose();
         onOrderComplete?.();
       }, 2000);
     } catch (err) {
-      console.error("❌ Order creation failed:", err.response?.data);
       setError(err.response?.data?.message || "Payment failed. Please try again.");
     } finally {
       setLoading(false);
@@ -121,7 +101,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                 </p>
                 {customer && (
                   <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
-                    Customer: <strong>{customer.fullName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim()}</strong>
+                    Customer: <strong>{customer.firstName} {customer.lastName}</strong>
                   </p>
                 )}
               </div>

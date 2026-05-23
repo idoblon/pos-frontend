@@ -1,6 +1,14 @@
+import { addToCart } from "@/Redux Toolkit/Features/Cart/cartSlice";
+import { useDispatch } from "react-redux";
+
 export default function ProductCard({ product, stock, onAddToCart }) {
   const id = product.id || product._id;
   const outOfStock = stock === 0;
+  const dispatch=useDispatch();
+
+  const handleAddProductToCart=()=>{
+    dispatch(addToCart(product))
+  }
 
   return (
     <div

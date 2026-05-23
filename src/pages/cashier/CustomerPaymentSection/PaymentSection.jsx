@@ -27,12 +27,6 @@ const PaymentSection = ({ total, cart, customer, discount, discountType, note, o
       <PaymentDialog
         open={isPaymentDialogOpen}
         onClose={() => setIsPaymentDialogOpen(false)}
-        total={total}
-        cart={cart}
-        customer={customer}
-        discount={discount}
-        discountType={discountType}
-        note={note}
         onOrderComplete={onOrderComplete}
       />
     </>

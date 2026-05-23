@@ -127,39 +127,32 @@ export default function CashierDashboardLayout() {
           </div>
 
           <div className="cart-list">
-            {cart.length === 0 ? (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#9ca3af", padding: "40px 0" }}>
-                <ShoppingCart size={40} style={{ marginBottom: 8, opacity: 0.3 }} />
-                <p style={{ margin: 0, fontSize: 13 }}>Cart is empty</p>
-                <p style={{ margin: "4px 0 0", fontSize: 11 }}>Click a product to add</p>
-              </div>
-            ) : (
-              cart.map((item) => (
-                <div key={item.id} className="cart-item">
-                  <div className="ci-info">
-                    <div className="ci-name">{item.name}</div>
-                    <div className="ci-sku">{item.sku}</div>
-                  </div>
-                  <div className="qty-ctrl">
-                    <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>-</button>
-                    <span className="qty-num">{item.qty || 1}</span>
-                    <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>+</button>
-                  </div>
-                  <div className="ci-price">
-                    <div className="ci-unit">{item.price}</div>
-                    <div className="ci-total">{(item.price * (item.qty || 1)).toFixed(2)}</div>
-                  </div>
-                  <button className="del-btn" onClick={() => removeItem(item.id)}>✕</button>
+            {cart.map((item) => (
+              <div key={item.id} className="cart-item">
+                <div className="ci-info">
+                  <div className="ci-name">{item.name}</div>
+                  <div className="ci-sku">{item.sku}</div>
                 </div>
-              ))
-            )}
-          </div>
-
-          <div className="cart-foot">
-            <div className="cf-row"><span className="cf-label">Subtotal</span><span className="cf-val">रु{subtotal.toFixed(2)}</span></div>
-            <div className="cf-row"><span className="cf-label">Tax (10%)</span><span className="cf-val">रु{tax.toFixed(2)}</span></div>
-            {discountAmt > 0 && (
-              <div className="cf-row"><span className="cf-label">Discount</span><span className="cf-val" style={{ color: "#e53e3e" }}>-रु{discountAmt.toFixed(2)}</span></div>
+                <div className="qty-ctrl">
+                  <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>-</button>
+                  <span className="qty-num">{item.qty || 1}</span>
+                  <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>+</button>
+                </div>
+                <div className="ci-price">
+                  <div className="ci-unit">{item.price}</div>
+                  <div className="ci-total">{(item.price * (item.qty || 1)).toFixed(2)}</div>
+                </div>
+                <button className="del-btn" onClick={() => removeItem(item.id)}>✕</button>
+              </div>
+            ))}
+            {cart.length > 0 && (
+              <div className="cart-foot">
+                <div className="cf-row"><span className="cf-label">Subtotal</span><span className="cf-val">रु{subtotal.toFixed(2)}</span></div>
+                <div className="cf-row"><span className="cf-label">Tax (10%)</span><span className="cf-val">रु{tax.toFixed(2)}</span></div>
+                {discountAmt > 0 && (
+                  <div className="cf-row"><span className="cf-label">Discount</span><span className="cf-val" style={{ color: "#e53e3e" }}>-रु{discountAmt.toFixed(2)}</span></div>
+                )}
+              </div>
             )}
           </div>
         </div>

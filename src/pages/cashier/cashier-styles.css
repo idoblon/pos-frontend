@@ -420,9 +420,9 @@
 
 .cart-foot {
   background: white;
-  border-top: 1px solid #e2e5e9;
+  border-radius: 10px;
+  margin-top: 6px;
   padding: 12px 14px;
-  flex-shrink: 0;
 }
 
 .cf-row {

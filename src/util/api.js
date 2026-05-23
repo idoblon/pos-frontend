@@ -1,5 +1,5 @@
 import axios from "axios";
-import { store } from "@/Redux Toolkit/globalStore";
+import { store } from "@/Redux Toolkit/globalState";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import { validateApiUrl } from "./urlValidator";
 import secureStorage from "./secureStorage";
@@ -18,7 +18,7 @@ api.interceptors.request.use(
     try {
       validateApiUrl(config.url);
     } catch (error) {
-      return Promise.reject(new Error('Invalid API endpoint'));
+      return Promise.reject(new Error("Invalid API endpoint"));
     }
 
     // Use secure token storage
@@ -28,7 +28,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 api.interceptors.response.use(
@@ -40,7 +40,7 @@ api.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

@@ -1,16 +1,20 @@
 import React, { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "lucide-react";
 import CustomerSection from "./CustomerSection";
 import PaymentSection from "./PaymentSection";
+import { selectCartItems, selectTotal, selectSelectedCustomer, setSelectedCustomer } from "@/Redux Toolkit/Features/Cart/cartSlice";
 
-const CustomerPaymentSection = ({ cart, onOrderComplete }) => {
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+const CustomerPaymentSection = ({ onOrderComplete }) => {
+  const dispatch = useDispatch();
+  const cartItems = useSelector(selectCartItems);
+  const total = useSelector(selectTotal);
+  const selectedCustomer = useSelector(selectSelectedCustomer);
 
   const handleSelectCustomer = (customer) => {
     console.log("🎯 CustomerPaymentSection - Customer selected:", customer);
-    console.log("📡 This is where you would make API calls if needed for order processing");
-    setSelectedCustomer(customer);
+    dispatch(setSelectedCustomer(customer));
   };
 
   return (
@@ -33,8 +37,8 @@ const CustomerPaymentSection = ({ cart, onOrderComplete }) => {
 
       {/* Payment Section */}
       <PaymentSection 
-        total={cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
-        cart={cart}
+        total={total}
+        cart={cartItems}
         customer={selectedCustomer}
         discount={0}
         discountType="percentage"
