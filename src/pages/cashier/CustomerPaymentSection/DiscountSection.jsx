@@ -13,9 +13,10 @@ const DiscountSection = ({ discount, discountType, onDiscountChange, onDiscountT
         <Input
           type="number"
           className="disc-input"
-          value={discount}
+          value={discount || ""}
           min={0}
           onChange={(e) => onDiscountChange(e.target.value)}
+          onFocus={(e) => e.target.select()}
           placeholder="0"
         />
         <div className="disc-tabs">

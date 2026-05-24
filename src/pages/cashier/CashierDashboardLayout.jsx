@@ -2,6 +2,23 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
+import { 
+  addToCart, 
+  updateCartItemQuantity, 
+  removeFromCart, 
+  clearCart,
+  setSelectedCustomer,
+  setDiscount,
+  setNote,
+  selectCartItems,
+  selectSubtotal,
+  selectTax,
+  selectDiscountAmount,
+  selectTotal,
+  selectSelectedCustomer,
+  selectDiscount,
+  selectCartNote
+} from "@/Redux Toolkit/Features/Cart/cartSlice";
 import { Menu, ShoppingCart, User, History, RotateCcw, FileText } from "lucide-react";
 import Sidebar from "./sidebar/Sidebar";
 import CustomerSection from "./CustomerPaymentSection/CustomerSection";
@@ -11,19 +28,22 @@ import PaymentSection from "./CustomerPaymentSection/PaymentSection";
 import ProductSection from "./ProductSection/ProductSection";
 import "./cashier-styles.css";
 
-const TAX_RATE = 0.1;
-
 export default function CashierDashboardLayout() {
-  const [cart, setCart] = useState([]);
-  const [discount, setDiscount] = useState(0);
-  const [discountType, setDiscountType] = useState("%");
-  const [note, setNote] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
+  
+  // Redux cart state
+  const cart = useSelector(selectCartItems);
+  const selectedCustomer = useSelector(selectSelectedCustomer);
+  const discount = useSelector(selectDiscount);
+  const note = useSelector(selectCartNote);
+  const subtotal = useSelector(selectSubtotal);
+  const tax = useSelector(selectTax);
+  const discountAmt = useSelector(selectDiscountAmount);
+  const total = useSelector(selectTotal);
 
   const initials = userProfile
     ? `${userProfile.firstName?.[0] ?? ""}${userProfile.lastName?.[0] ?? ""}`.toUpperCase()
@@ -35,35 +55,19 @@ export default function CashierDashboardLayout() {
   };
 
   const handleAddToCart = (product) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === product.id || i._id === product._id);
-      if (existing) {
-        return prev.map((i) =>
-          (i.id === product.id || i._id === product._id)
-            ? { ...i, qty: (i.qty || i.quantity || 1) + 1 }
-            : i
-        );
-      }
-      return [...prev, { ...product, id: product.id || product._id, qty: 1 }];
-    });
+    dispatch(addToCart({ ...product, id: product.id || product._id }));
   };
 
   const updateQty = (id, delta) => {
-    setCart((prev) =>
-      prev
-        .map((item) => item.id === id ? { ...item, qty: (item.qty || 1) + delta } : item)
-        .filter((item) => (item.qty || 1) > 0)
-    );
+    const item = cart.find(i => i.id === id);
+    if (item) {
+      dispatch(updateCartItemQuantity({ id, quantity: item.quantity + delta }));
+    }
   };
 
-  const removeItem = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
-  const clearCart = () => setCart([]);
-
-  const subtotal = cart.reduce((sum, item) => sum + item.price * (item.qty || 1), 0);
-  const tax = subtotal * TAX_RATE;
-  const discountAmt = discountType === "%" ? subtotal * (discount / 100) : Number(discount);
-  const total = Math.max(0, subtotal + tax - discountAmt);
-  const totalItems = cart.reduce((sum, i) => sum + (i.qty || 1), 0);
+  const removeItem = (id) => dispatch(removeFromCart(id));
+  const handleClearCart = () => dispatch(clearCart());
+  const totalItems = cart.reduce((sum, i) => sum + (i.quantity || 1), 0);
 
   return (
     <div className="cashier-layout">
@@ -120,7 +124,7 @@ export default function CashierDashboardLayout() {
               Cart ({totalItems} items)
             </div>
             <div className="cart-actions">
-              <button className="cart-btn" onClick={clearCart}>
+              <button className="cart-btn" onClick={handleClearCart}>
                 Clear
               </button>
             </div>
@@ -135,12 +139,12 @@ export default function CashierDashboardLayout() {
                 </div>
                 <div className="qty-ctrl">
                   <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>-</button>
-                  <span className="qty-num">{item.qty || 1}</span>
+                  <span className="qty-num">{item.quantity || 1}</span>
                   <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>+</button>
                 </div>
                 <div className="ci-price">
-                  <div className="ci-unit">{item.price}</div>
-                  <div className="ci-total">{(item.price * (item.qty || 1)).toFixed(2)}</div>
+                  <div className="ci-unit">{item.price || item.sellingPrice}</div>
+                  <div className="ci-total">{((item.price || item.sellingPrice) * (item.quantity || 1)).toFixed(2)}</div>
                 </div>
                 <button className="del-btn" onClick={() => removeItem(item.id)}>✕</button>
               </div>
@@ -148,7 +152,7 @@ export default function CashierDashboardLayout() {
             {cart.length > 0 && (
               <div className="cart-foot">
                 <div className="cf-row"><span className="cf-label">Subtotal</span><span className="cf-val">रु{subtotal.toFixed(2)}</span></div>
-                <div className="cf-row"><span className="cf-label">Tax (10%)</span><span className="cf-val">रु{tax.toFixed(2)}</span></div>
+                <div className="cf-row"><span className="cf-label">Tax (13%)</span><span className="cf-val">रु{tax.toFixed(2)}</span></div>
                 {discountAmt > 0 && (
                   <div className="cf-row"><span className="cf-label">Discount</span><span className="cf-val" style={{ color: "#e53e3e" }}>-रु{discountAmt.toFixed(2)}</span></div>
                 )}
@@ -161,28 +165,23 @@ export default function CashierDashboardLayout() {
         <div className="right-panel">
           <CustomerSection
             selectedCustomer={selectedCustomer}
-            onSelectCustomer={setSelectedCustomer}
+            onSelectCustomer={(customer) => dispatch(setSelectedCustomer(customer))}
           />
           <DiscountSection
-            discount={discount}
-            discountType={discountType}
-            onDiscountChange={setDiscount}
-            onDiscountTypeChange={setDiscountType}
+            discount={discount.value}
+            discountType={discount.type === "percentage" ? "%" : "fixed"}
+            onDiscountChange={(value) => dispatch(setDiscount({ ...discount, value: Number(value) }))}
+            onDiscountTypeChange={(type) => dispatch(setDiscount({ ...discount, type: type === "%" ? "percentage" : "fixed" }))}
           />
-          <NoteSection note={note} onNoteChange={setNote} />
+          <NoteSection note={note} onNoteChange={(value) => dispatch(setNote(value))} />
           <PaymentSection
             total={total}
             cart={cart}
             customer={selectedCustomer}
             discount={discount}
-            discountType={discountType}
+            discountType={discount.type}
             note={note}
-            onOrderComplete={() => {
-              setCart([]);
-              setSelectedCustomer(null);
-              setDiscount(0);
-              setNote("");
-            }}
+            onOrderComplete={() => dispatch(clearCart())}
           />
         </div>
       </div>

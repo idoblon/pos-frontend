@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +43,18 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       setError("Please add items to the cart first.");
       return;
     }
+    
+    // Check for demo products
+    const hasDemoProducts = cartItems.some(item => {
+      const productId = item.id || item._id;
+      return typeof productId === 'string' && productId.startsWith('p');
+    });
+    
+    if (hasDemoProducts) {
+      setError("Cannot process order with demo products. Please use real products from your inventory.");
+      return;
+    }
+    
     if (paymentMethod === "CASH" && (!amountReceived || parseFloat(amountReceived) < total)) {
       setError("Amount received must be at least रु " + total.toFixed(2));
       return;
@@ -110,6 +122,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
           <>
             <DialogHeader>
               <DialogTitle>Process Payment</DialogTitle>
+              <DialogDescription>Complete the payment for this order</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-5">
