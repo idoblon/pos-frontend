@@ -1,5 +1,7 @@
-import React from "react";
+import { useDispatch, useSelector } from 'react-redux';
+import React, { useEffect } from "react";
 import OrderTable from "./OrderTable";
+import { getOrdersByCashier } from "@/Redux Toolkit/Features/order/orderThunk";
 import {
   Dialog,
   DialogContent,
@@ -15,11 +17,19 @@ const OrderHistory = () => {
   const [showOrderInvoiceDialog, setShowOrderInvoiceDialog] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
+  const {userProfile}=useSelector(state=>state.user)
+  const dispatch = useDispatch();
+
   const handleViewOrderDetails = (order) => {
     setSelectedOrder(order);
     setShowOrderInvoiceDialog(true);
   };
 
+  useEffect(()=>{
+    if(userProfile?.id){
+      dispatch(getOrdersByCashier(userProfile.id))
+    }
+  },[userProfile, dispatch])
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 bg-card border-b">

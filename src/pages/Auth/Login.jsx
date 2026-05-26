@@ -10,6 +10,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { sanitizeInput, validateEmail } from "@/util/inputValidator";
 import { mapToBackendRole } from "@/util/roleMapper";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import { startShift } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -60,8 +61,25 @@ const Login = () => {
     
     const result = await dispatch(login(formData));
     if (login.fulfilled.match(result)) {
-      dispatch(getUserProfile(result.payload.jwt))
+      const profileResult = await dispatch(getUserProfile(result.payload.jwt));
       const role = mapToBackendRole(result.payload?.role);
+      
+      // Start shift for cashier on login
+      if (role === 'ROLE_BRANCH_CASHIER') {
+        const branchId = profileResult.payload?.branchId;
+        
+        if (branchId && branchId !== 'null') {
+          try {
+            await dispatch(startShift(branchId)).unwrap();
+            console.log("✅ Shift started successfully");
+          } catch (error) {
+            console.warn("⚠️ Failed to start shift:", error);
+            // Continue to dashboard even if shift start fails
+          }
+        } else {
+          console.warn("⚠️ No branchId found in user profile - cannot start shift");
+        }
+      }
       
       switch (role) {
         case 'ROLE_ADMIN':

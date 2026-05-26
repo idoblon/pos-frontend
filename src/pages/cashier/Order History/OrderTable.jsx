@@ -9,47 +9,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Eye as EyeIcon, Printer } from "lucide-react";
 import React from "react";
+import { useSelector } from "react-redux";
 
-const orders = [
-  {
-    id: 1,
-    createdAt: "Jul 8, 2025, 12:37 PM",
-    customer: {
-      fullName: "Pablo Escobar",
-      phone: "123243435",
-    },
-    totalAmount: 2134,
-    paymentType: "CASH",
-    status: "COMPLETED",
-    items: [
-      {
-        id: 1,
-        quantity: 2,
-        price: 500,
-        product: {
-          id: 101,
-          image:
-            "https://np.harringtonwear.com/cdn/shop/files/1_92992c7e-c7f9-4ce0-82cc-706e277a1396_370x.jpg?v=1775304465",
-          name: "Premium T-Shirt",
-          sku: "PROD001",
-        },
-      },
-      {
-        id: 2,
-        quantity: 1,
-        price: 1134,
-        product: {
-          id: 102,
-          image:
-            "https://np.harringtonwear.com/cdn/shop/files/1_92992c7e-c7f9-4ce0-82cc-706e277a1396_370x.jpg?v=1775304465",
-          name: "Designer Jeans",
-          sku: "PROD002",
-        },
-      },
-    ],
-  },
-];
 const OrderTable = ({ handleViewOrderDetails }) => {
+  const { orders } = useSelector((state) => state.order);
   const handlePrintOrder = (order) => {
     const printContent = `
 ORDER RECEIPT

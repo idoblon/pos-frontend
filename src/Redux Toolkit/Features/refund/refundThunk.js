@@ -145,7 +145,7 @@ export const getRefundByCashierAndDateRange = createAsyncThunk(
       const formattedTo = encodeURIComponent(sanitizedTo);
       
       const res = await api.get(
-        `/api/refunds/branch/${sanitizedParams.cashierId}/range?from=${formattedFrom}&to=${formattedTo}`,
+        `/api/refunds/cashier/${sanitizedParams.cashierId}/range?from=${formattedFrom}&to=${formattedTo}`,
         { headers },
       );
       console.log("get by date range refund success", res.data);

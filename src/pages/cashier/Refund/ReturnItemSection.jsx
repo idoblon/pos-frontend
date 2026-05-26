@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
+import { createRefund } from "@/Redux Toolkit/Features/refund/refundThunk";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,15 +23,38 @@ const returnReasons = [
 const refundMethods = ["esewa", "CARD", "CASH"];
 
 const ReturnItemSection = ({ selectedOrder, setShowReturnReciptDialog }) => {
+  const dispatch = useDispatch();
   const [returnReason, setReturnReason] = useState("");
   const [otherReason, setOtherReason] = useState("");
   const [refundMethod, setRefundMethod] = useState("");
-  const processRefund = () => {
-    console.log("Processing refund for order:", selectedOrder.id);
-    console.log("Return Reason:", returnReason);
-    console.log("Other Reason:", otherReason);
-    console.log("Refund Method:", refundMethod);
-    setShowReturnReciptDialog(true);
+  const [loading, setLoading] = useState(false);
+
+  const processRefund = async () => {
+    if (!returnReason || !refundMethod) {
+      alert("Please select return reason and refund method");
+      return;
+    }
+
+    const finalReason = returnReason === "Other" ? otherReason : returnReason;
+    if (!finalReason || finalReason.trim().length < 5) {
+      alert("Reason must be at least 5 characters");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await dispatch(createRefund({
+        orderId: selectedOrder.id,
+        amount: selectedOrder.totalAmount,
+        reason: finalReason,
+        refundMethod: refundMethod
+      })).unwrap();
+      setShowReturnReciptDialog(true);
+    } catch (error) {
+      alert("Failed to process refund: " + error);
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div className="p-4 w-1/2">
@@ -87,8 +112,8 @@ const ReturnItemSection = ({ selectedOrder, setShowReturnReciptDialog }) => {
               <div className="flex justify-between text-lg font-semibold mb-4">
                 <span>Total Refund Amount: रु {selectedOrder.totalAmount}</span>
               </div>
-              <Button onClick={processRefund} className="w-full py-6">
-                Process Refund
+              <Button onClick={processRefund} className="w-full py-6" disabled={loading}>
+                {loading ? "Processing..." : "Process Refund"}
               </Button>
             </div>
           </div>

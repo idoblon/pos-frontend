@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
+import { getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { 
   addToCart, 
   updateCartItemQuantity, 
@@ -34,6 +35,15 @@ export default function CashierDashboardLayout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
+  const { currentShift } = useSelector((s) => s.shiftReport);
+  
+  // Check for active shift on mount
+  useEffect(() => {
+    dispatch(getCurrentShiftProgress()).catch(() => {
+      // Silently handle 404 - no active shift exists
+      console.log("No active shift found");
+    });
+  }, [dispatch]);
   
   // Redux cart state
   const cart = useSelector(selectCartItems);
