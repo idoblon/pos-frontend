@@ -1,28 +1,16 @@
 import {Card, CardContent} from '@/components/ui/card'
 import React from 'react'
 
-const shiftData={
-    TopSellingProducts:[
-        {id:"1",  
-            name:"books",
-            sellingPrice:23,
-            quantity: 5,
-        },
-         {id:"2",    
-            name:"grocery",
-            sellingPrice:25,
-            quantity: 54,
-        },
-    ]
-}
+
 
 const TopSellingItems = () => {
+    const shiftData=useSelector((state)=> state.shifReport?.currentShift);
     return (
        <Card className="h-full">
         <CardContent className="p-4">
             <h2 className='text-base font-semibold mb-3 text-gray-900'>Top Selling Items</h2>
             <div className='space-y-2'>
-                {shiftData.TopSellingProducts.map((product, index) => (
+                {shiftData?.TopSellingProducts?.map((product, index) => (
                 <div key={product.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
                     <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
                         {index+1}

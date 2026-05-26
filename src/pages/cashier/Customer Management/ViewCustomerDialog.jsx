@@ -8,7 +8,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { User, Phone, Mail, MapPin, ShoppingBag, Calendar } from "lucide-react";
 import api from "@/util/api";
-import { demoOrders } from "@/util/demoData";
 
 const ViewCustomerDialog = ({ open, onClose, customer }) => {
   const [orders, setOrders] = useState([]);
@@ -26,9 +25,8 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
       const response = await api.get(`/orders/customer/${customer.id}`);
       setOrders(response.data);
     } catch (error) {
-      console.warn("Backend not available, using demo orders");
-      const customerOrders = demoOrders.filter(order => order.customerId === customer.id);
-      setOrders(customerOrders);
+      console.error("Failed to fetch customer orders:", error);
+      setOrders([]);
     } finally {
       setLoading(false);
     }

@@ -9,13 +9,6 @@ import { Button } from "@/components/ui/button";
 
 const EMPTY_FORM = { name: "", address: "", phone: "", city: "" };
 
-const DEMO_BRANCHES = [
-  { _id: "b1", name: "Kathmandu Main",   address: "New Road, Kathmandu",      phone: "+977-01-4567890", status: "active" },
-  { _id: "b2", name: "Pokhara Branch",   address: "Lakeside, Pokhara",        phone: "+977-61-521234",  status: "active" },
-  { _id: "b3", name: "Lalitpur Branch",  address: "Pulchowk, Lalitpur",       phone: "+977-01-5523456", status: "active" },
-  { _id: "b4", name: "Bhaktapur Branch", address: "Durbar Square, Bhaktapur", phone: "+977-01-6612345", status: "inactive" },
-];
-
 const s = {
   page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" },
   card: { background: "white", border: "1px solid #d1fae5", borderRadius: 10 },
@@ -33,7 +26,6 @@ export default function BranchManagement() {
   const dispatch = useDispatch();
   const storeId = localStorage.getItem("storeId");
   const { branches, loading } = useSelector((st) => st.branch);
-  const displayBranches = branches?.length ? branches : DEMO_BRANCHES;
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -44,7 +36,7 @@ export default function BranchManagement() {
     if (storeId) dispatch(getBranchesByStore(storeId));
   }, [dispatch, storeId]);
 
-  const filtered = displayBranches?.filter(
+  const filtered = branches?.filter(
     (b) =>
       b.name?.toLowerCase().includes(search.toLowerCase()) ||
       b.address?.toLowerCase().includes(search.toLowerCase())

@@ -9,15 +9,6 @@ import { Button } from "@/components/ui/button";
 
 const EMPTY_FORM = { name: "", description: "" };
 
-const DEMO_CATEGORIES = [
-  { _id: "cat1", name: "Succulents",       description: "Low-maintenance drought-tolerant plants" },
-  { _id: "cat2", name: "Tropical Plants",  description: "Lush tropical foliage plants" },
-  { _id: "cat3", name: "Flowering Plants", description: "Beautiful blooming indoor plants" },
-  { _id: "cat4", name: "Accessories",      description: "Pots, soil, tools and plant care" },
-  { _id: "cat5", name: "Air Purifiers",    description: "Plants that clean indoor air" },
-  { _id: "cat6", name: "Bonsai",           description: "Miniature artistic tree plants" },
-];
-
 const TAG_COLORS = [
   { bg: "#eff6ff", border: "#bfdbfe", color: "#3b82f6" },
   { bg: "#f0fdf4", border: "#bbf7d0", color: "#1a6b3c" },
@@ -42,7 +33,6 @@ export default function CategoryManagement() {
   const dispatch = useDispatch();
   const storeId = localStorage.getItem("storeId");
   const { categories, loading } = useSelector((st) => st.category);
-  const displayCategories = categories?.length ? categories : DEMO_CATEGORIES;
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -55,7 +45,7 @@ export default function CategoryManagement() {
     if (storeId) dispatch(getCategoriesByStore({ storeId }));
   }, [dispatch, storeId]);
 
-  const filtered = displayCategories?.filter((c) =>
+  const filtered = categories?.filter((c) =>
     c.name?.toLowerCase().includes(search.toLowerCase())
   );
 

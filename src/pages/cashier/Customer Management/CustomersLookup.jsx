@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import api from "@/util/api";
-import { demoCustomers } from "@/util/demoData";
 import CustomerTable from "./CustomerTable";
 import AddCustomerDialog from "./AddCustomerDialog";
 import EditCustomerDialog from "./EditCustomerDialog";
@@ -20,7 +19,6 @@ const CustomersLookup = () => {
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [useDemoData, setUseDemoData] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -31,11 +29,9 @@ const CustomersLookup = () => {
       setLoading(true);
       const response = await api.get("/customers");
       setCustomers(response.data);
-      setUseDemoData(false);
     } catch (error) {
-      console.warn("Backend not available, using demo data");
-      setCustomers(demoCustomers);
-      setUseDemoData(true);
+      console.error("Failed to fetch customers:", error);
+      setCustomers([]);
     } finally {
       setLoading(false);
     }
@@ -65,11 +61,7 @@ const CustomersLookup = () => {
   };
 
   const handleSuccess = () => {
-    if (useDemoData) {
-      setCustomers([...demoCustomers]);
-    } else {
-      fetchCustomers();
-    }
+    fetchCustomers();
   };
 
   return (
@@ -80,11 +72,6 @@ const CustomersLookup = () => {
             <h1 className="text-3xl font-bold">Customer Lookup</h1>
             <p className="text-gray-600 text-sm mt-1">
               Search and manage customer information
-              {useDemoData && (
-                <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                  Demo Mode
-                </span>
-              )}
             </p>
           </div>
           <Button onClick={() => setShowAddDialog(true)}>

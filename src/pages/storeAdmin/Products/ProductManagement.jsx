@@ -10,24 +10,6 @@ import { Button } from "@/components/ui/button";
 
 const EMPTY_FORM = { name: "", sku: "", price: "", categoryId: "", description: "" };
 
-const DEMO_CATEGORIES = [
-  { _id: "cat1", name: "Succulents" },
-  { _id: "cat2", name: "Tropical Plants" },
-  { _id: "cat3", name: "Flowering Plants" },
-  { _id: "cat4", name: "Accessories" },
-];
-
-const DEMO_PRODUCTS = [
-  { _id: "p1", name: "Aloe Vera",          sku: "PLT-001", price: 450,  categoryId: "cat1" },
-  { _id: "p2", name: "Monstera Deliciosa", sku: "PLT-002", price: 1200, categoryId: "cat2" },
-  { _id: "p3", name: "Peace Lily",         sku: "PLT-003", price: 650,  categoryId: "cat3" },
-  { _id: "p4", name: "Snake Plant",        sku: "PLT-004", price: 550,  categoryId: "cat1" },
-  { _id: "p5", name: "Fiddle Leaf Fig",    sku: "PLT-005", price: 2200, categoryId: "cat2" },
-  { _id: "p6", name: "Ceramic Pot 6in",    sku: "ACC-001", price: 320,  categoryId: "cat4" },
-  { _id: "p7", name: "Potting Mix 5kg",    sku: "ACC-002", price: 280,  categoryId: "cat4" },
-  { _id: "p8", name: "Orchid Plant",       sku: "PLT-006", price: 980,  categoryId: "cat3" },
-];
-
 const s = {
   page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" },
   card: { background: "white", border: "1px solid #d1fae5", borderRadius: 10 },
@@ -45,8 +27,6 @@ export default function ProductManagement() {
   const storeId = localStorage.getItem("storeId");
   const { products, loading } = useSelector((st) => st.product);
   const { categories } = useSelector((st) => st.category);
-  const displayProducts = products?.length ? products : DEMO_PRODUCTS;
-  const displayCategories = categories?.length ? categories : DEMO_CATEGORIES;
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,7 +42,7 @@ export default function ProductManagement() {
     }
   }, [dispatch, storeId]);
 
-  const filtered = displayProducts?.filter(
+  const filtered = products?.filter(
     (p) =>
       p.name?.toLowerCase().includes(search.toLowerCase()) ||
       p.sku?.toLowerCase().includes(search.toLowerCase())
@@ -126,7 +106,7 @@ export default function ProductManagement() {
                   >
                     <td style={{ ...s.td, fontWeight: 600 }}>{p.name}</td>
                     <td style={{ ...s.td, color: "#8a909c" }}>{p.sku ?? "—"}</td>
-                    <td style={{ ...s.td, color: "#8a909c" }}>{displayCategories?.find((c) => c._id === p.categoryId)?.name ?? "—"}</td>
+                    <td style={{ ...s.td, color: "#8a909c" }}>{categories?.find((c) => c._id === p.categoryId)?.name ?? "—"}</td>
                     <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#059669" }}>रु {p.price}</td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
@@ -164,7 +144,7 @@ export default function ProductManagement() {
                 <Label>Category</Label>
                 <select className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none" style={{ borderColor: "#e2e5e9", background: "#f5f6f8" }} value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}>
                   <option value="">Select category</option>
-                  {displayCategories?.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  {categories?.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="col-span-2 space-y-1.5">

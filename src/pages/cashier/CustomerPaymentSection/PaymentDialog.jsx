@@ -44,14 +44,14 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       return;
     }
     
-    // Check for demo products
-    const hasDemoProducts = cartItems.some(item => {
+    // Validate product IDs
+    const hasInvalidProducts = cartItems.some(item => {
       const productId = item.id || item._id;
       return typeof productId === 'string' && productId.startsWith('p');
     });
     
-    if (hasDemoProducts) {
-      setError("Cannot process order with demo products. Please use real products from your inventory.");
+    if (hasInvalidProducts) {
+      setError("Cannot process order with invalid products. Please use real products from your inventory.");
       return;
     }
     

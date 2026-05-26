@@ -11,15 +11,6 @@ import { Button } from "@/components/ui/button";
 const EMPTY_FORM = { firstName: "", lastName: "", email: "", phone: "", role: "cashier", branchId: "" };
 const ROLES = ["cashier", "manager", "supervisor"];
 
-const DEMO_EMPLOYEES = [
-  { _id: "e1", firstName: "Aarav",   lastName: "Sharma",    email: "aarav@indoorplant.com",   phone: "+977-9801234567", role: "manager",    branchId: "b1" },
-  { _id: "e2", firstName: "Priya",   lastName: "Thapa",     email: "priya@indoorplant.com",   phone: "+977-9812345678", role: "cashier",    branchId: "b1" },
-  { _id: "e3", firstName: "Rohan",   lastName: "Karki",     email: "rohan@indoorplant.com",   phone: "+977-9823456789", role: "cashier",    branchId: "b2" },
-  { _id: "e4", firstName: "Sita",    lastName: "Gurung",    email: "sita@indoorplant.com",    phone: "+977-9834567890", role: "supervisor", branchId: "b2" },
-  { _id: "e5", firstName: "Bikash",  lastName: "Rai",       email: "bikash@indoorplant.com",  phone: "+977-9845678901", role: "cashier",    branchId: "b3" },
-  { _id: "e6", firstName: "Anisha",  lastName: "Maharjan",  email: "anisha@indoorplant.com",  phone: "+977-9856789012", role: "manager",    branchId: "b3" },
-];
-
 const roleStyle = {
   manager: { background: "#f5f3ff", color: "#7c3aed" },
   cashier: { background: "#eff6ff", color: "#3b82f6" },
@@ -44,13 +35,6 @@ export default function EmployeeManagement() {
   const storeId = localStorage.getItem("storeId");
   const { employees, loading } = useSelector((st) => st.employee);
   const { branches } = useSelector((st) => st.branch);
-  const displayEmployees = employees?.length ? employees : DEMO_EMPLOYEES;
-  const displayBranches = branches?.length ? branches : [
-    { _id: "b1", name: "Kathmandu Main" },
-    { _id: "b2", name: "Pokhara Branch" },
-    { _id: "b3", name: "Lalitpur Branch" },
-    { _id: "b4", name: "Bhaktapur Branch" },
-  ];
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -66,7 +50,7 @@ export default function EmployeeManagement() {
     }
   }, [dispatch, storeId]);
 
-  const filtered = displayEmployees?.filter(
+  const filtered = employees?.filter(
     (e) =>
       e.firstName?.toLowerCase().includes(search.toLowerCase()) ||
       e.lastName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -142,7 +126,7 @@ export default function EmployeeManagement() {
                         {emp.role ?? "cashier"}
                       </span>
                     </td>
-                    <td style={{ ...s.td, color: "#8a909c" }}>{displayBranches?.find((b) => b._id === emp.branchId)?.name ?? "—"}</td>
+                    <td style={{ ...s.td, color: "#8a909c" }}>{branches?.find((b) => b._id === emp.branchId)?.name ?? "—"}</td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                         <button style={s.iconBtn} onClick={() => openEdit(emp)}><Pencil size={13} color="#6b7280" /></button>
@@ -187,7 +171,7 @@ export default function EmployeeManagement() {
                 <Label>Branch</Label>
                 <select style={s.select} value={form.branchId} onChange={(e) => setForm((f) => ({ ...f, branchId: e.target.value }))}>
                   <option value="">Select branch</option>
-                  {displayBranches?.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+                  {branches?.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
                 </select>
               </div>
             </div>

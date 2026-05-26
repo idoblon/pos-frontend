@@ -60,7 +60,7 @@ Thank you for your business!
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders.map((order) => (
+          {orders?.length > 0 ? orders.map((order) => (
             <TableRow key={order.id}>
               <TableCell>{order.id}</TableCell>
               <TableCell>{order.createdAt}</TableCell>
@@ -88,7 +88,13 @@ Thank you for your business!
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+          )) : (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                No orders found
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>

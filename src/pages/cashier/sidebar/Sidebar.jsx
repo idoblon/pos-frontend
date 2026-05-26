@@ -23,12 +23,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       storeAddress = null;
     }
     
-    // Demo data fallback if no branch name found
-    const demoBranchName = storeName || "Downtown Branch";
-    const demoBranchAddress = storeAddress || "123 Main Street, City Center";
+    // Fallback if no branch name found
+    const fallbackBranchName = storeName || "Branch";
+    const fallbackBranchAddress = storeAddress || "No address configured";
     
-    setBranchName(demoBranchName);
-    setBranchAddress(demoBranchAddress);
+    setBranchName(fallbackBranchName);
+    setBranchAddress(fallbackBranchAddress);
   }, []);
   
   const navItems = [

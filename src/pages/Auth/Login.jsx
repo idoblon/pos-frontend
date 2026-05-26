@@ -61,7 +61,7 @@ const Login = () => {
     
     const result = await dispatch(login(formData));
     if (login.fulfilled.match(result)) {
-      const profileResult = await dispatch(getUserProfile(result.payload.jwt));
+      const profileResult = await dispatch(getUserProfile());
       const role = mapToBackendRole(result.payload?.role);
       
       // Start shift for cashier on login

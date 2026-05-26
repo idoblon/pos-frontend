@@ -28,24 +28,6 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-const DEMO_TREND = [
-  { label: "Mon, Jul 14", revenue: 12400 },
-  { label: "Tue, Jul 15", revenue: 9800 },
-  { label: "Wed, Jul 16", revenue: 15600 },
-  { label: "Thu, Jul 17", revenue: 11200 },
-  { label: "Fri, Jul 18", revenue: 18900 },
-  { label: "Sat, Jul 19", revenue: 22300 },
-  { label: "Sun, Jul 20", revenue: 17500 },
-];
-
-const DEMO_BRANCH_SALES = [
-  { name: "Main Branch",     address: "Kathmandu",  orders: 142, revenue: 87400 },
-  { name: "New Road Branch", address: "Kathmandu",  orders: 98,  revenue: 61200 },
-  { name: "Pokhara Branch",  address: "Pokhara",    orders: 76,  revenue: 48900 },
-  { name: "Lalitpur Branch", address: "Lalitpur",   orders: 54,  revenue: 33500 },
-  { name: "Bhaktapur Branch",address: "Bhaktapur",  orders: 31,  revenue: 19800 },
-];
-
 export default function StoreDashboard() {
   const dispatch = useDispatch();
   const storeId = localStorage.getItem("storeId");
@@ -68,18 +50,8 @@ export default function StoreDashboard() {
 
   const activeBranches = branches?.filter((b) => b.status === "active" || !b.status).length ?? 0;
 
-  const displayBranches   = branches?.length   ? branches   : [{ _id:"b1" }, { _id:"b2" }, { _id:"b3" }, { _id:"b4" }];
-  const displayProducts   = products?.length   ? products   : Array(8).fill(null);
-  const displayEmployees  = employees?.length  ? employees  : Array(6).fill(null);
-  const displayCategories = categories?.length ? categories : Array(6).fill(null);
-
-  const activeCount = branches?.length
-    ? activeBranches
-    : displayBranches.length;
-
-  // Build last-7-days trend — use demo if no real orders
+  // Build last-7-days trend
   const trendData = useMemo(() => {
-    if (!orders?.length) return DEMO_TREND;
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (6 - i));
@@ -89,7 +61,7 @@ export default function StoreDashboard() {
         revenue: 0,
       };
     });
-    orders.forEach((o) => {
+    orders?.forEach((o) => {
       const date = new Date(o.createdAt).toISOString().slice(0, 10);
       const day = days.find((d) => d.dateStr === date);
       if (day) day.revenue += o.totalAmount ?? 0;
@@ -99,7 +71,7 @@ export default function StoreDashboard() {
 
   // Branch sales — aggregate orders per branch, sorted by revenue
   const branchSales = useMemo(() => {
-    if (!branches?.length) return DEMO_BRANCH_SALES;
+    if (!branches?.length) return [];
     const map = {};
     orders?.forEach((o) => {
       const id = o.branchId;
@@ -121,10 +93,10 @@ export default function StoreDashboard() {
   const maxRevenue = branchSales[0]?.revenue ?? 1;
 
   const summaryStats = [
-    { label: "Total Branches", value: displayBranches.length,   sub: `${activeCount} active`,          icon: GitBranch, iconColor: "#059669" },
-    { label: "Total Products", value: displayProducts.length,   sub: `${displayCategories.length} categories`, icon: Package,   iconColor: "#0d9488" },
-    { label: "Employees",      value: displayEmployees.length,  sub: "across all branches",             icon: Users,     iconColor: "#059669" },
-    { label: "Categories",     value: displayCategories.length, sub: "product groups",                  icon: Tag,       iconColor: "#0d9488" },
+    { label: "Total Branches", value: branches?.length ?? 0,   sub: `${activeBranches} active`,          icon: GitBranch, iconColor: "#059669" },
+    { label: "Total Products", value: products?.length ?? 0,   sub: `${categories?.length ?? 0} categories`, icon: Package,   iconColor: "#0d9488" },
+    { label: "Employees",      value: employees?.length ?? 0,  sub: "across all branches",             icon: Users,     iconColor: "#059669" },
+    { label: "Categories",     value: categories?.length ?? 0, sub: "product groups",                  icon: Tag,       iconColor: "#0d9488" },
   ];
 
   return (
@@ -188,7 +160,7 @@ export default function StoreDashboard() {
             <p style={{ margin: "3px 0 0", fontSize: 11, color: "#8a909c" }}>Ranked by total revenue</p>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
-            {branchSales.map((b, i) => {
+            {branchSales.length > 0 ? branchSales.map((b, i) => {
               const pct = Math.round((b.revenue / maxRevenue) * 100);
               return (
                 <div key={b.name}>
@@ -209,7 +181,11 @@ export default function StoreDashboard() {
                   </div>
                 </div>
               );
-            })}
+            }) : (
+              <div style={{ textAlign: "center", padding: "20px 0", color: "#6b7280" }}>
+                <p style={{ margin: 0, fontSize: 12 }}>No branch sales data available</p>
+              </div>
+            )}
           </div>
         </div>
 

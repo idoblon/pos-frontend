@@ -1,19 +1,12 @@
 import {Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import React from 'react';
+import { useSelector } from "react-redux";
 
-const shiftData={
-    refunds:[
-        {
-            id:12,
-            orderId:3,
-            reason:"wrong product received",
-            amount:2355
-        }
-    ]
-}
+
 
 const RefundsTable = () => {
+    const shiftData=useSelector((state)=> state.shiftRepor?.currentShift);
     return (
          <Card>
         <CardContent className="p-4">
@@ -29,7 +22,7 @@ const RefundsTable = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {shiftData.refunds.map((refund) => (
+                        {shiftData?.refunds?.map((refund) => (
                             <TableRow key={refund.id}>
                                 <TableCell className="font-medium text-sm">REF-{refund.id}</TableCell>
                                 <TableCell className="text-sm">ORD-{refund.orderId}</TableCell>

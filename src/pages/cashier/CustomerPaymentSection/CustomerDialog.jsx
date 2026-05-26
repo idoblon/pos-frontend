@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, UserPlus, User } from "lucide-react";
 import api from "@/util/api";
-import { demoCustomers } from "@/util/demoData";
 import { getAuthHeaders } from "@/util/getAuthHeader";
 import { logBackendStatus } from "@/util/backendTest";
 import CustomerForm from "./CustomerForm";

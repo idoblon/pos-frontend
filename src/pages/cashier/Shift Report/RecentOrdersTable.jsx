@@ -1,30 +1,11 @@
 import {Card, CardContent} from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import React from 'react';
+import { useSelector } from 'react-redux';
 
-const shiftData = {
-    recentOrders:[
-        {
-            id:1,
-            createdAt:"01:25 PM",
-            paymentType:"CASH",
-            totalAmount:5958
-        },
-        {
-            id:2,
-            createdAt:"03:25 PM",
-            paymentType:"CARD",
-            totalAmount:6564
-        },
-        {
-            id:3,
-            createdAt:"11:25 PM",
-            paymentType:"CASH",
-            totalAmount:54348
-        }
-    ]
-}
+
 const RecentOrdersTable = () => {
+    const shiftData=useSelector((state)=> state.shiftReport?.currentShift);
     return (
        <Card>
         <CardContent className="p-4">
@@ -40,7 +21,7 @@ const RecentOrdersTable = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {shiftData.recentOrders.map((order)=>(
+                        {shiftData?.recentOrders?.map((order)=>(
                             <TableRow key={order.id}>
                                 <TableCell className="font-medium text-sm">#{order.id}</TableCell>
                                 <TableCell className="text-sm">{order.createdAt}</TableCell>
