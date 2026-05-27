@@ -101,8 +101,8 @@ export default function CashierDashboardLayout() {
             {initials}
           </div>
           {profileOpen && (
-            <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 200, background: "white", border: "1px solid #d1fae5", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 100, overflow: "hidden" }}>
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid #d1fae5" }}>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 200, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 100, overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1d23" }}>
                   {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Cashier"}
                 </p>

@@ -80,7 +80,7 @@ const CartActions = () => {
             </Button>
           </div>
           {discount.value > 0 && (
-            <p className="text-xs text-green-600">
+            <p className="text-xs text-gray-600">
               {discount.type === 'percentage' ? `${discount.value}% discount applied` : `रु${discount.value} discount applied`}
             </p>
           )}

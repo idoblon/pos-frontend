@@ -8,26 +8,26 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const EMPTY_FORM = { firstName: "", lastName: "", email: "", phone: "", role: "cashier", branchId: "" };
-const ROLES = ["cashier", "manager", "supervisor"];
+const EMPTY_FORM = { firstName: "", lastName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER", branchId: "" };
+const ROLES = ["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER", "ROLE_STORE_MANAGER"];
 
 const roleStyle = {
-  manager: { background: "#f5f3ff", color: "#7c3aed" },
-  cashier: { background: "#eff6ff", color: "#3b82f6" },
-  supervisor: { background: "#fffbeb", color: "#d97706" },
+  ROLE_BRANCH_MANAGER: { background: "#f5f3ff", color: "#7c3aed" },
+  ROLE_BRANCH_CASHIER: { background: "#eff6ff", color: "#3b82f6" },
+  ROLE_STORE_MANAGER: { background: "#fffbeb", color: "#d97706" },
 };
 
 const s = {
-  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" },
-  card: { background: "white", border: "1px solid #d1fae5", borderRadius: 10 },
-  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #d1fae5", display: "flex", alignItems: "center", justifyContent: "space-between" },
-  searchInput: { width: "100%", border: "1px solid #d1fae5", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f0fdf4", outline: "none", boxSizing: "border-box" },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  th: { padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#6b7280", background: "#f0fdf4", textAlign: "left", borderBottom: "1px solid #d1fae5" },
-  td: { padding: "12px 16px", fontSize: 13, borderBottom: "1px solid #d1fae5", color: "#1a1d23" },
-  iconBtn: { border: "1px solid #d1fae5", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center" },
+  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
+  card: { background: "white", border: "1px solid #e5e7eb", borderRadius: 10 },
+  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between" },
+  searchInput: { width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f5f5f5", outline: "none", boxSizing: "border-box" },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  th: { padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#6b7280", background: "#f5f5f5", textAlign: "left", borderBottom: "1px solid #e5e7eb" },
+  td: { padding: "12px 16px", fontSize: 13, borderBottom: "1px solid #e5e7eb", color: "#1a1d23" },
+  iconBtn: { border: "1px solid #e5e7eb", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center" },
   empty: { textAlign: "center", padding: "40px 0", color: "#6b7280", fontSize: 13 },
-  select: { width: "100%", border: "1px solid #d1fae5", borderRadius: 8, padding: "7px 10px", fontFamily: "inherit", fontSize: 13, background: "#f0fdf4", outline: "none" },
+  select: { width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 10px", fontFamily: "inherit", fontSize: 13, background: "#f5f5f5", outline: "none" },
 };
 
 export default function EmployeeManagement() {
@@ -58,7 +58,7 @@ export default function EmployeeManagement() {
   );
 
   const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
-  const openEdit = (e) => { setEditing(e); setForm({ firstName: e.firstName ?? "", lastName: e.lastName ?? "", email: e.email ?? "", phone: e.phone ?? "", role: e.role ?? "cashier", branchId: e.branchId ?? "" }); setDialogOpen(true); };
+  const openEdit = (e) => { setEditing(e); setForm({ firstName: e.firstName ?? "", lastName: e.lastName ?? "", email: e.email ?? "", phone: e.phone ?? "", role: e.role ?? "ROLE_BRANCH_CASHIER", branchId: e.branchId ?? "" }); setDialogOpen(true); };
   const openDelete = (e) => { setSelected(e); setDeleteDialogOpen(true); };
 
   const handleSubmit = (ev) => {
@@ -109,7 +109,7 @@ export default function EmployeeManagement() {
               <tbody>
                 {filtered.map((emp) => (
                   <tr key={emp._id} style={{ background: "white" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f0fdf4"}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
                     onMouseLeave={e => e.currentTarget.style.background = "white"}
                   >
                     <td style={s.td}>
@@ -123,7 +123,7 @@ export default function EmployeeManagement() {
                     <td style={{ ...s.td, color: "#8a909c" }}>{emp.email}</td>
                     <td style={s.td}>
                       <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, textTransform: "capitalize", ...(roleStyle[emp.role] ?? { background: "#eef1f5", color: "#6b7280" }) }}>
-                        {emp.role ?? "cashier"}
+                        {emp.role?.replace('ROLE_', '').replace('_', ' ') ?? "CASHIER"}
                       </span>
                     </td>
                     <td style={{ ...s.td, color: "#8a909c" }}>{branches?.find((b) => b._id === emp.branchId)?.name ?? "—"}</td>
@@ -164,7 +164,7 @@ export default function EmployeeManagement() {
               <div className="space-y-1.5">
                 <Label>Role</Label>
                 <select style={s.select} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-                  {ROLES.map((r) => <option key={r} value={r} className="capitalize">{r}</option>)}
+                  {ROLES.map((r) => <option key={r} value={r} className="capitalize">{r.replace('ROLE_', '').replace('_', ' ')}</option>)}
                 </select>
               </div>
               <div className="col-span-2 space-y-1.5">
@@ -177,7 +177,7 @@ export default function EmployeeManagement() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none" }}>{editing ? "Update" : "Create"}</Button>
+              <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>{editing ? "Update" : "Create"}</Button>
             </div>
           </form>
         </DialogContent>

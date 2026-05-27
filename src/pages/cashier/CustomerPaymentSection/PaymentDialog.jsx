@@ -55,10 +55,14 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       return;
     }
     
-    if (paymentMethod === "CASH" && (!amountReceived || parseFloat(amountReceived) < total)) {
-      setError("Amount received must be at least रु " + total.toFixed(2));
-      return;
+    // Validate payment based on method
+    if (paymentMethod === "CASH") {
+      if (!amountReceived || parseFloat(amountReceived) < total) {
+        setError("Amount received must be at least रु " + total.toFixed(2));
+        return;
+      }
     }
+    
     try {
       setLoading(true);
       const orderData = {
@@ -72,7 +76,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         discountType: discount.type || "percentage",
         note: note || "",
         paymentMethod,
-        amountReceived: parseFloat(amountReceived) || total,
+        amountReceived: paymentMethod === "CASH" ? parseFloat(amountReceived) : total,
         total,
       };
       
@@ -114,7 +118,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       <DialogContent className="max-w-md">
         {success ? (
           <div className="text-center py-10">
-            <CheckCircle className="h-16 w-16 mx-auto mb-4" style={{ color: "#059669" }} />
+            <CheckCircle className="h-16 w-16 mx-auto mb-4" style={{ color: "#1a1d23" }} />
             <h2 className="text-2xl font-bold mb-2" style={{ color: "#1a1d23" }}>Payment Successful!</h2>
             <p style={{ color: "#6b7280" }}>Order has been created successfully</p>
           </div>
@@ -127,9 +131,9 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
 
             <div className="space-y-5">
               {/* Total */}
-              <div style={{ background: "#f0fdf4", border: "1px solid #d1fae5", borderRadius: 10, padding: "16px", textAlign: "center" }}>
+              <div style={{ background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px", textAlign: "center" }}>
                 <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Total Amount</p>
-                <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 800, color: "#059669", letterSpacing: "-1px" }}>
+                <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 800, color: "#1a1d23", letterSpacing: "-1px" }}>
                   रु {total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                 </p>
                 {customer && (
@@ -150,9 +154,9 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                       onClick={() => setPaymentMethod(id)}
                       style={{
                         padding: "12px 8px",
-                        border: `2px solid ${paymentMethod === id ? "#059669" : "#d1fae5"}`,
+                        border: `2px solid ${paymentMethod === id ? "#1a1d23" : "#e5e7eb"}`,
                         borderRadius: 10,
-                        background: paymentMethod === id ? "#f0fdf4" : "white",
+                        background: paymentMethod === id ? "#f5f5f5" : "white",
                         cursor: "pointer",
                         display: "flex",
                         flexDirection: "column",
@@ -161,8 +165,8 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                         transition: "all 0.15s",
                       }}
                     >
-                      <Icon size={22} color={paymentMethod === id ? "#059669" : "#6b7280"} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: paymentMethod === id ? "#059669" : "#6b7280" }}>
+                      <Icon size={22} color={paymentMethod === id ? "#1a1d23" : "#6b7280"} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: paymentMethod === id ? "#1a1d23" : "#6b7280" }}>
                         {label}
                       </span>
                     </button>
@@ -185,11 +189,23 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                     autoFocus
                   />
                   {amountReceived && parseFloat(amountReceived) >= total && (
-                    <div style={{ marginTop: 8, padding: "10px 14px", background: "#f0fdf4", border: "1px solid #d1fae5", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                    <div style={{ marginTop: 8, padding: "10px 14px", background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                       <span style={{ color: "#6b7280" }}>Change to return:</span>
-                      <span style={{ fontWeight: 700, color: "#059669" }}>रु {change.toFixed(2)}</span>
+                      <span style={{ fontWeight: 700, color: "#1a1d23" }}>रु {change.toFixed(2)}</span>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Card/eSewa Payment Info */}
+              {(paymentMethod === "CARD" || paymentMethod === "ESEWA") && (
+                <div style={{ background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 16px" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "#6b7280", textAlign: "center" }}>
+                    {paymentMethod === "CARD" 
+                      ? "💳 Please process the card payment of रु" + total.toFixed(2)
+                      : "📱 Please confirm eSewa payment of रु" + total.toFixed(2)
+                    }
+                  </p>
                 </div>
               )}
 
@@ -206,7 +222,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                   className="flex-1"
                   onClick={handlePayment}
                   disabled={loading}
-                  style={{ background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none" }}
+                  style={{ background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}
                 >
                   {loading ? "Processing..." : "Complete Payment"}
                 </Button>

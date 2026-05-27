@@ -12,18 +12,19 @@ const validateBranchData = (data) => {
     errors.name = 'Branch name must be at least 2 characters';
   }
   
-  if (!data.address || data.address.trim().length < 5) {
-    errors.address = 'Address must be at least 5 characters';
+  if (!data.address || data.address.trim().length < 3) {
+    errors.address = 'Address is required';
   }
   
-  if (!data.storeId) {
+  // storeId or store.id is required
+  if (!data.storeId && !data.store?.id) {
     errors.storeId = 'Store ID is required';
   }
   
   return {
     isValid: Object.keys(errors).length === 0,
     errors
-  };
+  }
 };
 
 export const createBranch = createAsyncThunk(

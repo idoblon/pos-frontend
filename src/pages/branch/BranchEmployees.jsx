@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import secureStorage from "@/util/secureStorage";
 
-const EMPTY_FORM = { firstName: "", lastName: "", email: "", phone: "", role: "cashier" };
-const ROLES = ["cashier", "manager", "supervisor"];
+const EMPTY_FORM = { firstName: "", lastName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER" };
+const ROLES = ["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER", "ROLE_STORE_MANAGER"];
 
 const roleStyle = {
-  manager:    { background: "#f5f3ff", color: "#7c3aed" },
-  cashier:    { background: "#eff6ff", color: "#3b82f6" },
-  supervisor: { background: "#fffbeb", color: "#d97706" },
+  ROLE_BRANCH_MANAGER:    { background: "#f5f3ff", color: "#7c3aed" },
+  ROLE_BRANCH_CASHIER:    { background: "#eff6ff", color: "#3b82f6" },
+  ROLE_STORE_MANAGER: { background: "#fffbeb", color: "#d97706" },
 };
 
 const s = {
@@ -51,7 +51,7 @@ export default function BranchEmployees() {
   );
 
   const openAdd  = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
-  const openEdit = (e) => { setEditing(e); setForm({ firstName: e.firstName ?? "", lastName: e.lastName ?? "", email: e.email ?? "", phone: e.phone ?? "", role: e.role ?? "cashier" }); setDialogOpen(true); };
+  const openEdit = (e) => { setEditing(e); setForm({ firstName: e.firstName ?? "", lastName: e.lastName ?? "", email: e.email ?? "", phone: e.phone ?? "", role: e.role ?? "ROLE_BRANCH_CASHIER" }); setDialogOpen(true); };
   const openDelete = (e) => { setSelected(e); setDeleteDialogOpen(true); };
 
   const handleSubmit = (ev) => {
@@ -122,7 +122,7 @@ export default function BranchEmployees() {
                     <td style={{ ...s.td, color: "#8a909c" }}>{emp.phone ?? "—"}</td>
                     <td style={s.td}>
                       <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, textTransform: "capitalize", ...(roleStyle[emp.role] ?? { background: "#eef1f5", color: "#6b7280" }) }}>
-                        {emp.role ?? "cashier"}
+                        {emp.role?.replace('ROLE_', '').replace('_', ' ') ?? "CASHIER"}
                       </span>
                     </td>
                     <td style={{ ...s.td, textAlign: "right" }}>
@@ -161,7 +161,7 @@ export default function BranchEmployees() {
               <div className="space-y-1.5">
                 <Label>Role</Label>
                 <select style={s.select} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                  {ROLES.map((r) => <option key={r} value={r}>{r.replace('ROLE_', '').replace('_', ' ')}</option>)}
                 </select>
               </div>
             </div>

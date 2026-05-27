@@ -34,6 +34,20 @@ export const getUserProfile = createAsyncThunk(
       const headers = getAuthHeaders();
       const res = await api.get("/api/users/profile", { headers });
       console.log("get user Profile success", res.data);
+      
+      // Update secureStorage with profile data including storeId and branchId
+      const userData = secureStorage.getUserData() || {};
+      const updatedUserData = {
+        ...userData,
+        storeId: res.data.storeId || userData.storeId,
+        branchId: res.data.branchId || userData.branchId,
+        userId: res.data.id,
+        email: res.data.email,
+        role: res.data.role || userData.role
+      };
+      secureStorage.setUserData(updatedUserData);
+      console.log("Updated secureStorage with profile data:", updatedUserData);
+      
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch profile");

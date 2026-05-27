@@ -27,7 +27,7 @@ const CustomersLookup = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/customers");
+      const response = await api.get("/api/customers");
       setCustomers(response.data);
     } catch (error) {
       console.error("Failed to fetch customers:", error);

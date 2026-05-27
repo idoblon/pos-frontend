@@ -19,7 +19,7 @@ export const getInventoryByBranch = createAsyncThunk(
       const headers = getAuthHeaders();
       
       console.log("📡 INVENTORY API: Making request to /inventory/branch/" + sanitizedParams.branchId);
-      const res = await api.get(`/inventory/branch/${sanitizedParams.branchId}`, { headers });
+      const res = await api.get(`/api/inventory/branch/${sanitizedParams.branchId}`, { headers });
       
       console.log("✅ INVENTORY API SUCCESS:", res.data);
       return res.data;

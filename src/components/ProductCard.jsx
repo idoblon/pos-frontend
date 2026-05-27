@@ -24,7 +24,7 @@ export default function ProductCard({ product, stock, onAddToCart }) {
           <span className="prod-price">रु {product.price}</span>
           <span className="prod-tag">{product.category ?? "—"}</span>
         </div>
-        <div style={{ fontSize: 10, marginTop: 3, color: outOfStock ? "#e53e3e" : stock <= 10 ? "#d97706" : "#059669", fontWeight: 600 }}>
+        <div style={{ fontSize: 10, marginTop: 3, color: outOfStock ? "#e53e3e" : stock <= 10 ? "#d97706" : "#1a1d23", fontWeight: 600 }}>
           {outOfStock ? "Out of Stock" : `Stock: ${stock}`}
         </div>
       </div>

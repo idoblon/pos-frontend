@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { signup, login } from "./authThunk";
+import { getUserProfile } from "../user/userThunk";
 import secureStorage from "@/util/secureStorage";
 
 const getInitialState = () => {
@@ -71,6 +72,18 @@ const authSlice = createSlice({
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // Update user state when profile is fetched
+      .addCase(getUserProfile.fulfilled, (state, action) => {
+        if (state.user) {
+          state.user = {
+            ...state.user,
+            storeId: action.payload.storeId,
+            branchId: action.payload.branchId,
+            userId: action.payload.id,
+            email: action.payload.email
+          };
+        }
       });
   },
 });

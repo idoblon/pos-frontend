@@ -17,7 +17,7 @@ const SalesSummaryCard = () => {
       
                     <div className="flex justify-between items-center py-1.5 border-b">
                         <span className="text-sm text-gray-600">Total Sales</span>
-                        <span className="font-semibold text-green-600 text-sm">रु{shiftData?.totalSales.toLocaleString()}</span>
+                        <span className="font-semibold text-gray-900 text-sm">रु{shiftData?.totalSales.toLocaleString()}</span>
                     </div>
       
                     <div className="flex justify-between items-center py-1.5 border-b">
@@ -27,7 +27,7 @@ const SalesSummaryCard = () => {
                     
                     <div className="flex justify-between items-center py-2 bg-gray-50 px-3 rounded-lg mt-2">
                         <span className="text-sm font-semibold text-gray-900">Net Sales</span>
-                        <span className="text-lg font-bold text-green-600">रु{shiftData?.netSales.toLocaleString()}</span>
+                        <span className="text-lg font-bold text-gray-900">रु{shiftData?.netSales.toLocaleString()}</span>
                     </div>
                 </div>
               </CardContent>

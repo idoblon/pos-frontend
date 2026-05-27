@@ -18,7 +18,7 @@ const DeleteCustomerDialog = ({ open, onClose, customer, onSuccess }) => {
     try {
       setLoading(true);
       setError("");
-      await api.delete(`/customers/${customer.id}`);
+      await api.delete(`/api/customers/${customer.id}`);
       onSuccess();
       onClose();
     } catch (error) {

@@ -31,7 +31,7 @@ const CartSummary = () => {
         </div>
 
         {discountAmount > 0 && (
-          <div className="flex justify-between text-sm text-green-600 animate-in slide-in-from-right-2 duration-200">
+          <div className="flex justify-between text-sm text-gray-600 animate-in slide-in-from-right-2 duration-200">
             <span>
               Discount ({discount.type === 'percentage' ? `${discount.value}%` : 'Fixed'})
             </span>
@@ -48,7 +48,7 @@ const CartSummary = () => {
 
         <div className="flex justify-between text-lg font-bold transition-all duration-300">
           <span>Total</span>
-          <span className="text-emerald-600 transition-all duration-300 transform hover:scale-105">
+          <span className="text-gray-900 transition-all duration-300 transform hover:scale-105">
             रु{total.toFixed(2)}
           </span>
         </div>

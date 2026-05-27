@@ -23,9 +23,9 @@ export const useAuth = () => {
     branchId: user?.branchId,
     storeName: user?.storeName,
     logout: handleLogout,
-    isStoreAdmin: user?.role === "store_admin",
-    isManager: user?.role === "manager",
-    isCashier: user?.role === "cashier",
-    canAccessAdmin: ["store_admin", "manager"].includes(user?.role),
+    isStoreAdmin: user?.role === "ROLE_STORE_ADMIN",
+    isManager: user?.role === "ROLE_BRANCH_MANAGER" || user?.role === "ROLE_STORE_MANAGER",
+    isCashier: user?.role === "ROLE_BRANCH_CASHIER",
+    canAccessAdmin: ["ROLE_STORE_ADMIN", "ROLE_BRANCH_MANAGER", "ROLE_STORE_MANAGER"].includes(user?.role),
   };
 };

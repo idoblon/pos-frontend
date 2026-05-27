@@ -25,7 +25,7 @@ const branchSlice = createSlice({
       .addCase(createBranch.fulfilled, (state, action) => {
         state.loading = false;
         state.branches.push(action.payload);
-        if (state.branch.id == action.payload) {
+        if (state.branch?.id === action.payload?.id) {
           state.branch = action.payload;
         }
       })
@@ -57,10 +57,23 @@ const branchSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // update branch
-
+      .addCase(updateBranch.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(updateBranch.fulfilled, (state, action) => {
-        state.branch = action.payload;
+        state.loading = false;
+        const branchId = action.payload.id || action.payload._id;
+        const index = state.branches.findIndex(b => (b.id || b._id) === branchId);
+        if (index !== -1) {
+          state.branches[index] = action.payload;
+        }
+        if ((state.branch?.id || state.branch?._id) === branchId) {
+          state.branch = action.payload;
+        }
+      })
+      .addCase(updateBranch.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });

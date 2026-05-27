@@ -52,7 +52,7 @@ const PaymentDialog = ({ open, onClose, total, cart, customer, discount, discoun
       console.log("👤 Customer in order:", customer);
       console.log("🛍️ Cart items:", cart);
       
-      const response = await api.post("/orders", orderData);
+      const response = await api.post("/api/orders", orderData);
       
       console.log("✅ Order created successfully:", response.data);
       console.log("📡 This was the main API call that uses the selected customer data");

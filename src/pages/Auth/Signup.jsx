@@ -6,9 +6,10 @@ import posLogo from "@/logo/pos.png";
 import { useDispatch, useSelector } from "react-redux";
 import { signup } from "@/Redux Toolkit/Features/auth/authThunk";
 import { useNavigate, Link } from "react-router-dom";
+import emailService from "@/util/emailService";
 
 const ROLES = [
-  { value: "store_admin", label: "Store Admin" },
+  { value: "ROLE_STORE_ADMIN", label: "Store Admin" },
 ];
 
 const Signup = () => {
@@ -22,10 +23,11 @@ const Signup = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "store_admin",
+    role: "ROLE_STORE_ADMIN",
     storeName: "",
   });
   const [passwordError, setPasswordError] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,10 +42,38 @@ const Signup = () => {
       setPasswordError("Passwords do not match");
       return;
     }
-    const { confirmPassword, ...payload } = formData;
+    const { confirmPassword, firstName, lastName, ...rest } = formData;
+    const fullName = `${firstName} ${lastName}`.trim();
+    const payload = {
+      ...rest,
+      fullName
+    };
+    
     const result = await dispatch(signup(payload));
     if (signup.fulfilled.match(result)) {
+      console.log("✅ Signup successful, response:", result.payload);
+      console.log("Store ID from signup:", result.payload?.storeId);
+      
+      // Send welcome email after successful signup
+      try {
+        setEmailSending(true);
+        await emailService.sendAccountCreatedEmail({
+          email: formData.email,
+          fullName,
+          storeName: formData.storeName,
+          role: formData.role,
+        });
+        console.log("✅ Welcome email sent successfully");
+      } catch (emailError) {
+        console.warn("⚠️ Failed to send welcome email:", emailError);
+        // Don't block navigation if email fails
+      } finally {
+        setEmailSending(false);
+      }
+      
       navigate("/login");
+    } else {
+      console.error("❌ Signup failed:", result);
     }
   };
 
@@ -144,8 +174,8 @@ const Signup = () => {
               </p>
             )}
 
-            <Button className="w-full py-4 mt-2" type="submit" disabled={loading}>
-              {loading ? "Creating account..." : "Create Account"}
+            <Button className="w-full py-4 mt-2" type="submit" disabled={loading || emailSending}>
+              {loading ? "Creating account..." : emailSending ? "Sending confirmation email..." : "Create Account"}
             </Button>
           </form>
 

@@ -11,20 +11,20 @@ const EMPTY_FORM = { name: "", description: "" };
 
 const TAG_COLORS = [
   { bg: "#eff6ff", border: "#bfdbfe", color: "#3b82f6" },
-  { bg: "#f0fdf4", border: "#bbf7d0", color: "#1a6b3c" },
+  { bg: "#f5f5f5", border: "#e5e7eb", color: "#1a1d23" },
   { bg: "#f5f3ff", border: "#ddd6fe", color: "#7c3aed" },
   { bg: "#fffbeb", border: "#fde68a", color: "#d97706" },
   { bg: "#fff1f2", border: "#fecdd3", color: "#e53e3e" },
-  { bg: "#f0fdfa", border: "#99f6e4", color: "#0d9488" },
+  { bg: "#f5f5f5", border: "#e5e7eb", color: "#4a4d55" },
 ];
 
 const s = {
-  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" },
-  card: { background: "white", border: "1px solid #d1fae5", borderRadius: 10 },
-  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #d1fae5", display: "flex", alignItems: "center", justifyContent: "space-between" },
+  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
+  card: { background: "white", border: "1px solid #e5e7eb", borderRadius: 10 },
+  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between" },
   cardBody: { padding: 18 },
-  searchInput: { width: "100%", border: "1px solid #d1fae5", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f0fdf4", outline: "none", boxSizing: "border-box" },
-  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  searchInput: { width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, color: "#1a1d23", background: "#f5f5f5", outline: "none", boxSizing: "border-box" },
+  addBtn: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" },
   iconBtn: { border: "none", background: "rgba(255,255,255,0.6)", borderRadius: 6, padding: "3px 5px", cursor: "pointer", display: "flex", alignItems: "center" },
   empty: { textAlign: "center", padding: "40px 0", color: "#6b7280", fontSize: 13 },
 };
@@ -131,7 +131,7 @@ export default function CategoryManagement() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#059669,#0d9488)", color: "white", border: "none" }}>{editing ? "Update" : "Create"}</Button>
+              <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>{editing ? "Update" : "Create"}</Button>
             </div>
           </form>
         </DialogContent>

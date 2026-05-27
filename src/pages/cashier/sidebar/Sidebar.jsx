@@ -40,14 +40,14 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
   
   return (
-    <div className="w-64 border-r border-emerald-100 bg-white p-4 flex flex-col h-screen shadow-xl">
+    <div className="w-64 border-r border-gray-200 bg-white p-4 flex flex-col h-screen shadow-xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <img src={posLogo} alt="POS" style={{ width: 28, height: 28, objectFit: "contain" }} />
           <h1 className="text-xl font-bold text-slate-800">POS SYSTEM</h1>
         </div>
         {onClose && (
-          <Button size="icon" variant="ghost" onClick={onClose} className="text-slate-600 hover:bg-emerald-50">
+          <Button size="icon" variant="ghost" onClick={onClose} className="text-slate-600 hover:bg-gray-100">
             <X />
           </Button>
         )}
@@ -58,8 +58,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             onClick={() => { if (onClose) onClose(); }}
             className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
               location.pathname === item.path
-                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold shadow-md"
-                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
+                ? "bg-gradient-to-r from-gray-800 to-gray-600 text-white font-semibold shadow-md"
+                : "text-slate-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
             key={item.path}
             to={item.path}
@@ -69,12 +69,12 @@ const Sidebar = ({ isOpen, onClose }) => {
           </Link>
         ))}
       </nav>
-      <div className="pt-4 border-t border-emerald-100">
+      <div className="pt-4 border-t border-gray-200">
         <div className="text-center">
-          <p className="text-xs text-emerald-700 font-semibold">
+          <p className="text-xs text-gray-700 font-semibold">
             {branchName}
           </p>
-          <p className="text-xs text-emerald-600 mt-1 leading-relaxed">
+          <p className="text-xs text-gray-600 mt-1 leading-relaxed">
             {branchAddress}
           </p>
         </div>

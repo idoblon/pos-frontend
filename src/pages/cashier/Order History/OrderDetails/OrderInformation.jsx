@@ -39,9 +39,9 @@ const OrderInformation = ({ selectedOrder }) => {
             <span className="text-xs text-gray-600">Payment Method</span>
             <span className="font-medium text-xs text-gray-900">{selectedOrder.paymentType || 'N/A'}</span>
           </div>
-          <div className="flex justify-between items-center py-1 bg-green-50 px-2 rounded mt-1.5">
+          <div className="flex justify-between items-center py-1 bg-gray-50 px-2 rounded mt-1.5">
             <span className="text-xs font-semibold text-gray-900">Total Amount</span>
-            <span className="font-bold text-base text-green-600">रु {selectedOrder.totalAmount?.toFixed(2) || '0.00'}</span>
+            <span className="font-bold text-base text-gray-900">रु {selectedOrder.totalAmount?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
       </CardContent>

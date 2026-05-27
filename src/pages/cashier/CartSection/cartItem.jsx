@@ -66,7 +66,7 @@ const CartItem = ({ item }) => {
             <Trash2 className="h-3 w-3" />
           </Button>
         </div>
-        <p className="text-sm font-semibold text-emerald-600">
+        <p className="text-sm font-semibold text-gray-900">
           रु{itemTotal.toFixed(2)}
         </p>
       </div>

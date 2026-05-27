@@ -93,14 +93,14 @@ export default function StoreDashboard() {
   const maxRevenue = branchSales[0]?.revenue ?? 1;
 
   const summaryStats = [
-    { label: "Total Branches", value: branches?.length ?? 0,   sub: `${activeBranches} active`,          icon: GitBranch, iconColor: "#059669" },
-    { label: "Total Products", value: products?.length ?? 0,   sub: `${categories?.length ?? 0} categories`, icon: Package,   iconColor: "#0d9488" },
-    { label: "Employees",      value: employees?.length ?? 0,  sub: "across all branches",             icon: Users,     iconColor: "#059669" },
-    { label: "Categories",     value: categories?.length ?? 0, sub: "product groups",                  icon: Tag,       iconColor: "#0d9488" },
+    { label: "Total Branches", value: branches?.length ?? 0,   sub: `${activeBranches} active`,          icon: GitBranch, iconColor: "#1a1d23" },
+    { label: "Total Products", value: products?.length ?? 0,   sub: `${categories?.length ?? 0} categories`, icon: Package,   iconColor: "#4a4d55" },
+    { label: "Employees",      value: employees?.length ?? 0,  sub: "across all branches",             icon: Users,     iconColor: "#1a1d23" },
+    { label: "Categories",     value: categories?.length ?? 0, sub: "product groups",                  icon: Tag,       iconColor: "#4a4d55" },
   ];
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" }}>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" }}>
 
       {/* Header */}
       <div>
@@ -140,15 +140,15 @@ export default function StoreDashboard() {
             <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#059669" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#8a909c" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: "#8a909c" }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2} fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: "#059669" }} />
+              <Area type="monotone" dataKey="revenue" stroke="#1a1d23" strokeWidth={2} fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: "#1a1d23" }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -166,7 +166,7 @@ export default function StoreDashboard() {
                 <div key={b.name}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: i === 0 ? "linear-gradient(135deg,#059669,#0d9488)" : "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: i === 0 ? "linear-gradient(135deg,#1a1d23,#4a4d55)" : "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: i === 0 ? "white" : "#8a909c" }}>{i + 1}</span>
                       </div>
                       <div>
@@ -176,8 +176,8 @@ export default function StoreDashboard() {
                     </div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1a1d23" }}>रु {b.revenue.toLocaleString("en-IN")}</p>
                   </div>
-                  <div style={{ height: 4, borderRadius: 4, background: "#d1fae5" }}>
-                    <div style={{ height: "100%", borderRadius: 4, width: `${pct}%`, background: i === 0 ? "linear-gradient(90deg,#059669,#0d9488)" : "#6ee7b7", transition: "width 0.4s ease" }} />
+                  <div style={{ height: 4, borderRadius: 4, background: "#e5e7eb" }}>
+                    <div style={{ height: "100%", borderRadius: 4, width: `${pct}%`, background: i === 0 ? "linear-gradient(90deg,#1a1d23,#4a4d55)" : "#9ca3af", transition: "width 0.4s ease" }} />
                   </div>
                 </div>
               );

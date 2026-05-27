@@ -48,7 +48,7 @@ const EditCustomerDialog = ({ open, onClose, customer, onSuccess }) => {
 
     try {
       setLoading(true);
-      const response = await api.put(`/customers/${customer.id}`, formData);
+      const response = await api.put(`/api/customers/${customer.id}`, formData);
       onSuccess(response.data);
       onClose();
     } catch (error) {

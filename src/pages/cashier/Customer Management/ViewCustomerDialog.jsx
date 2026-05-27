@@ -22,7 +22,7 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
   const fetchCustomerOrders = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/orders/customer/${customer.id}`);
+      const response = await api.get(`/api/orders/customer/${customer.id}`);
       setOrders(response.data);
     } catch (error) {
       console.error("Failed to fetch customer orders:", error);
@@ -81,7 +81,7 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
               <p className="text-2xl font-bold">{orders.length}</p>
               <p className="text-sm text-gray-600">Total Orders</p>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg text-center">
+            <div className="bg-gray-50 p-4 rounded-lg text-center">
               <span className="text-3xl mb-2 block">💰</span>
               <p className="text-2xl font-bold">${totalSpent.toFixed(2)}</p>
               <p className="text-sm text-gray-600">Total Spent</p>
@@ -117,7 +117,7 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
                         <p className="font-semibold">${order.total?.toFixed(2)}</p>
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           order.status === "COMPLETED" 
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-gray-100 text-gray-700"
                             : "bg-yellow-100 text-yellow-700"
                         }`}>
                           {order.status}
