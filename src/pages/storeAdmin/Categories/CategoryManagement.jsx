@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Plus, Search, Tag, Pencil, Trash2 } from "lucide-react";
 import { getCategoriesByStore, createCategory, updateCategory, deleteCategory } from "@/Redux Toolkit/Features/category/categoryThunk";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import secureStorage from "@/util/secureStorage";
 
 const EMPTY_FORM = { name: "", description: "" };
 
@@ -31,7 +34,12 @@ const s = {
 
 export default function CategoryManagement() {
   const dispatch = useDispatch();
-  const storeId = localStorage.getItem("storeId");
+  const { user } = useSelector((st) => st.auth);
+  const { userProfile } = useSelector((st) => st.user);
+  const userData = secureStorage.getUserData();
+  
+  const storeId = user?.storeId || userData?.storeId || userProfile?.storeId || localStorage.getItem("storeId");
+  
   const { categories, loading } = useSelector((st) => st.category);
 
   const [search, setSearch] = useState("");
@@ -42,7 +50,16 @@ export default function CategoryManagement() {
   const [form, setForm] = useState(EMPTY_FORM);
 
   useEffect(() => {
-    if (storeId) dispatch(getCategoriesByStore({ storeId }));
+    if (!storeId) {
+      toast.error("Store ID not found. Fetching user profile...");
+      dispatch(getUserProfile()).then((result) => {
+        if (result.payload?.storeId) {
+          dispatch(getCategoriesByStore({ storeId: result.payload.storeId }));
+        }
+      });
+      return;
+    }
+    dispatch(getCategoriesByStore({ storeId }));
   }, [dispatch, storeId]);
 
   const filtered = categories?.filter((c) =>
@@ -55,13 +72,56 @@ export default function CategoryManagement() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const dto = { ...form, storeId };
-    if (editing) dispatch(updateCategory({ id: editing._id, dto }));
-    else dispatch(createCategory({ dto }));
+    
+    if (!storeId) {
+      toast.error("Store ID not found. Please log in again.");
+      return;
+    }
+    
+    const dto = { 
+      ...form, 
+      storeId: parseInt(storeId),
+      store: { id: parseInt(storeId) }
+    };
+    
+    if (editing) {
+      const categoryId = editing.id || editing._id;
+      dispatch(updateCategory({ id: categoryId, dto }))
+        .then((result) => {
+          if (result.type.includes('fulfilled')) {
+            toast.success("Category updated successfully");
+            dispatch(getCategoriesByStore({ storeId }));
+          } else {
+            toast.error(result.payload || "Failed to update category");
+          }
+        });
+    } else {
+      dispatch(createCategory({ dto }))
+        .then((result) => {
+          if (result.type.includes('fulfilled')) {
+            toast.success("Category created successfully");
+            dispatch(getCategoriesByStore({ storeId }));
+          } else {
+            toast.error(result.payload || "Failed to create category");
+          }
+        });
+    }
     setDialogOpen(false);
   };
 
-  const handleDelete = () => { dispatch(deleteCategory({ id: selected._id })); setDeleteDialogOpen(false); };
+  const handleDelete = () => {
+    const categoryId = selected.id || selected._id;
+    dispatch(deleteCategory({ id: categoryId }))
+      .then((result) => {
+        if (result.type.includes('fulfilled')) {
+          toast.success("Category deleted successfully");
+          dispatch(getCategoriesByStore({ storeId }));
+        } else {
+          toast.error(result.payload || "Failed to delete category");
+        }
+      });
+    setDeleteDialogOpen(false);
+  };
 
   return (
     <div style={s.page}>
@@ -92,8 +152,9 @@ export default function CategoryManagement() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
             {filtered?.map((cat, i) => {
               const tc = TAG_COLORS[i % TAG_COLORS.length];
+              const catId = cat.id || cat._id;
               return (
-                <div key={cat._id} style={{ background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 16px" }}>
+                <div key={catId} style={{ background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 16px" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                       <Tag size={14} color={tc.color} />
@@ -116,18 +177,22 @@ export default function CategoryManagement() {
         </div>
       </div>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{editing ? "Edit Category" : "Add New Category"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Category" : "Add New Category"}</DialogTitle>
+            <DialogDescription>
+              {editing ? "Update category information" : "Create a new category to organize products"}
+            </DialogDescription>
+          </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
             <div className="space-y-1.5">
               <Label>Category Name</Label>
-              <Input placeholder="e.g. Clothing" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
+              <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <Input placeholder="Optional description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+              <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
@@ -137,13 +202,14 @@ export default function CategoryManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Category</DialogTitle></DialogHeader>
-          <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
-            Are you sure you want to delete <strong>{selected?.name}</strong>? Products under this category may be affected.
-          </p>
+          <DialogHeader>
+            <DialogTitle>Delete Category</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{selected?.name}</strong>? Products under this category may be affected.
+            </DialogDescription>
+          </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>

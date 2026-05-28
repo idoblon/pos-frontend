@@ -38,7 +38,10 @@ export const sanitizeFormData = (formData) => {
   const sanitized = {};
   
   for (const [key, value] of Object.entries(formData)) {
-    if (typeof value === 'string') {
+    // Skip sanitization for image data (base64 strings)
+    if (key === 'imageUrl' || key === 'image') {
+      sanitized[key] = value;
+    } else if (typeof value === 'string') {
       sanitized[key] = sanitizeInput(value);
     } else {
       sanitized[key] = value;

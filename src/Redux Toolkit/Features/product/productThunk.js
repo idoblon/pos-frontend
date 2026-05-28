@@ -41,12 +41,13 @@ export const createProduct = createAsyncThunk(
       }
 
       const sanitizedData = sanitizeFormData(dto);
+      console.log("📤 SENDING TO API:", JSON.stringify(sanitizedData, null, 2));
       const headers = getAuthHeaders();
       const res = await api.post(`/api/products`, sanitizedData, { headers });
-      console.log("product create success", res.data);
+      console.log("✅ product create success", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
+      console.log("❌ error", error);
       return rejectWithValue(error.response?.data?.message || "Failed to create product");
     }
   },

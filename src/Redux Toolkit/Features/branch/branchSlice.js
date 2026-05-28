@@ -51,7 +51,27 @@ const branchSlice = createSlice({
       })
       .addCase(getBranchesByStore.fulfilled, (state, action) => {
         state.loading = false;
-        state.branches = action.payload;
+        console.log("Branch slice - received payload:", action.payload);
+        console.log("Branch slice - payload type:", typeof action.payload);
+        console.log("Branch slice - is array:", Array.isArray(action.payload));
+        
+        // Handle if backend returns wrapped data
+        if (action.payload && typeof action.payload === 'object') {
+          if (Array.isArray(action.payload)) {
+            state.branches = action.payload;
+          } else if (action.payload.data && Array.isArray(action.payload.data)) {
+            state.branches = action.payload.data;
+          } else if (action.payload.branches && Array.isArray(action.payload.branches)) {
+            state.branches = action.payload.branches;
+          } else {
+            console.warn("Unexpected branch data format:", action.payload);
+            state.branches = [];
+          }
+        } else {
+          state.branches = [];
+        }
+        
+        console.log("Branch slice - final branches:", state.branches);
       })
       .addCase(getBranchesByStore.rejected, (state, action) => {
         state.loading = false;

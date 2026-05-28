@@ -17,7 +17,9 @@ const EMPTY_FORM = {
   phone: "", 
   email: "", 
   openTime: "", 
+  openPeriod: "AM",
   closeTime: "",
+  closePeriod: "PM",
   workingDays: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
 };
 
@@ -82,12 +84,10 @@ export default function BranchManagement() {
       console.error("❌ No storeId found in any source!");
       toast.error("Store ID not found. Fetching user profile...");
       
-      // Try to fetch user profile to get storeId
       dispatch(getUserProfile()).then((result) => {
         console.log("User profile fetch result:", result);
         if (result.payload?.storeId) {
           console.log("✅ Got storeId from profile:", result.payload.storeId);
-          // Retry fetching branches
           dispatch(getBranchesByStore(result.payload.storeId));
         }
       });
@@ -95,15 +95,7 @@ export default function BranchManagement() {
     }
     
     console.log("✅ Fetching branches for store:", storeId);
-    dispatch(getBranchesByStore(storeId)).then((result) => {
-      console.log("Branches fetch result:", result);
-      if (result.type === 'branch/getAllByStore/fulfilled') {
-        console.log("✅ Branches loaded:", result.payload);
-      } else {
-        console.error("❌ Failed to load branches:", result);
-        toast.error("Failed to load branches");
-      }
-    });
+    dispatch(getBranchesByStore(storeId));
   }, [dispatch, storeId]);
 
   const filtered = branches?.filter(
@@ -116,14 +108,43 @@ export default function BranchManagement() {
 
   const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
   const openEdit = (b) => { 
-    setEditing(b); 
+    setEditing(b);
+    
+    // Parse 24-hour time to 12-hour with AM/PM
+    let openTime = "", openPeriod = "AM";
+    let closeTime = "", closePeriod = "PM";
+    
+    if (b.openTime) {
+      const [hours, minutes] = b.openTime.split(":");
+      const h = parseInt(hours);
+      if (h >= 12) {
+        openPeriod = "PM";
+        openTime = `${h === 12 ? 12 : h - 12}:${minutes}`;
+      } else {
+        openTime = `${h === 0 ? 12 : h}:${minutes}`;
+      }
+    }
+    
+    if (b.closeTime) {
+      const [hours, minutes] = b.closeTime.split(":");
+      const h = parseInt(hours);
+      if (h >= 12) {
+        closePeriod = "PM";
+        closeTime = `${h === 12 ? 12 : h - 12}:${minutes}`;
+      } else {
+        closeTime = `${h === 0 ? 12 : h}:${minutes}`;
+      }
+    }
+    
     setForm({ 
       name: b.name ?? "", 
       address: b.address ?? "", 
       phone: b.phone ?? "",
       email: b.email ?? "",
-      openTime: b.openTime ?? "",
-      closeTime: b.closeTime ?? "",
+      openTime,
+      openPeriod,
+      closeTime,
+      closePeriod,
       workingDays: b.workingDays ?? []
     }); 
     setDialogOpen(true); 
@@ -138,16 +159,26 @@ export default function BranchManagement() {
       return;
     }
     
-    // Format time fields to HH:mm:ss if they exist
-    const formattedData = { ...form };
-    if (formattedData.openTime && formattedData.openTime.length === 5) {
-      formattedData.openTime = formattedData.openTime + ":00";
-    }
-    if (formattedData.closeTime && formattedData.closeTime.length === 5) {
-      formattedData.closeTime = formattedData.closeTime + ":00";
-    }
+    // Convert 12-hour time to 24-hour format
+    const convert12to24 = (time, period) => {
+      if (!time) return "";
+      const [hours, minutes] = time.split(":");
+      let h = parseInt(hours);
+      if (period === "PM" && h !== 12) h += 12;
+      if (period === "AM" && h === 12) h = 0;
+      return `${String(h).padStart(2, "0")}:${minutes}:00`;
+    };
     
-    // Backend BranchDTO accepts both storeId and store object
+    const formattedData = {
+      name: form.name,
+      address: form.address,
+      phone: form.phone,
+      email: form.email,
+      openTime: convert12to24(form.openTime, form.openPeriod),
+      closeTime: convert12to24(form.closeTime, form.closePeriod),
+      workingDays: form.workingDays
+    };
+    
     const payload = {
       ...formattedData,
       storeId: storeId ? parseInt(storeId) : null,
@@ -156,12 +187,9 @@ export default function BranchManagement() {
     
     console.log("Form submitted:", formattedData);
     console.log("Payload to send:", payload);
-    console.log("Store ID:", storeId);
-    console.log("Editing:", editing);
     
     if (editing) {
       const branchId = editing.id || editing._id;
-      console.log("Updating branch:", branchId);
       dispatch(updateBranch({ id: branchId, dto: payload }))
         .then((result) => {
           if (result.type === 'branch/update/fulfilled') {
@@ -172,17 +200,13 @@ export default function BranchManagement() {
           }
         });
     } else {
-      console.log("Creating branch with data:", payload);
       dispatch(createBranch(payload))
         .then((result) => {
-          console.log("Create branch result:", result);
           if (result.type === 'branch/create/fulfilled') {
             toast.success("Branch created successfully");
-            console.log("Branch created successfully, refreshing list");
             dispatch(getBranchesByStore(storeId));
           } else {
             toast.error(result.payload || "Failed to create branch");
-            console.error("Branch creation failed:", result);
           }
         });
     }
@@ -295,25 +319,64 @@ export default function BranchManagement() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
             {[
-              { id: "name", label: "Branch Name", placeholder: "Main Branch", required: true },
-              { id: "address", label: "Address", placeholder: "123 Street, City", required: true },
-              { id: "phone", label: "Phone", placeholder: "+977-...", type: "tel", required: false },
-              { id: "email", label: "Email", placeholder: "branch@example.com", type: "email", required: false },
-              { id: "openTime", label: "Opening Time", placeholder: "09:00:00", type: "time", required: false },
-              { id: "closeTime", label: "Closing Time", placeholder: "18:00:00", type: "time", required: false },
-            ].map(({ id, label, placeholder, type = "text", required = false }) => (
+              { id: "name", label: "Branch Name", required: true },
+              { id: "address", label: "Address", required: true },
+              { id: "phone", label: "Phone", type: "tel", required: false },
+              { id: "email", label: "Email", type: "email", required: false },
+            ].map(({ id, label, type = "text", required = false }) => (
               <div key={id} className="space-y-1.5">
                 <Label htmlFor={id}>{label}</Label>
                 <Input 
                   id={id} 
                   type={type}
-                  placeholder={placeholder} 
                   value={form[id]} 
                   onChange={(e) => setForm((f) => ({ ...f, [id]: e.target.value }))} 
                   required={required} 
                 />
               </div>
             ))}
+            
+            <div className="space-y-1.5">
+              <Label>Opening Time</Label>
+              <div className="flex gap-2">
+                <Input 
+                  type="text"
+                  placeholder="HH:MM"
+                  value={form.openTime}
+                  onChange={(e) => setForm((f) => ({ ...f, openTime: e.target.value }))}
+                  className="flex-1"
+                />
+                <select
+                  value={form.openPeriod}
+                  onChange={(e) => setForm((f) => ({ ...f, openPeriod: e.target.value }))}
+                  className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="space-y-1.5">
+              <Label>Closing Time</Label>
+              <div className="flex gap-2">
+                <Input 
+                  type="text"
+                  placeholder="HH:MM"
+                  value={form.closeTime}
+                  onChange={(e) => setForm((f) => ({ ...f, closeTime: e.target.value }))}
+                  className="flex-1"
+                />
+                <select
+                  value={form.closePeriod}
+                  onChange={(e) => setForm((f) => ({ ...f, closePeriod: e.target.value }))}
+                  className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            </div>
             
             <div className="space-y-2">
               <Label>Working Days</Label>

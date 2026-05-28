@@ -75,7 +75,7 @@ export const getBranchesByStore = createAsyncThunk(
     try {
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/branches/stores/${sanitizedParams.id}`, { headers });
+      const res = await api.get(`/api/branches/store/${sanitizedParams.id}`, { headers });
       console.log("get store branches successfully", res.data);
       return res.data;
     } catch (error) {

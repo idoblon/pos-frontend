@@ -64,11 +64,11 @@ export default function StoreAdminLayout() {
     navigate("/login");
   };
 
-  const initials = userProfile
-    ? `${userProfile.firstName?.[0] ?? ""}${userProfile.lastName?.[0] ?? ""}`.toUpperCase()
-    : "IP";
-  const displayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Indoor Plant World";
-  const displayEmail = userProfile?.email ?? "indoorplant@gmail.com";
+  const initials = userProfile?.fullName
+    ? userProfile.fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    : "SA";
+  const displayName = userProfile?.fullName || "Store Admin";
+  const displayEmail = userProfile?.email || "admin@store.com";
 
   const SidebarInner = ({ showClose }) => (
     <>

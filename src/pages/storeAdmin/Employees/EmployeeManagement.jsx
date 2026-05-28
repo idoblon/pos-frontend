@@ -3,12 +3,15 @@ import { useDispatch, useSelector } from "react-redux";
 import { Plus, Search, Users, Pencil, Trash2, UserCircle } from "lucide-react";
 import { findStoreEmployee, createStoreEmpoyee, updateEmpoyee, deleteEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import secureStorage from "@/util/secureStorage";
 
-const EMPTY_FORM = { firstName: "", lastName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER", branchId: "" };
+const EMPTY_FORM = { fullName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER", branchId: "" };
 const ROLES = ["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER", "ROLE_STORE_MANAGER"];
 
 const roleStyle = {
@@ -32,7 +35,12 @@ const s = {
 
 export default function EmployeeManagement() {
   const dispatch = useDispatch();
-  const storeId = localStorage.getItem("storeId");
+  const { user } = useSelector((st) => st.auth);
+  const { userProfile } = useSelector((st) => st.user);
+  const userData = secureStorage.getUserData();
+  
+  const storeId = user?.storeId || userData?.storeId || userProfile?.storeId || localStorage.getItem("storeId");
+  
   const { employees, loading } = useSelector((st) => st.employee);
   const { branches } = useSelector((st) => st.branch);
 
@@ -44,31 +52,126 @@ export default function EmployeeManagement() {
   const [form, setForm] = useState(EMPTY_FORM);
 
   useEffect(() => {
-    if (storeId) {
-      dispatch(findStoreEmployee({ storeId }));
-      dispatch(getBranchesByStore(storeId));
+    if (!storeId) {
+      toast.error("Store ID not found. Fetching user profile...");
+      dispatch(getUserProfile()).then((result) => {
+        if (result.payload?.storeId) {
+          dispatch(findStoreEmployee({ storeId: result.payload.storeId }));
+          dispatch(getBranchesByStore(result.payload.storeId));
+        }
+      });
+      return;
     }
+    dispatch(findStoreEmployee({ storeId }));
+    dispatch(getBranchesByStore(storeId));
   }, [dispatch, storeId]);
 
   const filtered = employees?.filter(
-    (e) =>
-      e.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-      e.lastName?.toLowerCase().includes(search.toLowerCase()) ||
-      e.email?.toLowerCase().includes(search.toLowerCase())
+    (e) => {
+      // Filter out store admin (ROLE_STORE_ADMIN)
+      if (e.role === "ROLE_STORE_ADMIN") return false;
+      
+      return (
+        e.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+        e.email?.toLowerCase().includes(search.toLowerCase())
+      );
+    }
   );
 
   const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
-  const openEdit = (e) => { setEditing(e); setForm({ firstName: e.firstName ?? "", lastName: e.lastName ?? "", email: e.email ?? "", phone: e.phone ?? "", role: e.role ?? "ROLE_BRANCH_CASHIER", branchId: e.branchId ?? "" }); setDialogOpen(true); };
+  const openEdit = (e) => { 
+    setEditing(e); 
+    setForm({ 
+      fullName: e.fullName ?? "", 
+      email: e.email ?? "", 
+      phone: e.phone ?? "", 
+      role: e.role ?? "ROLE_BRANCH_CASHIER", 
+      branchId: e.branchId ?? "" 
+    }); 
+    setDialogOpen(true); 
+  };
   const openDelete = (e) => { setSelected(e); setDeleteDialogOpen(true); };
 
   const handleSubmit = (ev) => {
     ev.preventDefault();
-    if (editing) dispatch(updateEmpoyee({ employeeId: editing._id, employeeDetails: form }));
-    else dispatch(createStoreEmpoyee({ employee: form, storeId }));
+    
+    if (!storeId) {
+      toast.error("Store ID not found. Please log in again.");
+      return;
+    }
+    
+    // Validate branchId for branch-level roles
+    if ((form.role === "ROLE_BRANCH_MANAGER" || form.role === "ROLE_BRANCH_CASHIER") && !form.branchId) {
+      toast.error("Please select a branch for this role");
+      return;
+    }
+    
+    if (editing) {
+      const employeeId = editing.id || editing._id;
+      if (!employeeId) {
+        toast.error("Employee ID not found");
+        return;
+      }
+      
+      // Clean up form data - remove empty branchId
+      const cleanedForm = { ...form };
+      if (!cleanedForm.branchId || cleanedForm.branchId === "") {
+        delete cleanedForm.branchId;
+      }
+      
+      dispatch(updateEmpoyee({ employeeId, employeeDetails: cleanedForm }))
+        .then((result) => {
+          if (result.type.includes('fulfilled')) {
+            toast.success("Employee updated successfully");
+            dispatch(findStoreEmployee({ storeId }));
+          } else {
+            toast.error(result.payload || "Failed to update employee");
+          }
+        });
+    } else {
+      // Clean up form data - remove empty branchId for store manager
+      const cleanedForm = { ...form };
+      if (!cleanedForm.branchId || cleanedForm.branchId === "") {
+        delete cleanedForm.branchId;
+      }
+      
+      // Generate a default password for new employees
+      const employeeData = {
+        ...cleanedForm,
+        password: "Employee@123" // Default password - employee should change on first login
+      };
+      
+      dispatch(createStoreEmpoyee({ employee: employeeData, storeId }))
+        .then((result) => {
+          if (result.type.includes('fulfilled')) {
+            toast.success("Employee created successfully with default password: Employee@123");
+            dispatch(findStoreEmployee({ storeId }));
+          } else {
+            toast.error(result.payload || "Failed to create employee");
+          }
+        });
+    }
     setDialogOpen(false);
   };
 
-  const handleDelete = () => { dispatch(deleteEmployee({ employee: selected })); setDeleteDialogOpen(false); };
+  const handleDelete = () => {
+    const employeeId = selected.id || selected._id;
+    if (!employeeId) {
+      toast.error("Employee ID not found");
+      return;
+    }
+    
+    dispatch(deleteEmployee({ employeeId }))
+      .then((result) => {
+        if (result.type.includes('fulfilled')) {
+          toast.success("Employee removed successfully");
+          dispatch(findStoreEmployee({ storeId }));
+        } else {
+          toast.error(result.payload || "Failed to remove employee");
+        }
+      });
+    setDeleteDialogOpen(false); 
+  };
 
   return (
     <div style={s.page}>
@@ -107,8 +210,10 @@ export default function EmployeeManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((emp) => (
-                  <tr key={emp._id} style={{ background: "white" }}
+                {filtered.map((emp) => {
+                  const empId = emp.id || emp._id;
+                  return (
+                  <tr key={empId} style={{ background: "white" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
                     onMouseLeave={e => e.currentTarget.style.background = "white"}
                   >
@@ -117,7 +222,7 @@ export default function EmployeeManagement() {
                         <div style={{ padding: 5, background: "#eef1f5", borderRadius: "50%" }}>
                           <UserCircle size={16} color="#6b7280" />
                         </div>
-                        <span style={{ fontWeight: 600 }}>{emp.firstName} {emp.lastName}</span>
+                        <span style={{ fontWeight: 600 }}>{emp.fullName}</span>
                       </div>
                     </td>
                     <td style={{ ...s.td, color: "#8a909c" }}>{emp.email}</td>
@@ -126,7 +231,7 @@ export default function EmployeeManagement() {
                         {emp.role?.replace('ROLE_', '').replace('_', ' ') ?? "CASHIER"}
                       </span>
                     </td>
-                    <td style={{ ...s.td, color: "#8a909c" }}>{branches?.find((b) => b._id === emp.branchId)?.name ?? "—"}</td>
+                    <td style={{ ...s.td, color: "#8a909c" }}>{branches?.find((b) => (b._id || b.id) === emp.branchId)?.name ?? "—"}</td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                         <button style={s.iconBtn} onClick={() => openEdit(emp)}><Pencil size={13} color="#6b7280" /></button>
@@ -134,46 +239,55 @@ export default function EmployeeManagement() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editing ? "Edit Employee" : "Add New Employee"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Employee" : "Add New Employee"}</DialogTitle>
+            <DialogDescription>
+              {editing ? "Update employee information" : "Fill in the details to add a new employee"}
+            </DialogDescription>
+          </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-            <div className="grid grid-cols-2 gap-4">
-              {[{ id: "firstName", label: "First Name", placeholder: "John" }, { id: "lastName", label: "Last Name", placeholder: "Doe" }].map(({ id, label, placeholder }) => (
-                <div key={id} className="space-y-1.5">
-                  <Label>{label}</Label>
-                  <Input placeholder={placeholder} value={form[id]} onChange={(e) => setForm((f) => ({ ...f, [id]: e.target.value }))} required />
-                </div>
-              ))}
-              <div className="col-span-2 space-y-1.5">
-                <Label>Email</Label>
-                <Input type="email" placeholder="john@example.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Phone</Label>
-                <Input placeholder="+977-..." value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Role</Label>
-                <select style={s.select} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-                  {ROLES.map((r) => <option key={r} value={r} className="capitalize">{r.replace('ROLE_', '').replace('_', ' ')}</option>)}
-                </select>
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label>Branch</Label>
-                <select style={s.select} value={form.branchId} onChange={(e) => setForm((f) => ({ ...f, branchId: e.target.value }))}>
-                  <option value="">Select branch</option>
-                  {branches?.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <Label>Full Name</Label>
+              <Input value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Phone</Label>
+              <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <select style={s.select} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
+                {ROLES.map((r) => <option key={r} value={r}>{r.replace('ROLE_', '').replace('_', ' ')}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Branch {(form.role === "ROLE_BRANCH_MANAGER" || form.role === "ROLE_BRANCH_CASHIER") && <span className="text-red-500">*</span>}</Label>
+              <select 
+                style={s.select} 
+                value={form.branchId} 
+                onChange={(e) => setForm((f) => ({ ...f, branchId: e.target.value }))}
+                required={form.role === "ROLE_BRANCH_MANAGER" || form.role === "ROLE_BRANCH_CASHIER"}
+              >
+                <option value="">Select branch</option>
+                {branches?.map((b) => <option key={b._id || b.id} value={b._id || b.id}>{b.name}</option>)}
+              </select>
+              {(form.role === "ROLE_BRANCH_MANAGER" || form.role === "ROLE_BRANCH_CASHIER") && (
+                <p className="text-xs text-gray-500">Branch is required for this role</p>
+              )}
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
@@ -183,13 +297,14 @@ export default function EmployeeManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Remove Employee</DialogTitle></DialogHeader>
-          <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
-            Are you sure you want to remove <strong>{selected?.firstName} {selected?.lastName}</strong>?
-          </p>
+          <DialogHeader>
+            <DialogTitle>Remove Employee</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove <strong>{selected?.fullName}</strong>?
+            </DialogDescription>
+          </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Remove</Button>

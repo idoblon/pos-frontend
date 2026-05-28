@@ -21,7 +21,11 @@ const productSlice = createSlice({
       })
       .addCase(createProduct.fulfilled, (state, action) => {
         state.loading = false;
-        state.products.push(action.payload);
+        if (state.products?.content) {
+          state.products.content.push(action.payload);
+        } else if (Array.isArray(state.products)) {
+          state.products.push(action.payload);
+        }
       })
       .addCase(createProduct.rejected, (state, action) => {
         state.loading = false;
@@ -47,11 +51,12 @@ const productSlice = createSlice({
       })
       .addCase(updateProduct.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.products.findIndex(
+        const productList = state.products?.content || state.products || [];
+        const index = productList.findIndex(
           (product) => product.id === action.payload.id,
         );
         if (index !== -1) {
-          state.products[index] = action.payload;
+          productList[index] = action.payload;
         }
       })
       .addCase(updateProduct.rejected, (state, action) => {
@@ -65,9 +70,15 @@ const productSlice = createSlice({
       })
       .addCase(deleteProduct.fulfilled, (state, action) => {
         state.loading = false;
-        state.products = state.products.filter(
-          (product) => product.id !== action.payload.id,
-        );
+        if (state.products?.content) {
+          state.products.content = state.products.content.filter(
+            (product) => product.id !== action.payload.id,
+          );
+        } else if (Array.isArray(state.products)) {
+          state.products = state.products.filter(
+            (product) => product.id !== action.payload.id,
+          );
+        }
       })
       .addCase(deleteProduct.rejected, (state, action) => {
         state.loading = false;
