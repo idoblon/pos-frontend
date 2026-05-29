@@ -31,7 +31,8 @@ export default function ProductSection({ onAddToCart }) {
     return item?.quantity ?? 99;
   };
 
-  const filtered = products?.filter((p) =>
+  const productList = products?.content || products || [];
+  const filtered = productList.filter((p) =>
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );

@@ -1,35 +1,46 @@
 import { X, ShoppingCart, History, Users, RotateCcw, FileText } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
+import { getBranchById } from "@/Redux Toolkit/Features/branch/branchThunk";
 import secureStorage from "@/util/secureStorage";
 import posLogo from "@/logo/pos.png";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const dispatch = useDispatch();
+  const { userProfile } = useSelector((s) => s.user);
+  const { user } = useSelector((s) => s.auth);
+  const userData = secureStorage.getUserData();
+  
   const [branchName, setBranchName] = useState(null);
   const [branchAddress, setBranchAddress] = useState(null);
   
   useEffect(() => {
-    const userData = secureStorage.getUserData();
-    let storeName = userData?.storeName || localStorage.getItem("storeName") || localStorage.getItem("branchName");
-    let storeAddress = userData?.storeAddress || localStorage.getItem("storeAddress") || localStorage.getItem("branchAddress");
+    const branchId = userProfile?.branchId || user?.branchId || userData?.branchId;
     
-    // Handle string 'null' values
-    if (storeName === 'null' || storeName === null || !storeName) {
-      storeName = null;
+    if (branchId && branchId !== 'null') {
+      // Fetch branch details to get name and address
+      dispatch(getBranchById(branchId))
+        .unwrap()
+        .then((branch) => {
+          setBranchName(branch.name || "Branch");
+          setBranchAddress(branch.address || "No address configured");
+        })
+        .catch(() => {
+          // Fallback to stored values
+          const storeName = userData?.storeName || localStorage.getItem("storeName") || "Branch";
+          setBranchName(storeName);
+          setBranchAddress("No address configured");
+        });
+    } else {
+      // No branch ID, use fallback
+      const storeName = userData?.storeName || localStorage.getItem("storeName") || "Branch";
+      setBranchName(storeName);
+      setBranchAddress("No address configured");
     }
-    if (storeAddress === 'null' || storeAddress === null || !storeAddress) {
-      storeAddress = null;
-    }
-    
-    // Fallback if no branch name found
-    const fallbackBranchName = storeName || "Branch";
-    const fallbackBranchAddress = storeAddress || "No address configured";
-    
-    setBranchName(fallbackBranchName);
-    setBranchAddress(fallbackBranchAddress);
-  }, []);
+  }, [dispatch, userProfile, user, userData]);
   
   const navItems = [
     { path: "/cashier", label: "POS Terminal", icon: <ShoppingCart className="h-5 w-5" /> },

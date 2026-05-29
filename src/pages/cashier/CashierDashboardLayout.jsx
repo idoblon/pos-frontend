@@ -20,6 +20,7 @@ import {
   selectDiscount,
   selectCartNote
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
+
 import { Menu, ShoppingCart, User, History, RotateCcw, FileText } from "lucide-react";
 import Sidebar from "./sidebar/Sidebar";
 import CustomerSection from "./CustomerPaymentSection/CustomerSection";
@@ -27,6 +28,7 @@ import DiscountSection from "./CustomerPaymentSection/DiscountSection";
 import NoteSection from "./CustomerPaymentSection/NoteSection";
 import PaymentSection from "./CustomerPaymentSection/PaymentSection";
 import ProductSection from "./ProductSection/ProductSection";
+import secureStorage from "@/util/secureStorage";
 import "./cashier-styles.css";
 
 export default function CashierDashboardLayout() {
@@ -35,6 +37,8 @@ export default function CashierDashboardLayout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
+const { user } = useSelector((s) => s.auth);
+const userData = secureStorage.getUserData();
   const { currentShift } = useSelector((s) => s.shiftReport);
   
   // Check for active shift on mount
@@ -55,9 +59,11 @@ export default function CashierDashboardLayout() {
   const discountAmt = useSelector(selectDiscountAmount);
   const total = useSelector(selectTotal);
 
-  const initials = userProfile
-    ? `${userProfile.firstName?.[0] ?? ""}${userProfile.lastName?.[0] ?? ""}`.toUpperCase()
-    : "U";
+  const fullName = userProfile?.fullName || user?.fullName || userData?.fullName;
+const email = userProfile?.email || user?.email || userData?.email;
+const initials = fullName
+  ? fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+  : "U";
 
   const handleLogout = () => {
     dispatch(logout());
@@ -97,17 +103,45 @@ export default function CashierDashboardLayout() {
           <p className="header-sub">Create new Order</p>
         </div>
         <div style={{ position: "relative" }}>
-          <div className="avatar" onClick={() => setProfileOpen((o) => !o)} style={{ cursor: "pointer" }}>
-            {initials}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 4px",
+              cursor: "pointer",
+            }}
+            onClick={() => setProfileOpen((o) => !o)}
+          >
+            <div className="avatar" style={{ flexShrink: 0 }}>
+              {initials}
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#1a1d23",
+                  lineHeight: 1.3,
+                }}
+              >
+                {fullName || "Cashier"}
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 11,
+                  color: "#6b7280",
+                  lineHeight: 1.3,
+                }}
+              >
+                {email || ""}
+              </p>
+            </div>
           </div>
           {profileOpen && (
             <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 200, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 100, overflow: "hidden" }}>
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1d23" }}>
-                  {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : "Cashier"}
-                </p>
-                <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280" }}>{userProfile?.email ?? ""}</p>
-              </div>
               <button
                 onClick={handleLogout}
                 style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "#e53e3e", fontFamily: "inherit" }}

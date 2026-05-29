@@ -98,7 +98,14 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       }, 2000);
     } catch (err) {
       console.error("❌ Order creation failed:", err.response?.data);
-      setError(err.response?.data?.message || "Payment failed. Please try again.");
+      const errorMsg = err.response?.data?.message || "Payment failed. Please try again.";
+      
+      // Provide helpful error message for inventory issues
+      if (errorMsg.includes("not found in branch inventory") || errorMsg.includes("Product not found")) {
+        setError("⚠️ Product not in branch inventory. Please ask your Store Admin or Branch Manager to add this product to your branch's inventory first.");
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }

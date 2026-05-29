@@ -1,8 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getInventoryByBranch } from "./inventoryThunk";
+import { 
+  getInventoryByBranch, 
+  getInventoryByStore,
+  getLowStockItems,
+  addInventoryItem,
+  updateInventoryStock,
+  deleteInventoryItem
+} from "./inventoryThunk";
 
 const initialState = {
   inventory: [],
+  lowStockItems: [],
   loading: false,
   error: null,
 };
@@ -10,13 +18,54 @@ const initialState = {
 const inventorySlice = createSlice({
   name: "inventory",
   initialState,
-  reducers: {},
+  reducers: {
+    clearInventoryError: (state) => {
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
+      .addCase(getInventoryByBranch.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(getInventoryByBranch.fulfilled, (state, action) => {
+        state.loading = false;
         state.inventory = action.payload;
+      })
+      .addCase(getInventoryByBranch.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(getInventoryByStore.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getInventoryByStore.fulfilled, (state, action) => {
+        state.loading = false;
+        state.inventory = action.payload;
+      })
+      .addCase(getInventoryByStore.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(getLowStockItems.fulfilled, (state, action) => {
+        state.lowStockItems = action.payload;
+      })
+      .addCase(addInventoryItem.fulfilled, (state, action) => {
+        state.inventory.push(action.payload);
+      })
+      .addCase(updateInventoryStock.fulfilled, (state, action) => {
+        const index = state.inventory.findIndex(item => item.id === action.payload.id);
+        if (index !== -1) {
+          state.inventory[index] = action.payload;
+        }
+      })
+      .addCase(deleteInventoryItem.fulfilled, (state, action) => {
+        state.inventory = state.inventory.filter(item => item.id !== action.payload);
       });
   },
 });
 
+export const { clearInventoryError } = inventorySlice.actions;
 export default inventorySlice.reducer;
