@@ -2,6 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import React, { useEffect } from "react";
 import OrderTable from "./OrderTable";
 import { getOrdersByCashier } from "@/Redux Toolkit/Features/order/orderThunk";
+import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import {
   Dialog,
   DialogContent,
@@ -12,24 +13,32 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import OrderDetails from "./OrderDetails/OrderDetails";
 import { useState } from "react";
+import secureStorage from "@/util/secureStorage";
 
 const OrderHistory = () => {
   const [showOrderInvoiceDialog, setShowOrderInvoiceDialog] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const {userProfile}=useSelector(state=>state.user)
+  const { user } = useSelector(state => state.auth);
   const dispatch = useDispatch();
 
   const handleViewOrderDetails = (order) => {
-    setSelectedOrder(order);
+    setSelectedOrder({
+      ...order,
+      status: order.status === "PENDING" && order.createdAt ? "COMPLETED" : (order.status || "COMPLETED"),
+      paymentMethod: order.paymentMethod || order.paymentType || "CASH",
+      paymentType: order.paymentMethod || order.paymentType || "CASH",
+    });
     setShowOrderInvoiceDialog(true);
   };
 
-  useEffect(()=>{
-    if(userProfile?.id){
-      dispatch(getOrdersByCashier(userProfile.id))
-    }
-  },[userProfile, dispatch])
+  useEffect(() => {
+    dispatch(getUserProfile()).then((action) => {
+      const userData = secureStorage.getUserData();
+      const cashierId = action.payload?.id || user?.id || userData?.userId;
+      if (cashierId) dispatch(getOrdersByCashier(cashierId));
+    });
+  }, [dispatch]);
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 bg-card border-b">

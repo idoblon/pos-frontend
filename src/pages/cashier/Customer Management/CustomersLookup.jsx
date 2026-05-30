@@ -39,9 +39,8 @@ const CustomersLookup = () => {
 
   const filteredCustomers = customers.filter(
     (customer) =>
-      customer.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phoneNumber?.includes(searchQuery) ||
+      customer.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.phone?.includes(searchQuery) ||
       customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

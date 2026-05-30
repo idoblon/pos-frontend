@@ -12,7 +12,7 @@ const CustomerSection = ({ selectedCustomer, onSelectCustomer }) => {
         Customer
       </div>
 
-      {selectedCustomer ? (
+      {selectedCustomer && selectedCustomer.id ? (
         <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", background: "#f5f5f5" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
             <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#1a1d23" }}>

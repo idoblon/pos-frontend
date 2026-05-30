@@ -1,58 +1,32 @@
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import api from "@/util/api";
 
 const AddCustomerDialog = ({ open, onClose, onSuccess }) => {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phoneNumber: "",
-    address: "",
-  });
+  const [formData, setFormData] = useState({ fullName: "", email: "", phone: "", address: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (!formData.firstName || !formData.phoneNumber) {
-      setError("First name and phone number are required");
+    if (!formData.fullName || !formData.phone) {
+      setError("Full name and phone are required");
       return;
     }
-
     try {
       setLoading(true);
-      const branchId = localStorage.getItem("branchId");
-      const response = await api.post("/api/customers", {
-        ...formData,
-        branchId,
-      });
-      
+      const response = await api.post("/api/customers", formData);
       onSuccess(response.data);
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phoneNumber: "",
-        address: "",
-      });
+      setFormData({ fullName: "", email: "", phone: "", address: "" });
       onClose();
-    } catch (error) {
-      setError(error.response?.data?.message || "Failed to add customer");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to add customer");
     } finally {
       setLoading(false);
     }
@@ -64,81 +38,27 @@ const AddCustomerDialog = ({ open, onClose, onSuccess }) => {
         <DialogHeader>
           <DialogTitle>Add New Customer</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
-              {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                placeholder="John"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                placeholder="Doe"
-              />
-            </div>
-          </div>
-
+          {error && <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">{error}</div>}
           <div>
-            <Label htmlFor="phoneNumber">Phone Number *</Label>
-            <Input
-              id="phoneNumber"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              placeholder="+1234567890"
-              required
-            />
+            <Label htmlFor="fullName">Full Name *</Label>
+            <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full name" required />
           </div>
-
+          <div>
+            <Label htmlFor="phone">Phone *</Label>
+            <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone number" required />
+          </div>
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="john@example.com"
-            />
+            <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Email address" />
           </div>
-
           <div>
             <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              placeholder="123 Main St, City"
-            />
+            <Input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Address" />
           </div>
-
-          <div className="flex gap-2 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Adding..." : "Add Customer"}
-            </Button>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={loading}>{loading ? "Adding..." : "Add Customer"}</Button>
           </div>
         </form>
       </DialogContent>

@@ -48,13 +48,13 @@ export default function InventoryManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ branchId: "", productId: "", quantity: "", unitPrice: "" });
+  const [form, setForm] = useState({ branchId: "", productId: "", quantity: "" });
 
   useEffect(() => {
     if (storeId) {
       dispatch(getInventoryByStore({ storeId }));
       dispatch(getBranchesByStore(storeId));
-      dispatch(getProductsByStore({ storeId }));
+      dispatch(getProductsByStore(storeId));
     }
   }, [dispatch, storeId]);
 
@@ -66,11 +66,14 @@ export default function InventoryManagement() {
     return matchesSearch && matchesBranch;
   });
 
+  // Handle both array and paginated response for products
+  const productList = Array.isArray(products) ? products : (products?.content || []);
+
   const lowStockCount = filtered?.filter(item => item.quantity > 0 && item.quantity <= 10).length || 0;
   const outOfStockCount = filtered?.filter(item => item.quantity === 0).length || 0;
 
   const openAdd = () => {
-    setForm({ branchId: "", productId: "", quantity: "", unitPrice: "" });
+    setForm({ branchId: "", productId: "", quantity: "" });
     setDialogOpen(true);
   };
 
@@ -88,8 +91,16 @@ export default function InventoryManagement() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!form.branchId || !form.productId || !form.quantity || !form.unitPrice) {
+    if (!form.branchId || !form.productId || !form.quantity) {
       toast.error("Please fill all required fields");
+      return;
+    }
+
+    const selectedProduct = productList?.find(p => (p._id || p.id) === form.productId);
+    const unitPrice = selectedProduct?.sellingPrice || selectedProduct?.price;
+
+    if (!unitPrice) {
+      toast.error("Product must have a selling price");
       return;
     }
 
@@ -97,7 +108,7 @@ export default function InventoryManagement() {
       branchId: form.branchId,
       productId: form.productId,
       quantity: Number(form.quantity),
-      unitPrice: Number(form.unitPrice),
+      unitPrice: Number(unitPrice),
     }))
       .unwrap()
       .then(() => {
@@ -214,8 +225,8 @@ export default function InventoryManagement() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  {["Product", "SKU", "Branch", "Stock", "Unit Price", "Actions"].map((h, i) => (
-                    <th key={h} style={{ ...s.th, textAlign: i === 5 ? "right" : "left" }}>{h}</th>
+                  {["Product", "SKU", "Branch", "Stock", "Actions"].map((h, i) => (
+                    <th key={h} style={{ ...s.th, textAlign: i === 4 ? "right" : "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -235,7 +246,6 @@ export default function InventoryManagement() {
                         {item.quantity} units
                       </span>
                     </td>
-                    <td style={{ ...s.td, fontWeight: 600 }}>रु {item.unitPrice?.toLocaleString("en-IN")}</td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                         <button style={s.iconBtn} onClick={() => openEdit(item)}>
@@ -273,20 +283,26 @@ export default function InventoryManagement() {
             </div>
             <div className="space-y-1.5">
               <Label>Product <span className="text-red-500">*</span></Label>
-              <select style={s.select} value={form.productId} onChange={(e) => setForm(f => ({ ...f, productId: e.target.value }))} required>
+              <select 
+                style={s.select} 
+                value={form.productId} 
+                onChange={(e) => setForm(f => ({ ...f, productId: e.target.value }))} 
+                required
+              >
                 <option value="">Select product</option>
-                {products?.map((p) => (
-                  <option key={p._id || p.id} value={p._id || p.id}>{p.name} ({p.sku})</option>
+                {productList?.map((p) => (
+                  <option key={p._id || p.id} value={p._id || p.id}>
+                    {p.name} - {p.sku} (रु {p.sellingPrice || p.price})
+                  </option>
                 ))}
               </select>
+              {!productList || productList.length === 0 ? (
+                <p className="text-xs text-gray-500">No products available. Create products first.</p>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <Label>Initial Quantity <span className="text-red-500">*</span></Label>
               <Input type="number" min="0" value={form.quantity} onChange={(e) => setForm(f => ({ ...f, quantity: e.target.value }))} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Unit Price (रु) <span className="text-red-500">*</span></Label>
-              <Input type="number" min="0" step="0.01" value={form.unitPrice} onChange={(e) => setForm(f => ({ ...f, unitPrice: e.target.value }))} required />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

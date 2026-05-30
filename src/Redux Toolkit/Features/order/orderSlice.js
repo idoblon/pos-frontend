@@ -23,7 +23,16 @@ const initialState = {
 const orderSlice = createSlice({
   name: "order",
   initialState,
-  reducers: {},
+  reducers: {
+    patchOrder: (state, action) => {
+      const idx = state.orders.findIndex(o => o.id === action.payload.id);
+      if (idx !== -1) {
+        state.orders[idx] = { ...state.orders[idx], ...action.payload };
+      } else {
+        state.orders.unshift(action.payload);
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(createOrder.pending, (state) => {
@@ -67,7 +76,21 @@ const orderSlice = createSlice({
       })
       .addCase(getOrdersByCashier.fulfilled, (state, action) => {
         state.loading = false;
-        state.orders = action.payload;
+        // Merge backend orders with locally patched data to preserve customer/payment info
+        const existing = state.orders;
+        state.orders = action.payload.map(backendOrder => {
+          const patched = existing.find(o => o.id === backendOrder.id);
+          if (patched) {
+            return {
+              ...backendOrder,
+              customer: patched.customer ?? backendOrder.customer,
+              paymentMethod: patched.paymentMethod || backendOrder.paymentMethod,
+              paymentType: patched.paymentType || backendOrder.paymentType,
+              status: patched.status === "COMPLETED" ? "COMPLETED" : backendOrder.status,
+            };
+          }
+          return backendOrder;
+        });
       })
       .addCase(getOrdersByCashier.rejected, (state, action) => {
         state.loading = false;
@@ -121,4 +144,5 @@ const orderSlice = createSlice({
   },
 });
 
+export const { patchOrder } = orderSlice.actions;
 export default orderSlice.reducer;

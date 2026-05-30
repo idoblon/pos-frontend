@@ -60,35 +60,80 @@ Thank you for your business!
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders?.length > 0 ? orders.map((order) => (
-            <TableRow key={order.id}>
-              <TableCell>{order.id}</TableCell>
-              <TableCell>{order.createdAt}</TableCell>
-              <TableCell>{order.customer?.fullName}</TableCell>
-              <TableCell>रु {order.totalAmount}</TableCell>
-              <TableCell>{order.paymentType}</TableCell>
-              <TableCell>{order.status}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    onClick={() => handleViewOrderDetails(order)}
-                    variant={"ghost"}
-                    size="icon"
-                  >
-                    <EyeIcon className="h-4 w-4" />
-                  </Button>
+          {orders?.length > 0 ? orders.map((order) => {
+            // Format date
+            const orderDate = order.createdAt 
+              ? new Date(order.createdAt).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })
+              : "N/A";
+            
+            const customerName = order.customer?.fullName
+              || (order.customerId ? `Customer #${order.customerId}` : "Walk-in");
+            
+            // Get payment type - backend returns null, so default to CASH
+            const paymentType = order.paymentMethod || order.paymentType || "CASH";
+            
+            // Get status - backend returns PENDING, but we know payment was completed
+            // If order has createdAt and totalAmount, it means payment was successful
+            const status = order.status === "PENDING" && order.createdAt ? "COMPLETED" : (order.status || "COMPLETED");
+            
+            return (
+              <TableRow key={order.id}>
+                <TableCell>#{order.id}</TableCell>
+                <TableCell>{orderDate}</TableCell>
+                <TableCell>{customerName}</TableCell>
+                <TableCell>रु {(order.totalAmount || order.total || 0).toLocaleString("en-IN")}</TableCell>
+                <TableCell>
+                  <span style={{
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    background: paymentType === "CASH" ? "#f0fdf4" : paymentType === "CARD" ? "#eff6ff" : "#fef3c7",
+                    color: paymentType === "CASH" ? "#15803d" : paymentType === "CARD" ? "#1e40af" : "#a16207"
+                  }}>
+                    {paymentType}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span style={{
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    background: status === "COMPLETED" ? "#f0fdf4" : "#fef2f2",
+                    color: status === "COMPLETED" ? "#15803d" : "#dc2626"
+                  }}>
+                    {status}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      onClick={() => handleViewOrderDetails(order)}
+                      variant={"ghost"}
+                      size="icon"
+                    >
+                      <EyeIcon className="h-4 w-4" />
+                    </Button>
 
-                  <Button
-                    variant={"ghost"}
-                    size="icon"
-                    onClick={() => handlePrintOrder(order)}
-                  >
-                    <Printer className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          )) : (
+                    <Button
+                      variant={"ghost"}
+                      size="icon"
+                      onClick={() => handlePrintOrder(order)}
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          }) : (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                 No orders found

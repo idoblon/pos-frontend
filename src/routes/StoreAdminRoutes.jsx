@@ -6,6 +6,7 @@ import ProductManagement from "@/pages/storeAdmin/Products/ProductManagement";
 import EmployeeManagement from "@/pages/storeAdmin/Employees/EmployeeManagement";
 import CategoryManagement from "@/pages/storeAdmin/Categories/CategoryManagement";
 import StoreReports from "@/pages/storeAdmin/Reports/StoreReports";
+import InventoryManagement from "@/pages/storeAdmin/Inventory/InventoryManagement";
 
 const StoreAdminRoutes = () => {
   return (
@@ -14,6 +15,7 @@ const StoreAdminRoutes = () => {
         <Route index element={<StoreDashboard />} />
         <Route path="branches"   element={<BranchManagement />} />
         <Route path="products"   element={<ProductManagement />} />
+        <Route path="inventory"  element={<InventoryManagement />} />
         <Route path="employees"  element={<EmployeeManagement />} />
         <Route path="categories" element={<CategoryManagement />} />
         <Route path="reports"    element={<StoreReports />} />

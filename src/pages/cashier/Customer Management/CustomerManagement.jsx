@@ -31,10 +31,9 @@ export default function CustomerManagement() {
 
   const filteredCustomers = customers?.filter(
     (customer) =>
-      customer.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phoneNumber?.includes(searchTerm)
+      customer.phone?.includes(searchTerm)
   );
 
   const handleView = (customer) => {

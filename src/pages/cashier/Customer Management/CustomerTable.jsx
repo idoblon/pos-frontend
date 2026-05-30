@@ -37,13 +37,13 @@ const CustomerTable = ({ customers, onView, onEdit, onDelete, loading }) => {
             <tr key={customer.id} className="hover:bg-gray-50 transition">
               <td className="px-4 py-3">
                 <div className="font-medium">
-                  {customer.firstName} {customer.lastName}
+                  {customer.fullName || 'N/A'}
                 </div>
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <Phone size={14} />
-                  {customer.phoneNumber || "N/A"}
+                  {customer.phone || "N/A"}
                 </div>
               </td>
               <td className="px-4 py-3">
@@ -57,7 +57,7 @@ const CustomerTable = ({ customers, onView, onEdit, onDelete, loading }) => {
               </td>
               <td className="px-4 py-3 text-sm">
                 <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                  {customer.totalOrders || 0}
+                  {customer.totalOrders ?? 0}
                 </span>
               </td>
               <td className="px-4 py-3">

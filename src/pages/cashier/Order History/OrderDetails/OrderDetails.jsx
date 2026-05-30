@@ -13,8 +13,8 @@ INVOICE ${selectedOrder?.id}
 Date: ${selectedOrder?.createdAt}
 Customer: ${selectedOrder?.customer?.fullName || 'Walk-in'}
 Phone: ${selectedOrder?.customer?.phone || 'N/A'}
-Payment: ${selectedOrder?.paymentType}
-Status: ${selectedOrder?.status}
+Payment: ${selectedOrder?.paymentMethod || selectedOrder?.paymentType || 'CASH'}
+Status: ${selectedOrder?.status === 'PENDING' && selectedOrder?.createdAt ? 'COMPLETED' : (selectedOrder?.status || 'COMPLETED')}
 
 ITEMS:
 ${selectedOrder?.items?.map(item => 

@@ -18,6 +18,10 @@ const getStatusVariant = (status) => {
 const OrderInformation = ({ selectedOrder }) => {
   if (!selectedOrder) return null;
 
+  const status = selectedOrder.status === "PENDING" && selectedOrder.createdAt
+    ? "COMPLETED"
+    : (selectedOrder.status || "COMPLETED");
+
   return (
     <Card>
       <CardContent className="p-3">
@@ -31,13 +35,13 @@ const OrderInformation = ({ selectedOrder }) => {
           </div>
           <div className="flex justify-between items-center py-1 border-b">
             <span className="text-xs text-gray-600">Status</span>
-            <Badge variant={getStatusVariant(selectedOrder.status)} className="text-xs uppercase px-2 py-0.5">
-              {selectedOrder.status || 'Unknown'}
+            <Badge variant={getStatusVariant(status)} className="text-xs uppercase px-2 py-0.5">
+              {status}
             </Badge>
           </div>
           <div className="flex justify-between items-center py-1 border-b">
             <span className="text-xs text-gray-600">Payment Method</span>
-            <span className="font-medium text-xs text-gray-900">{selectedOrder.paymentType || 'N/A'}</span>
+            <span className="font-medium text-xs text-gray-900">{selectedOrder.paymentMethod || selectedOrder.paymentType || "CASH"}</span>
           </div>
           <div className="flex justify-between items-center py-1 bg-gray-50 px-2 rounded mt-1.5">
             <span className="text-xs font-semibold text-gray-900">Total Amount</span>

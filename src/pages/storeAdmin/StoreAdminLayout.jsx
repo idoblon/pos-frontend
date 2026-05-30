@@ -10,6 +10,7 @@ import {
   X,
   LogOut,
   Bell,
+  Warehouse,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
@@ -21,6 +22,7 @@ const navItems = [
   { path: "/store-admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/store-admin/branches", label: "Branches", icon: GitBranch },
   { path: "/store-admin/products", label: "Products", icon: Package },
+  { path: "/store-admin/inventory", label: "Inventory", icon: Warehouse },
   { path: "/store-admin/employees", label: "Employees", icon: Users },
   { path: "/store-admin/categories", label: "Categories", icon: Tag },
   { path: "/store-admin/reports", label: "Reports", icon: BarChart2 },

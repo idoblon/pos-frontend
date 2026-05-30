@@ -34,7 +34,7 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
 
   if (!customer) return null;
 
-  const totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+  const totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -48,12 +48,10 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                {customer.firstName?.[0]}{customer.lastName?.[0]}
+                {customer.fullName?.[0]?.toUpperCase() || '?'}
               </div>
               <div>
-                <h3 className="font-semibold text-lg">
-                  {customer.firstName} {customer.lastName}
-                </h3>
+                <h3 className="font-semibold text-lg">{customer.fullName}</h3>
                 <p className="text-sm text-gray-600">Customer ID: #{customer.id}</p>
               </div>
             </div>
@@ -61,16 +59,18 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Phone size={16} className="text-gray-500" />
-                <span>{customer.phoneNumber || "N/A"}</span>
+                <span>{customer.phone || "N/A"}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Mail size={16} className="text-gray-500" />
                 <span>{customer.email || "N/A"}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm col-span-2">
-                <MapPin size={16} className="text-gray-500" />
-                <span>{customer.address || "N/A"}</span>
-              </div>
+              {customer.address && (
+                <div className="flex items-center gap-2 text-sm col-span-2">
+                  <MapPin size={16} className="text-gray-500" />
+                  <span>{customer.address}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -83,13 +83,13 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
             </div>
             <div className="bg-gray-50 p-4 rounded-lg text-center">
               <span className="text-3xl mb-2 block">💰</span>
-              <p className="text-2xl font-bold">${totalSpent.toFixed(2)}</p>
+              <p className="text-2xl font-bold">रु{totalSpent.toFixed(2)}</p>
               <p className="text-sm text-gray-600">Total Spent</p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg text-center">
               <Calendar className="mx-auto mb-2 text-purple-600" size={24} />
               <p className="text-2xl font-bold">
-                {orders.length > 0 ? Math.round(totalSpent / orders.length) : 0}$
+                रु{orders.length > 0 ? (totalSpent / orders.length).toFixed(2) : '0.00'}
               </p>
               <p className="text-sm text-gray-600">Avg Order</p>
             </div>
@@ -110,17 +110,17 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
                       <div>
                         <p className="font-medium">Order #{order.id}</p>
                         <p className="text-sm text-gray-600">
-                          {new Date(order.createdAt).toLocaleDateString()}
+                          {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">${order.total?.toFixed(2)}</p>
+                        <p className="font-semibold">रु{(order.totalAmount || 0).toFixed(2)}</p>
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          order.status === "COMPLETED" 
-                            ? "bg-gray-100 text-gray-700"
+                          order.status === "COMPLETED"
+                            ? "bg-green-100 text-green-700"
                             : "bg-yellow-100 text-yellow-700"
                         }`}>
-                          {order.status}
+                          {order.status || 'COMPLETED'}
                         </span>
                       </div>
                     </div>

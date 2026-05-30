@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Banknote, Smartphone, CheckCircle } from "lucide-react";
 import api from "@/util/api";
+import { getOrdersByCashier } from "@/Redux Toolkit/Features/order/orderThunk";
+import { patchOrder } from "@/Redux Toolkit/Features/order/orderSlice";
 import {
   selectCartItems,
   selectTotal,
@@ -14,6 +16,7 @@ import {
   selectCartNote,
   clearCart
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
+import secureStorage from "@/util/secureStorage";
 
 const PAYMENT_METHODS = [
   { id: "CASH", label: "Cash", icon: Banknote },
@@ -28,6 +31,10 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const customer = useSelector(selectSelectedCustomer);
   const discount = useSelector(selectDiscount);
   const note = useSelector(selectCartNote);
+  const { userProfile } = useSelector((state) => state.user);
+  const { user } = useSelector((state) => state.auth);
+  const userData = secureStorage.getUserData();
+  const cashierId = userProfile?.id || user?.id || userData?.userId || userData?.id;
   
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [amountReceived, setAmountReceived] = useState("");
@@ -47,7 +54,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
     // Validate product IDs
     const hasInvalidProducts = cartItems.some(item => {
       const productId = item.id || item._id;
-      return typeof productId === 'string' && productId.startsWith('p');
+      return !productId || (typeof productId === 'string' && productId.startsWith('p'));
     });
     
     if (hasInvalidProducts) {
@@ -65,34 +72,45 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
     
     try {
       setLoading(true);
-      const orderData = {
-        customerId: customer?.id || customer?._id || null,
-        items: cartItems.map((item) => ({
-          productId: item.id || item._id,
+      
+      // Ensure all product IDs are properly formatted
+      const orderItems = cartItems.map((item) => {
+        const productId = item.id || item._id;
+        return {
+          productId: typeof productId === 'number' ? productId : parseInt(productId, 10),
           quantity: item.quantity || 1,
           price: item.price || item.sellingPrice,
-        })),
+        };
+      });
+      
+      const orderData = {
+        customerId: customer?.id || customer?._id || null,
+        items: orderItems,
         discount: discount.value || 0,
         discountType: discount.type || "percentage",
         note: note || "",
-        paymentMethod,
+        paymentMethod: paymentMethod, // CASH, CARD, ESEWA
         amountReceived: paymentMethod === "CASH" ? parseFloat(amountReceived) : total,
         total,
       };
       
-      console.log("📡 API CALL: Creating order with customer data");
-      console.log("📋 Order payload:", orderData);
-      console.log("👤 Customer in order:", customer);
-      console.log("🛒 Cart items:", cartItems);
-      
       const response = await api.post("/api/orders", orderData);
       
-      console.log("✅ Order created successfully:", response.data);
-      console.log("📡 This was the main API call that uses the selected customer data");
-      
       setSuccess(true);
-      dispatch(clearCart());
+
+      // Patch the order in Redux with correct data the backend failed to return
+      const isWalkIn = !customer?.id;
+      dispatch(patchOrder({
+        ...response.data,
+        status: "COMPLETED",
+        paymentMethod: paymentMethod,
+        paymentType: paymentMethod,
+        customer: isWalkIn ? null : customer,
+        customerId: customer?.id || null,
+      }));
+
       setTimeout(() => {
+        dispatch(clearCart());
         handleClose();
         onOrderComplete?.();
       }, 2000);
@@ -102,7 +120,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       
       // Provide helpful error message for inventory issues
       if (errorMsg.includes("not found in branch inventory") || errorMsg.includes("Product not found")) {
-        setError("⚠️ Product not in branch inventory. Please ask your Store Admin or Branch Manager to add this product to your branch's inventory first.");
+        setError("⚠️ Some products are not available in your branch inventory. Please contact your Branch Manager to add these products to your branch first.");
       } else {
         setError(errorMsg);
       }

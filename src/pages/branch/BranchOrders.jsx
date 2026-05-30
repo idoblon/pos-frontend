@@ -5,18 +5,18 @@ import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 import secureStorage from "@/util/secureStorage";
 
 const statusStyle = {
-  COMPLETED: { background: "#f0fdf4", color: "#059669" },
+  COMPLETED: { background: "#f0f0f0", color: "#1a1d23" },
   PENDING:   { background: "#fffbeb", color: "#d97706" },
   CANCELLED: { background: "#fef2f2", color: "#e53e3e" },
 };
 
 const s = {
-  page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f0fdf4", minHeight: "100%" },
-  card: { background: "white", border: "1px solid #d1fae5", borderRadius: 10 },
-  cardHeader: { padding: "14px 18px", borderBottom: "1px solid #d1fae5", display: "flex", alignItems: "center", justifyContent: "space-between" },
-  searchInput: { width: "100%", border: "1px solid #d1fae5", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, outline: "none", background: "#f0fdf4", boxSizing: "border-box" },
-  th: { padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#6b7280", background: "#f0fdf4", textAlign: "left", borderBottom: "1px solid #d1fae5" },
-  td: { padding: "12px 16px", fontSize: 13, borderBottom: "1px solid #d1fae5" },
+  page:        { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
+  card:        { background: "white", border: "1px solid #e5e7eb", borderRadius: 10 },
+  cardHeader:  { padding: "14px 18px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between" },
+  searchInput: { width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 12px 7px 34px", fontFamily: "inherit", fontSize: 13, outline: "none", background: "#f5f5f5", boxSizing: "border-box" },
+  th:          { padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#6b7280", background: "#f5f5f5", textAlign: "left", borderBottom: "1px solid #e5e7eb" },
+  td:          { padding: "12px 16px", fontSize: 13, borderBottom: "1px solid #e5e7eb" },
 };
 
 export default function BranchOrders() {
@@ -52,7 +52,7 @@ export default function BranchOrders() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ border: "1px solid #d1fae5", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#f0fdf4", outline: "none", fontFamily: "inherit" }}
+              style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#f5f5f5", outline: "none", fontFamily: "inherit" }}
             >
               {["ALL", "COMPLETED", "PENDING", "CANCELLED"].map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -87,7 +87,7 @@ export default function BranchOrders() {
               <tbody>
                 {filtered.map((o, i) => (
                   <tr key={o.id ?? o._id ?? i} style={{ background: "white" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f0fdf4"}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
                     onMouseLeave={e => e.currentTarget.style.background = "white"}
                   >
                     <td style={{ ...s.td, fontWeight: 600 }}>#{(o.id ?? o._id ?? "").toString().slice(-8)}</td>
@@ -101,7 +101,7 @@ export default function BranchOrders() {
                         {o.status ?? "PENDING"}
                       </span>
                     </td>
-                    <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#059669" }}>
+                    <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#1a1d23" }}>
                       रु {(o.totalAmount ?? 0).toLocaleString("en-IN")}
                     </td>
                   </tr>
