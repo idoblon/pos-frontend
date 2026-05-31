@@ -92,12 +92,19 @@ export const getRefundsByBranch = createAsyncThunk(
   "refund/getByBranch",
   async (branchId, { rejectWithValue }) => {
     try {
+      console.log("🔄 getRefundsByBranch called with branchId:", branchId);
       const sanitizedParams = sanitizePathParams({ branchId });
+      console.log("🔄 Sanitized params:", sanitizedParams);
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/refunds/branch/${sanitizedParams.branchId}`, { headers });
+      console.log("🔄 Auth headers:", headers);
+      const url = `/api/refunds/branch/${sanitizedParams.branchId}`;
+      console.log("🔄 Making request to:", url);
+      const res = await api.get(url, { headers });
       console.log("get refund by branch success", res.data);
       return res.data;
     } catch (error) {
+      console.log("❌ getRefundsByBranch error:", error);
+      console.log("❌ Error response:", error.response?.data);
       return rejectWithValue(
         error.response?.data?.message || "Failed to get refunds by branch",
       );

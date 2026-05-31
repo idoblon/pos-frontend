@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { createRefund } from "@/Redux Toolkit/Features/refund/refundThunk";
+import { markOrderAsRefunded } from "@/Redux Toolkit/Features/order/orderSlice";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,14 +44,29 @@ const ReturnItemSection = ({ selectedOrder, setShowReturnReciptDialog }) => {
 
     setLoading(true);
     try {
-      await dispatch(createRefund({
+      const refundResult = await dispatch(createRefund({
         orderId: selectedOrder.id,
         amount: selectedOrder.totalAmount,
         reason: finalReason,
         refundMethod: refundMethod
       })).unwrap();
+      
+      console.log("✅ Refund created successfully:", refundResult);
+      
+      // Update order status locally
+      dispatch(markOrderAsRefunded({
+        orderId: selectedOrder.id
+      }));
+      
+      console.log("✅ Order marked as refunded locally");
+      
+      // Show success message
+      alert("✅ Refund processed successfully! Items have been restored to inventory.");
+      
+      // Open receipt dialog
       setShowReturnReciptDialog(true);
     } catch (error) {
+      console.error("❌ Refund failed:", error);
       alert("Failed to process refund: " + error);
     } finally {
       setLoading(false);

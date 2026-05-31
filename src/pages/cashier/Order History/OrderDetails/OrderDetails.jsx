@@ -6,8 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
 const OrderDetails = ({ selectedOrder }) => {
-  const handleDownload = () => {
-    const invoiceContent = `
+const handleDownload = () => {
+     const subtotal = selectedOrder?.taxAmount
+       ? (selectedOrder.totalAmount - selectedOrder.taxAmount)
+       : selectedOrder?.totalAmount;
+     const tax = selectedOrder?.taxAmount || 0;
+     
+     const discountAmount = selectedOrder?.discount || 0;
+     const discountType = selectedOrder?.discountType || "percentage";
+     let calculatedDiscount = 0;
+     if (discountAmount > 0) {
+       if (discountType === "percentage") {
+         calculatedDiscount = subtotal * (discountAmount / 100);
+       } else {
+         calculatedDiscount = discountAmount;
+       }
+     }
+
+     const invoiceContent = `
 INVOICE ${selectedOrder?.id}
 ================================
 Date: ${selectedOrder?.createdAt}
@@ -17,13 +33,16 @@ Payment: ${selectedOrder?.paymentMethod || selectedOrder?.paymentType || 'CASH'}
 Status: ${selectedOrder?.status === 'PENDING' && selectedOrder?.createdAt ? 'COMPLETED' : (selectedOrder?.status || 'COMPLETED')}
 
 ITEMS:
-${selectedOrder?.items?.map(item => 
-  `${item.product?.name} (${item.product?.sku}) x${item.quantity} - रु${(item.price * item.quantity).toFixed(2)}`
+${selectedOrder?.items?.map(item =>
+  `${item.product?.name} (${item.product?.sku}) x${item.quantity} - रु${(item.price || 0).toFixed(2)}`
 ).join('\n')}
 
 ================================
-TOTAL: रु${selectedOrder?.totalAmount?.toFixed(2)}
-    `;
+SUBTOTAL:  रु${(subtotal || 0).toFixed(2)}
+TAX (13%):  रु${tax.toFixed(2)}${calculatedDiscount > 0 ? `
+DISCOUNT${discountType === 'percentage' ? ` (${discountAmount}%)` : ''}:  -रु${calculatedDiscount.toFixed(2)}` : ''}
+TOTAL:      रु${(selectedOrder?.totalAmount || 0).toFixed(2)}
+     `;
     
     const blob = new Blob([invoiceContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);

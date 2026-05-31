@@ -57,10 +57,10 @@ const OrderItemTable = ({ selectedOrder }) => {
                     {item.quantity}
                   </TableCell>
                   <TableCell className="text-right text-xs p-1.5">
-                    रु{item.price?.toFixed(2) || "0.00"}
+                    रु{((item.unitPrice || (item.price || 0) / (item.quantity || 1))).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right font-semibold text-xs p-1.5">
-                    रु{((item.price || 0) * (item.quantity || 0)).toFixed(2)}
+                    रु{(item.price || 0).toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}

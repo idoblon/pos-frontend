@@ -10,7 +10,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { sanitizeInput, validateEmail } from "@/util/inputValidator";
 import { mapToBackendRole } from "@/util/roleMapper";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
-import { startShift } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
+import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -64,20 +64,18 @@ const Login = () => {
       const profileResult = await dispatch(getUserProfile());
       const role = mapToBackendRole(result.payload?.role);
       
-      // Start shift for cashier on login
       if (role === 'ROLE_BRANCH_CASHIER') {
-        const branchId = profileResult.payload?.branchId;
-        
-        if (branchId && branchId !== 'null') {
+        try {
+          const shiftResult = await dispatch(startShift()).unwrap();
+          console.log('✅ Shift started successfully:', shiftResult);
+        } catch (error) {
+          console.warn("Start shift failed, fetching current shift:", error);
           try {
-            await dispatch(startShift(branchId)).unwrap();
-            console.log("✅ Shift started successfully");
-          } catch (error) {
-            console.warn("⚠️ Failed to start shift:", error);
-            // Continue to dashboard even if shift start fails
+            const currentShiftResult = await dispatch(getCurrentShiftProgress()).unwrap();
+            console.log('✅ Current shift fetched:', currentShiftResult);
+          } catch (getCurrentError) {
+            console.error('❌ Failed to get current shift:', getCurrentError);
           }
-        } else {
-          console.warn("⚠️ No branchId found in user profile - cannot start shift");
         }
       }
       

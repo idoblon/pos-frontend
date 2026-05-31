@@ -4,7 +4,9 @@ import { User, Lock } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { updateUserProfile, changePassword } from "@/Redux Toolkit/Features/user/userThunk";
+import { updateUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import { toast } from "sonner";
+import axios from "axios";
 
 export default function BranchSettings() {
   const dispatch = useDispatch();
@@ -18,29 +20,32 @@ export default function BranchSettings() {
   });
 
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   const handleProfileSave = (e) => {
     e.preventDefault();
     dispatch(updateUserProfile(profileForm));
   };
 
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault();
-    setPasswordError("");
-    setPasswordSuccess("");
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) { setPasswordError("New passwords do not match."); return; }
-    if (passwordForm.newPassword.length < 6) { setPasswordError("Password must be at least 6 characters."); return; }
-    dispatch(changePassword({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword }))
-      .then((res) => {
-        if (changePassword.fulfilled.match(res)) {
-          setPasswordSuccess("Password changed successfully.");
-          setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-        } else {
-          setPasswordError(res.payload ?? "Failed to change password.");
-        }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    try {
+      await axios.put("/api/users/update-password", {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
       });
+      toast.success("Password changed successfully");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to change password");
+    }
   };
 
   const sectionCard = { background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 24, display: "flex", flexDirection: "column", gap: 20 };
@@ -110,8 +115,7 @@ export default function BranchSettings() {
               <Input type="password" value={passwordForm[id]} onChange={(e) => setPasswordForm((f) => ({ ...f, [id]: e.target.value }))} required />
             </div>
           ))}
-          {passwordError   && <p style={{ fontSize: 13, color: "#e53e3e", margin: 0 }}>{passwordError}</p>}
-          {passwordSuccess && <p style={{ fontSize: 13, color: "#1a1d23", margin: 0 }}>{passwordSuccess}</p>}
+
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>
               Update Password

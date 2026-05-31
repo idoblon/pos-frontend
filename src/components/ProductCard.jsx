@@ -4,7 +4,7 @@ import { Package } from "lucide-react";
 
 export default function ProductCard({ product, stock, onAddToCart }) {
   const id = product.id || product._id;
-  const outOfStock = stock === 0;
+  const outOfStock = stock === 0 || stock === undefined || stock === null;
   const dispatch = useDispatch();
   const image = product.image || product.imageUrl;
   const description = product.description || product.desciption;
@@ -12,15 +12,16 @@ export default function ProductCard({ product, stock, onAddToCart }) {
   const price = product.sellingPrice || product.price || 0;
 
   const handleAddProductToCart = () => {
-    dispatch(addToCart(product));
+    if (outOfStock) return;
+    onAddToCart({ ...product, id, stock });
   };
 
   return (
     <div
       className="prod-card"
-      onClick={() => !outOfStock && onAddToCart({ ...product, id })}
+      onClick={handleAddProductToCart}
       style={{ opacity: outOfStock ? 0.5 : 1, cursor: outOfStock ? "not-allowed" : "pointer" }}
-      title={description || product.name}
+      title={outOfStock ? "Out of Stock" : (description || product.name)}
     >
       <div className="prod-img">
         {image ? (

@@ -25,7 +25,9 @@ const ReturnReceiptDialog = ({
   // Memoize the print handler to prevent re-creation on every render
   const handlePrint = useCallback(() => {
     window.print();
-  }, []);
+    // Close dialog after printing
+    setShowReturnReciptDialog(false);
+  }, [setShowReturnReciptDialog]);
 
   // Memoize the dialog close handler
   const handleDialogClose = useCallback((open) => {
@@ -91,47 +93,48 @@ const ReturnReceiptDialog = ({
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {selectedOrder.items?.map((item) => {
-                const itemTotal = ((item.price || 0) * (item.quantity || 0)).toFixed(2);
-                
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell className="p-1.5">
-                      <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
-                        {item.product?.image ? (
-                          <img
-                            src={item.product.image}
-                            className="w-8 h-8 object-cover"
-                            alt={item.product?.name || "Product"}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="p-1.5">
-                      <div className="font-medium text-xs text-gray-900">
-                        {item.product?.name || "Unknown"}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {item.product?.sku || "N/A"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center font-medium text-xs p-1.5">
-                      {item.quantity}
-                    </TableCell>
-                    <TableCell className="text-right text-xs p-1.5">
-                      रु{item.price?.toFixed(2) || "0.00"}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold text-xs p-1.5">
-                      रु{itemTotal}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
+             <TableBody>
+               {selectedOrder.items?.map((item) => {
+                 // Calculate unit price for display (prefer stored unitPrice, fallback to price/quantity)
+                 const unitPrice = item.unitPrice || (item.price ? item.price / item.quantity : 0);
+                 
+                 return (
+                   <TableRow key={item.id}>
+                     <TableCell className="p-1.5">
+                       <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center overflow-hidden">
+                         {item.product?.image ? (
+                           <img
+                             src={item.product.image}
+                             className="w-8 h-8 object-cover"
+                             alt={item.product?.name || "Product"}
+                             loading="lazy"
+                           />
+                         ) : (
+                           <span className="text-xs text-gray-400">-</span>
+                         )}
+                       </div>
+                     </TableCell>
+                     <TableCell className="p-1.5">
+                       <div className="font-medium text-xs text-gray-900">
+                         {item.product?.name || "Unknown"}
+                       </div>
+                       <div className="text-xs text-gray-500">
+                         {item.product?.sku || "N/A"}
+                       </div>
+                     </TableCell>
+                     <TableCell className="text-center font-medium text-xs p-1.5">
+                       {item.quantity}
+                     </TableCell>
+                     <TableCell className="text-right text-xs p-1.5">
+                       रु{unitPrice.toFixed(2)}
+                     </TableCell>
+                     <TableCell className="text-right font-semibold text-xs p-1.5">
+                       रु{(item.price || 0).toFixed(2)}
+                     </TableCell>
+                   </TableRow>
+                 );
+               })}
+             </TableBody>
           </Table>
           <div className="mt-4 pt-4 border-t">
             <div className="flex justify-between font-bold text-lg">

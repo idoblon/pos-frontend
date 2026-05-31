@@ -20,20 +20,23 @@ import {
   selectDiscount,
   selectCartNote
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
+import { toast } from "sonner";
 
-import { Menu, ShoppingCart, User, History, RotateCcw, FileText } from "lucide-react";
+import { Menu, ShoppingCart, User, History, RotateCcw, FileText, Lock } from "lucide-react";
 import Sidebar from "./sidebar/Sidebar";
 import CustomerSection from "./CustomerPaymentSection/CustomerSection";
 import DiscountSection from "./CustomerPaymentSection/DiscountSection";
 import NoteSection from "./CustomerPaymentSection/NoteSection";
 import PaymentSection from "./CustomerPaymentSection/PaymentSection";
 import ProductSection from "./ProductSection/ProductSection";
+import ChangePasswordDialog from "./Settings/ChangePasswordDialog";
 import secureStorage from "@/util/secureStorage";
 import "./cashier-styles.css";
 
 export default function CashierDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
@@ -59,6 +62,17 @@ const userData = secureStorage.getUserData();
   const discountAmt = useSelector(selectDiscountAmount);
   const total = useSelector(selectTotal);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('💰 Cart Calculations:', {
+      subtotal: subtotal.toFixed(2),
+      tax: tax.toFixed(2),
+      discount: discount,
+      discountAmt: discountAmt.toFixed(2),
+      total: total.toFixed(2)
+    });
+  }, [subtotal, tax, discount, discountAmt, total]);
+
   const fullName = userProfile?.fullName || user?.fullName || userData?.fullName;
 const email = userProfile?.email || user?.email || userData?.email;
 const initials = fullName
@@ -71,13 +85,36 @@ const initials = fullName
   };
 
   const handleAddToCart = (product) => {
+    const stock = product.stock || 0;
+    
+    // Check if product is out of stock
+    if (stock <= 0) {
+      toast.error(`${product.name} is out of stock!`);
+      return;
+    }
+    
+    // Check if already in cart and at max quantity
+    const existingItem = cart.find(item => item.id === product.id);
+    if (existingItem && existingItem.quantity >= stock) {
+      toast.warning(`Cannot add more ${product.name}. Only ${stock} available in stock.`);
+      return;
+    }
+    
     dispatch(addToCart({ ...product, id: product.id || product._id }));
   };
 
   const updateQty = (id, delta) => {
     const item = cart.find(i => i.id === id);
     if (item) {
-      dispatch(updateCartItemQuantity({ id, quantity: item.quantity + delta }));
+      const newQty = item.quantity + delta;
+      const stock = item.stock || 0;
+      
+      if (newQty > stock) {
+        toast.warning(`Cannot add more ${item.name}. Only ${stock} available in stock.`);
+        return;
+      }
+      
+      dispatch(updateCartItemQuantity({ id, quantity: newQty }));
     }
   };
 
@@ -143,6 +180,16 @@ const initials = fullName
           {profileOpen && (
             <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 200, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 100, overflow: "hidden" }}>
               <button
+                onClick={() => {
+                  setProfileOpen(false);
+                  setPasswordDialogOpen(true);
+                }}
+                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "#1a1d23", fontFamily: "inherit", borderBottom: "1px solid #e5e7eb" }}
+              >
+                <Lock size={16} />
+                Change Password
+              </button>
+              <button
                 onClick={handleLogout}
                 style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "#e53e3e", fontFamily: "inherit" }}
               >
@@ -175,16 +222,30 @@ const initials = fullName
           </div>
 
           <div className="cart-list">
-            {cart.map((item) => (
+            {cart.map((item) => {
+              const stock = item.stock || 0;
+              const atMaxStock = item.quantity >= stock;
+              
+              return (
               <div key={item.id} className="cart-item">
                 <div className="ci-info">
                   <div className="ci-name">{item.name}</div>
                   <div className="ci-sku">{item.sku}</div>
+                  {stock > 0 && stock <= 10 && (
+                    <div style={{ fontSize: 9, color: "#d97706", marginTop: 2 }}>Only {stock} in stock</div>
+                  )}
                 </div>
                 <div className="qty-ctrl">
                   <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>-</button>
                   <span className="qty-num">{item.quantity || 1}</span>
-                  <button className="qty-btn" onClick={() => updateQty(item.id, 1)}>+</button>
+                  <button 
+                    className="qty-btn" 
+                    onClick={() => updateQty(item.id, 1)}
+                    disabled={atMaxStock}
+                    style={{ opacity: atMaxStock ? 0.5 : 1, cursor: atMaxStock ? 'not-allowed' : 'pointer' }}
+                  >
+                    +
+                  </button>
                 </div>
                 <div className="ci-price">
                   <div className="ci-unit">{item.price || item.sellingPrice}</div>
@@ -192,7 +253,7 @@ const initials = fullName
                 </div>
                 <button className="del-btn" onClick={() => removeItem(item.id)}>✕</button>
               </div>
-            ))}
+            )})}
             {cart.length > 0 && (
               <div className="cart-foot">
                 <div className="cf-row"><span className="cf-label">Subtotal</span><span className="cf-val">रु{subtotal.toFixed(2)}</span></div>
@@ -229,6 +290,11 @@ const initials = fullName
           />
         </div>
       </div>
+      
+      <ChangePasswordDialog 
+        open={passwordDialogOpen} 
+        onClose={() => setPasswordDialogOpen(false)} 
+      />
     </div>
   );
 }

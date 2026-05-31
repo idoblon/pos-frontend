@@ -7,13 +7,11 @@ export const signup = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/signup", userData);
-      const { jwt, role, storeId, branchId, storeName } = res.data;
-      
-      // Use secure storage instead of localStorage
+      const { jwt } = res.data;
+      const { role, storeId, branchId, storeName, id: userId, email } = res.data.user ?? {};
       secureStorage.setToken(jwt);
-      secureStorage.setUserData({ role, storeId, branchId, storeName });
-      
-      return res.data;
+      secureStorage.setUserData({ role, storeId, branchId, storeName, userId, email });
+      return { jwt, role, storeId, branchId, storeName, userId, email };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "signup failed");
     }
@@ -26,17 +24,13 @@ export const login = createAsyncThunk(
     try {
       const res = await api.post("/auth/login", userData);
       console.log("✅ Login response:", res.data);
-      const { jwt, role, storeId, branchId, storeName } = res.data;
-      
-      console.log("Extracted values:", { jwt: jwt ? "present" : "missing", role, storeId, branchId, storeName });
-      
-      // Use secure storage instead of localStorage
+      const { jwt } = res.data;
+      const { role, storeId, branchId, storeName, id: userId, email } = res.data.user ?? {};
+
       secureStorage.setToken(jwt);
-      secureStorage.setUserData({ role, storeId, branchId, storeName });
-      
-      console.log("Saved to secureStorage:", secureStorage.getUserData());
-      
-      return res.data;
+      secureStorage.setUserData({ role, storeId, branchId, storeName, userId, email });
+
+      return { jwt, role, storeId, branchId, storeName, userId, email };
     } catch (error) {
       console.error("❌ Login error:", error);
       return rejectWithValue(error.response?.data?.message || "login failed");

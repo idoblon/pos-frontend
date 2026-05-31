@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const EMPTY_FORM = { name: "", email: "", phone: "", address: "" };
+const EMPTY_FORM = { fullName: "", email: "", phone: "", address: "" };
 
 const s = {
   page:        { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
@@ -33,11 +33,11 @@ export default function BranchCustomers() {
   useEffect(() => { dispatch(getAllCustomers()); }, [dispatch]);
 
   const filtered = customers?.filter((c) =>
-    `${c.name} ${c.email} ${c.phone}`.toLowerCase().includes(search.toLowerCase())
+    `${c.fullName} ${c.email} ${c.phone}`.toLowerCase().includes(search.toLowerCase())
   );
 
   const openAdd    = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
-  const openEdit   = (c) => { setEditing(c); setForm({ name: c.name ?? "", email: c.email ?? "", phone: c.phone ?? "", address: c.address ?? "" }); setDialogOpen(true); };
+  const openEdit   = (c) => { setEditing(c); setForm({ fullName: c.fullName ?? "", email: c.email ?? "", phone: c.phone ?? "", address: c.address ?? "" }); setDialogOpen(true); };
   const openDelete = (c) => { setSelected(c); setDeleteDialogOpen(true); };
 
   const handleSubmit = (e) => {
@@ -101,7 +101,7 @@ export default function BranchCustomers() {
                         <div style={{ padding: 5, background: "#eef1f5", borderRadius: "50%" }}>
                           <UserCircle size={16} color="#6b7280" />
                         </div>
-                        <span style={{ fontWeight: 600 }}>{c.name}</span>
+                        <span style={{ fontWeight: 600 }}>{c.fullName}</span>
                       </div>
                     </td>
                     <td style={{ ...s.td, color: "#8a909c" }}>{c.email ?? "—"}</td>
@@ -125,7 +125,7 @@ export default function BranchCustomers() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editing ? "Edit Customer" : "Add Customer"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-            {[{ id: "name", label: "Name", required: true }, { id: "email", label: "Email", type: "email" }, { id: "phone", label: "Phone" }, { id: "address", label: "Address" }].map(({ id, label, type, required }) => (
+            {[{ id: "fullName", label: "Full Name", required: true }, { id: "email", label: "Email", type: "email" }, { id: "phone", label: "Phone" }, { id: "address", label: "Address" }].map(({ id, label, type, required }) => (
               <div key={id} className="space-y-1.5">
                 <Label>{label}</Label>
                 <Input type={type ?? "text"} value={form[id]} onChange={(e) => setForm((f) => ({ ...f, [id]: e.target.value }))} required={required} />
@@ -144,7 +144,7 @@ export default function BranchCustomers() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Delete Customer</DialogTitle></DialogHeader>
-          <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Delete <strong>{selected?.name}</strong>?</p>
+          <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Delete <strong>{selected?.fullName}</strong>?</p>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>

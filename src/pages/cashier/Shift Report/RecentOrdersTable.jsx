@@ -21,7 +21,7 @@ const RecentOrdersTable = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {shiftData?.recentOrders?.map((order)=>(
+                        {shiftData?.recentOrders?.length > 0 ? shiftData.recentOrders.map((order)=>(
                             <TableRow key={order.id}>
                                 <TableCell className="font-medium text-sm">#{order.id}</TableCell>
                                 <TableCell className="text-sm">{order.createdAt}</TableCell>
@@ -30,9 +30,11 @@ const RecentOrdersTable = () => {
                                         {order.paymentType}
                                     </span>
                                 </TableCell>
-                                <TableCell className="text-right font-semibold text-sm">रु {order.totalAmount.toLocaleString()}</TableCell>
+                                <TableCell className="text-right font-semibold text-sm">रु {(order.totalAmount ?? 0).toLocaleString()}</TableCell>
                             </TableRow>
-                        ))}
+                        )) : (
+                            <TableRow><TableCell colSpan={4} className="text-center text-gray-400 text-sm py-4">No orders yet</TableCell></TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </div>

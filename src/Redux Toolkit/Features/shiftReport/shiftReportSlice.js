@@ -31,12 +31,11 @@ const shiftReportSlice = createSlice({
       })
       .addCase(startShift.fulfilled, (state, action) => {
         state.loading = false;
-        state.selectedShift = action.payload;
+        state.currentShift = action.payload;
       })
       .addCase(startShift.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.shifts.push(action.payload);
       })
       // end shift
       .addCase(endShift.pending, (state) => {
@@ -69,6 +68,7 @@ const shiftReportSlice = createSlice({
       .addCase(getCurrentShiftProgress.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        // Do not clear currentShift on 404 - it may have been set by startShift
       })
       // get shift report by date
       .addCase(getShiftReportByDate.pending, (state) => {

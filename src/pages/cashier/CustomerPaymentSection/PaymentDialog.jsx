@@ -44,6 +44,11 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
 
   const change = amountReceived ? Math.max(0, parseFloat(amountReceived) - total) : 0;
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('💳 PaymentDialog - Total:', total.toFixed(2), 'Discount:', discount);
+  }, [total, discount]);
+
   const handlePayment = async () => {
     setError("");
     if (cartItems.length === 0) {
@@ -98,10 +103,15 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       
       setSuccess(true);
 
-      // Patch the order in Redux with correct data the backend failed to return
+      // Patch the order in Redux with correct data the backend doesn't return
       const isWalkIn = !customer?.id;
+      const patchedItems = response.data.items?.map(item => ({
+        ...item,
+        unitPrice: item.unitPrice || (item.price / (item.quantity || 1)),
+      }));
       dispatch(patchOrder({
         ...response.data,
+        items: patchedItems,
         status: "COMPLETED",
         paymentMethod: paymentMethod,
         paymentType: paymentMethod,

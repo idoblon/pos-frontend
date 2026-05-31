@@ -2,6 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import React, { useEffect } from "react";
 import OrderTable from "./OrderTable";
 import { getOrdersByCashier } from "@/Redux Toolkit/Features/order/orderThunk";
+import { getRefundsByCashier } from "@/Redux Toolkit/Features/refund/refundThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import {
   Dialog,
@@ -25,7 +26,8 @@ const OrderHistory = () => {
   const handleViewOrderDetails = (order) => {
     setSelectedOrder({
       ...order,
-      status: order.status === "PENDING" && order.createdAt ? "COMPLETED" : (order.status || "COMPLETED"),
+      status: order.status === "REFUNDED" ? "REFUNDED" : 
+              (order.status === "PENDING" && order.createdAt ? "COMPLETED" : (order.status || "COMPLETED")),
       paymentMethod: order.paymentMethod || order.paymentType || "CASH",
       paymentType: order.paymentMethod || order.paymentType || "CASH",
     });
@@ -36,7 +38,18 @@ const OrderHistory = () => {
     dispatch(getUserProfile()).then((action) => {
       const userData = secureStorage.getUserData();
       const cashierId = action.payload?.id || user?.id || userData?.userId;
-      if (cashierId) dispatch(getOrdersByCashier(cashierId));
+      if (cashierId) {
+        console.log("🔄 Fetching orders and refunds for cashier:", cashierId);
+        dispatch(getOrdersByCashier(cashierId));
+        // Also fetch existing refunds to mark orders as refunded
+        dispatch(getRefundsByCashier(cashierId))
+          .then((result) => {
+            console.log("🔄 Cashier refunds fetch result:", result);
+          })
+          .catch((error) => {
+            console.log("❌ Cashier refunds fetch error:", error);
+          });
+      }
     });
   }, [dispatch]);
   return (

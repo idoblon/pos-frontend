@@ -22,6 +22,20 @@ const OrderInformation = ({ selectedOrder }) => {
     ? "COMPLETED"
     : (selectedOrder.status || "COMPLETED");
 
+  const subtotal = (selectedOrder.totalAmount || 0) - (selectedOrder.taxAmount || 0);
+  const discountAmount = selectedOrder.discount || 0;
+  const discountType = selectedOrder.discountType || "percentage";
+  
+  // Calculate discount display value
+  let calculatedDiscount = 0;
+  if (discountAmount > 0) {
+    if (discountType === "percentage") {
+      calculatedDiscount = subtotal * (discountAmount / 100);
+    } else {
+      calculatedDiscount = discountAmount;
+    }
+  }
+
   return (
     <Card>
       <CardContent className="p-3">
@@ -43,9 +57,25 @@ const OrderInformation = ({ selectedOrder }) => {
             <span className="text-xs text-gray-600">Payment Method</span>
             <span className="font-medium text-xs text-gray-900">{selectedOrder.paymentMethod || selectedOrder.paymentType || "CASH"}</span>
           </div>
-          <div className="flex justify-between items-center py-1 bg-gray-50 px-2 rounded mt-1.5">
-            <span className="text-xs font-semibold text-gray-900">Total Amount</span>
-            <span className="font-bold text-base text-gray-900">रु {selectedOrder.totalAmount?.toFixed(2) || '0.00'}</span>
+          <div className="flex justify-between items-center py-1">
+            <span className="text-xs text-gray-600">Subtotal</span>
+            <span className="font-medium text-xs text-gray-900">रु {subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center py-1">
+            <span className="text-xs text-gray-600">Tax (13%)</span>
+            <span className="font-medium text-xs text-gray-900">रु {selectedOrder.taxAmount?.toFixed(2) || '0.00'}</span>
+          </div>
+          {calculatedDiscount > 0 && (
+            <div className="flex justify-between items-center py-1">
+              <span className="text-xs text-gray-600">
+                Discount {discountType === "percentage" ? `(${discountAmount}%)` : ""}
+              </span>
+              <span className="font-medium text-xs text-red-600">-रु {calculatedDiscount.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center py-1 bg-gray-100 px-2 rounded mt-1.5">
+            <span className="text-xs font-bold text-gray-900">Total Amount</span>
+            <span className="font-extrabold text-lg text-gray-900">रु {selectedOrder.totalAmount?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
       </CardContent>

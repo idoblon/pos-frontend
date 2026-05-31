@@ -60,10 +60,10 @@ export const getOrdersByBranch = createAsyncThunk(
       
       const headers = getAuthHeaders();
       const param = [];
-      if (sanitizedParams.customerId) param.push(`customerId=${sanitizedParams.customerId}`);
-      if (sanitizedParams.cashierId) param.push(`cashierId=${sanitizedParams.cashierId}`);
-      if (sanitizedParams.paymentId) param.push(`paymentId=${sanitizedParams.paymentId}`);
-      if (sanitizedParams.status) param.push(`status=${sanitizedParams.status}`);
+      if (sanitizedParams.customerId && sanitizedParams.customerId !== 'undefined') param.push(`customerId=${sanitizedParams.customerId}`);
+      if (sanitizedParams.cashierId && sanitizedParams.cashierId !== 'undefined') param.push(`cashierId=${sanitizedParams.cashierId}`);
+      if (sanitizedParams.paymentId && sanitizedParams.paymentId !== 'undefined') param.push(`paymentId=${sanitizedParams.paymentId}`);
+      if (sanitizedParams.status && sanitizedParams.status !== 'undefined') param.push(`status=${sanitizedParams.status}`);
       
       const query = param.length ? `?${param.join("&")}` : "";
       const res = await api.get(`/api/orders/branch/${sanitizedParams.branchId}${query}`, { headers });

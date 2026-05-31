@@ -15,10 +15,21 @@ const cartSlice = createSlice({
   reducers: {
     addToCart: (state, action) => {
       const product = action.payload;
+      const stock = product.stock || 0;
+      
+      // Prevent adding out of stock items
+      if (stock <= 0) {
+        return;
+      }
+      
       const existingItem = state.items.find(
         (item) => item.id === product.id,
       );
       if (existingItem) {
+        // Check if we can add more (stock limit)
+        if (existingItem.quantity >= stock) {
+          return; // Cannot add more than available stock
+        }
         existingItem.quantity += 1;
       } else {
         const productWithQuantity = {
@@ -35,7 +46,13 @@ const cartSlice = createSlice({
       } else {
         const item = state.items.find((item) => item.id === id);
         if (item) {
-          item.quantity = quantity;
+          const stock = item.stock || 0;
+          // Prevent exceeding stock
+          if (quantity > stock) {
+            item.quantity = stock;
+          } else {
+            item.quantity = quantity;
+          }
         }
       }
     },

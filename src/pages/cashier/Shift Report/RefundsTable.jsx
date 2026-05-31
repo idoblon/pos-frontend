@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 
 
 const RefundsTable = () => {
-    const shiftData=useSelector((state)=> state.shiftRepor?.currentShift);
+    const shiftData=useSelector((state)=> state.shiftReport?.currentShift);
     return (
          <Card>
         <CardContent className="p-4">
@@ -22,14 +22,16 @@ const RefundsTable = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {shiftData?.refunds?.map((refund) => (
+                        {shiftData?.refunds?.length > 0 ? shiftData.refunds.map((refund) => (
                             <TableRow key={refund.id}>
                                 <TableCell className="font-medium text-sm">REF-{refund.id}</TableCell>
                                 <TableCell className="text-sm">ORD-{refund.orderId}</TableCell>
                                 <TableCell className="max-w-xs truncate text-sm">{refund.reason}</TableCell>
-                                <TableCell className="text-right font-semibold text-red-600 text-sm">रु {refund.amount.toLocaleString()}</TableCell>
+                                <TableCell className="text-right font-semibold text-red-600 text-sm">रु {(refund.amount ?? 0).toLocaleString()}</TableCell>
                             </TableRow>
-                        ))}
+                        )) : (
+                            <TableRow><TableCell colSpan={4} className="text-center text-gray-400 text-sm py-4">No refunds yet</TableCell></TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </div>

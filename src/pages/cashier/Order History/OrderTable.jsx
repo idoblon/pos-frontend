@@ -1,3 +1,5 @@
+import React from "react";
+import { useSelector } from "react-redux";
 import {
   Table,
   TableBody,
@@ -8,11 +10,10 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Eye as EyeIcon, Printer } from "lucide-react";
-import React from "react";
-import { useSelector } from "react-redux";
 
 const OrderTable = ({ handleViewOrderDetails }) => {
   const { orders } = useSelector((state) => state.order);
+  
   const handlePrintOrder = (order) => {
     const printContent = `
 ORDER RECEIPT
@@ -78,9 +79,15 @@ Thank you for your business!
             // Get payment type - backend returns null, so default to CASH
             const paymentType = order.paymentMethod || order.paymentType || "CASH";
             
-            // Get status - backend returns PENDING, but we know payment was completed
-            // If order has createdAt and totalAmount, it means payment was successful
-            const status = order.status === "PENDING" && order.createdAt ? "COMPLETED" : (order.status || "COMPLETED");
+            // Get status - handle refund statuses properly
+            let status;
+            if (order.status === "REFUNDED") {
+              status = "REFUNDED";
+            } else if (order.status === "PENDING" && order.createdAt) {
+              status = "COMPLETED";
+            } else {
+              status = order.status || "COMPLETED";
+            }
             
             return (
               <TableRow key={order.id}>
@@ -106,8 +113,10 @@ Thank you for your business!
                     borderRadius: "4px",
                     fontSize: "11px",
                     fontWeight: "600",
-                    background: status === "COMPLETED" ? "#f0fdf4" : "#fef2f2",
-                    color: status === "COMPLETED" ? "#15803d" : "#dc2626"
+                    background: status === "COMPLETED" ? "#f0fdf4" : 
+                               status === "REFUNDED" ? "#fef2f2" : "#fef2f2",
+                    color: status === "COMPLETED" ? "#15803d" : 
+                          status === "REFUNDED" ? "#dc2626" : "#dc2626"
                   }}>
                     {status}
                   </span>

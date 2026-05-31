@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Search, ShoppingBag } from "lucide-react";
 import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
+import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 import secureStorage from "@/util/secureStorage";
+import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 
 const statusStyle = {
   COMPLETED: { background: "#f0f0f0", color: "#1a1d23" },
-  PENDING:   { background: "#fffbeb", color: "#d97706" },
-  CANCELLED: { background: "#fef2f2", color: "#e53e3e" },
+  REFUNDED: { background: "#fef2f2", color: "#dc2626" },
 };
 
 const s = {
@@ -21,28 +22,69 @@ const s = {
 
 export default function BranchOrders() {
   const dispatch = useDispatch();
+  const { userProfile } = useSelector((s) => s.user);
+  const { user } = useSelector((s) => s.auth);
   const userData = secureStorage.getUserData();
-  const branchId = userData?.branchId;
+  const branchId = userProfile?.branchId ?? user?.branchId ?? userData?.branchId;
   const { orders, loading } = useSelector((s) => s.order);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   useEffect(() => {
-    if (branchId) dispatch(getOrdersByBranch({ branchId }));
+    dispatch(getUserProfile());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (branchId) {
+      console.log("🔄 BranchOrders - Fetching orders and refunds for branch:", branchId);
+      dispatch(getOrdersByBranch({ branchId }));
+      
+      // Test if getRefundsByBranch is available
+      console.log("🔄 getRefundsByBranch function:", getRefundsByBranch);
+      
+      // Also fetch existing refunds to mark orders as refunded
+      console.log("🔄 About to dispatch getRefundsByBranch...");
+      const refundPromise = dispatch(getRefundsByBranch(branchId));
+      console.log("🔄 Refund promise:", refundPromise);
+      
+      refundPromise
+        .then((result) => {
+          console.log("🔄 BranchOrders - Refunds fetch result:", result);
+        })
+        .catch((error) => {
+          console.log("❌ BranchOrders - Refunds fetch error:", error);
+        });
+    }
   }, [dispatch, branchId]);
 
   const filtered = orders?.filter((o) => {
     const matchSearch = (o.id ?? o._id ?? "").toString().includes(search) ||
       (o.customerName ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "ALL" || o.status === statusFilter;
+    
+    // Determine actual status - only COMPLETED or REFUNDED
+    let actualStatus;
+    if (o.status === "REFUNDED") {
+      actualStatus = "REFUNDED";
+    } else {
+      // All other orders (PENDING with createdAt, COMPLETED, etc.) are treated as COMPLETED
+      actualStatus = "COMPLETED";
+    }
+    
+    const matchStatus = statusFilter === "ALL" || actualStatus === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  // Debug: Log current orders to see their statuses
+  console.log("🔄 Current orders with statuses:", orders?.map(o => ({ id: o.id, status: o.status })));
+
+
 
   return (
     <div style={s.page}>
       <div>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Orders & Transactions</h1>
         <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>All branch orders and payment details</p>
+
       </div>
 
       <div style={s.card}>
@@ -54,7 +96,7 @@ export default function BranchOrders() {
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#f5f5f5", outline: "none", fontFamily: "inherit" }}
             >
-              {["ALL", "COMPLETED", "PENDING", "CANCELLED"].map((s) => (
+              {["ALL", "COMPLETED", "REFUNDED"].map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -77,15 +119,19 @@ export default function BranchOrders() {
         {filtered?.length > 0 && (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  {["Order ID", "Date", "Items", "Payment", "Status", "Total"].map((h, i) => (
-                    <th key={h} style={{ ...s.th, textAlign: i === 5 ? "right" : "left" }}>{h}</th>
+               <thead>
+                 <tr>
+                   {["Order ID", "Date", "Cashier", "Items", "Payment", "Status", "Total"].map((h, i) => (
+                     <th key={h} style={{ ...s.th, textAlign: i === 6 ? "right" : "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((o, i) => (
+                {filtered.map((o, i) => {
+                  // Determine display status - only COMPLETED or REFUNDED
+                  const actualStatus = o.status === "REFUNDED" ? "REFUNDED" : "COMPLETED";
+                  
+                  return (
                   <tr key={o.id ?? o._id ?? i} style={{ background: "white" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
                     onMouseLeave={e => e.currentTarget.style.background = "white"}
@@ -94,18 +140,25 @@ export default function BranchOrders() {
                     <td style={{ ...s.td, color: "#8a909c" }}>
                       {o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                     </td>
+                    <td style={{ ...s.td, color: "#1a1d23", fontWeight: 500 }}>{o.cashier?.fullName ?? "—"}</td>
                     <td style={{ ...s.td, color: "#8a909c" }}>{o.items?.length ?? o.orderItems?.length ?? "—"}</td>
                     <td style={{ ...s.td, color: "#8a909c" }}>{o.paymentType ?? o.paymentMethod ?? "—"}</td>
                     <td style={s.td}>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, ...(statusStyle[o.status] ?? { background: "#eef1f5", color: "#6b7280" }) }}>
-                        {o.status ?? "PENDING"}
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, ...(statusStyle[actualStatus] ?? { background: "#eef1f5", color: "#6b7280" }) }}>
+                        {actualStatus}
                       </span>
                     </td>
                     <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#1a1d23" }}>
                       रु {(o.totalAmount ?? 0).toLocaleString("en-IN")}
+                      {o.refundedAmount > 0 && (
+                        <div style={{ fontSize: 10, color: "#dc2626", fontWeight: 400 }}>
+                          Refunded: रु {o.refundedAmount.toLocaleString("en-IN")}
+                        </div>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

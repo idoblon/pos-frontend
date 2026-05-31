@@ -12,21 +12,10 @@ const validateDateFormat = (dateString) => {
 
 export const startShift = createAsyncThunk(
   "/shiftReport/start",
-  async (branchId, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const sanitizedParams = sanitizePathParams({ branchId });
-      
-      if (!sanitizedParams.branchId) {
-        return rejectWithValue('Branch ID is required to start shift');
-      }
-      
       const headers = getAuthHeaders();
-      const res = await api.post(
-        `/api/shift-report/start?branchId=${sanitizedParams.branchId}`,
-        {},
-        { headers },
-      );
-      console.log("shift started successfully", res.data);
+      const res = await api.post(`/api/shift-reports/start`, {}, { headers });
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to start shift");
@@ -39,8 +28,7 @@ export const endShift = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.patch(`/api/shift-report/end`, {}, { headers });
-      console.log("shift end successfully", res.data);
+      const res = await api.patch(`/api/shift-reports/end`, {}, { headers });
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to end shift");
@@ -53,8 +41,7 @@ export const getCurrentShiftProgress = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/shift-report/current`, { headers });
-      console.log("current shift fetched successfully", res.data);
+      const res = await api.get(`/api/shift-reports/current`, { headers });
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch current shift");
@@ -77,10 +64,9 @@ export const getShiftReportByDate = createAsyncThunk(
       const headers = getAuthHeaders();
       const formattedDate = encodeURIComponent(sanitizedDate);
       const res = await api.get(
-        `/api/shift-report/cashier/${sanitizedParams.cashierId}/by-date?date=${formattedDate}`,
+        `/api/shift-reports/cashier/${sanitizedParams.cashierId}/by-date?date=${formattedDate}`,
         { headers },
       );
-      console.log("shift report by date successfully", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch shift report by date");
@@ -94,8 +80,7 @@ export const getShiftsByCashier = createAsyncThunk(
     try {
       const sanitizedParams = sanitizePathParams({ cashierId });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/shift-report/cashier/${sanitizedParams.cashierId}`, { headers });
-      console.log("cashier shift successfully", res.data);
+      const res = await api.get(`/api/shift-reports/cashier/${sanitizedParams.cashierId}`, { headers });
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch cashier shifts");
@@ -109,8 +94,7 @@ export const getShiftsByBranch = createAsyncThunk(
     try {
       const sanitizedParams = sanitizePathParams({ branchId });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/shift-report/branch/${sanitizedParams.branchId}`, { headers });
-      console.log("branch shift successfully", res.data);
+      const res = await api.get(`/api/shift-reports/branch/${sanitizedParams.branchId}`, { headers });
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch branch shifts");
@@ -124,8 +108,7 @@ export const getShiftById = createAsyncThunk(
     try {
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.get(`/api/shift-report/${sanitizedParams.id}`, { headers });
-      console.log("shift by id successfully", res.data);
+      const res = await api.get(`/api/shift-reports/${sanitizedParams.id}`, { headers });
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch shift by id");
@@ -155,10 +138,9 @@ export const getShiftsByDateRange = createAsyncThunk(
       const formattedTo = encodeURIComponent(sanitizedTo);
       
       const res = await api.get(
-        `/api/shift-report/branch/${sanitizedParams.branchId}/range?from=${formattedFrom}&to=${formattedTo}`,
+        `/api/shift-reports/branch/${sanitizedParams.branchId}/range?from=${formattedFrom}&to=${formattedTo}`,
         { headers },
       );
-      console.log("shifts by date range successfully", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch shifts by date range");
@@ -172,8 +154,7 @@ export const updateShiftReport = createAsyncThunk(
     try {
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
-      const res = await api.put(`/api/shift-report/${sanitizedParams.id}`, shiftData, { headers });
-      console.log("update shift report successfully", res.data);
+      const res = await api.put(`/api/shift-reports/${sanitizedParams.id}`, shiftData, { headers });
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to update shift report");

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import React, { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
+import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 
 // Mock data for testing when no user is logged in
 const mockOrders = [
@@ -86,6 +87,8 @@ const OrderTable = ({ handleSelectOrder }) => {
     if (user?.branchId) {
       console.log("Fetching orders for branch:", user.branchId);
       dispatch(getOrdersByBranch({ branchId: user.branchId }));
+      console.log("🔄 Fetching refunds for branch:", user.branchId);
+      dispatch(getRefundsByBranch(user.branchId));
     } else {
       console.log("No branchId found in user - using mock data");
     }
@@ -99,6 +102,8 @@ const OrderTable = ({ handleSelectOrder }) => {
         return "warning";
       case "CANCELLED":
         return "destructive";
+      case "REFUNDED":
+        return "destructive";
       default:
         return "info";
     }
@@ -109,9 +114,12 @@ const OrderTable = ({ handleSelectOrder }) => {
     const orderList =
       orders && orders.length > 0 ? orders : !user ? mockOrders : [];
     console.log("Order list:", orderList);
-    return (
-      orderList?.filter((o) => o.status?.toUpperCase() === "COMPLETED") ?? []
-    );
+    
+    // Show both COMPLETED and REFUNDED orders for refund management
+    return orderList.filter((o) => {
+      const status = o.status?.toUpperCase();
+      return status === "COMPLETED" || status === "REFUNDED";
+    });
   }, [orders, user]);
 
   console.log("Refundable orders:", refundableOrders);
@@ -159,10 +167,11 @@ const OrderTable = ({ handleSelectOrder }) => {
                   <TableCell className="text-right">
                     <Button
                       onClick={() => handleSelectOrder(order)}
-                      variant="default"
+                      variant={order.status?.toUpperCase() === "REFUNDED" ? "secondary" : "default"}
                       size="sm"
+                      disabled={order.status?.toUpperCase() === "REFUNDED"}
                     >
-                      Select for Refund
+                      {order.status?.toUpperCase() === "REFUNDED" ? "Already Refunded" : "Select for Refund"}
                     </Button>
                   </TableCell>
                 </TableRow>
