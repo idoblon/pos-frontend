@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Search, UserPlus, User } from "lucide-react";
 import api from "@/util/api";
 import { getAuthHeaders } from "@/util/getAuthHeader";
-import { logBackendStatus } from "@/util/backendTest";
 import CustomerForm from "./CustomerForm";
 
 const CustomerDialog = ({ open, onClose, onSelectCustomer }) => {

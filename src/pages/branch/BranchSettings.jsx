@@ -1,29 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { User, Lock } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { updateUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import { updateUserProfile, changePassword, getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { toast } from "sonner";
-import axios from "axios";
 
 export default function BranchSettings() {
   const dispatch = useDispatch();
   const { userProfile, loading } = useSelector((s) => s.user);
 
   const [profileForm, setProfileForm] = useState({
-    firstName: userProfile?.firstName ?? "",
-    lastName:  userProfile?.lastName  ?? "",
-    email:     userProfile?.email     ?? "",
-    phone:     userProfile?.phone     ?? "",
+    fullName: "",
+    email: "",
+    phone: "",
   });
 
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
 
-  const handleProfileSave = (e) => {
+  // Load user profile on component mount
+  useEffect(() => {
+    dispatch(getUserProfile());
+  }, [dispatch]);
+
+  // Update form when userProfile changes
+  useEffect(() => {
+    if (userProfile) {
+      setProfileForm({
+        fullName: userProfile.fullName || "",
+        email: userProfile.email || "",
+        phone: userProfile.phone || "",
+      });
+    }
+  }, [userProfile]);
+
+  const handleProfileSave = async (e) => {
     e.preventDefault();
-    dispatch(updateUserProfile(profileForm));
+    try {
+      await dispatch(updateUserProfile(profileForm)).unwrap();
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      toast.error(error || "Failed to update profile");
+    }
   };
 
   const handlePasswordChange = async (e) => {
@@ -37,14 +56,14 @@ export default function BranchSettings() {
       return;
     }
     try {
-      await axios.put("/api/users/update-password", {
+      await dispatch(changePassword({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
-      });
+      })).unwrap();
       toast.success("Password changed successfully");
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to change password");
+      toast.error(error || "Failed to change password");
     }
   };
 
@@ -69,25 +88,35 @@ export default function BranchSettings() {
           </div>
         </div>
         <form onSubmit={handleProfileSave} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            {[{ id: "firstName", label: "First Name" }, { id: "lastName", label: "Last Name" }].map(({ id, label }) => (
-              <div key={id} className="space-y-1.5">
-                <Label>{label}</Label>
-                <Input value={profileForm[id]} onChange={(e) => setProfileForm((f) => ({ ...f, [id]: e.target.value }))} />
-              </div>
-            ))}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, maxWidth: 400 }}>
+            <div className="space-y-1.5">
+              <Label>Full Name</Label>
+              <Input 
+                value={profileForm.fullName} 
+                onChange={(e) => setProfileForm((f) => ({ ...f, fullName: e.target.value }))} 
+                required 
+              />
+            </div>
             <div className="space-y-1.5">
               <Label>Email</Label>
-              <Input type="email" value={profileForm.email} onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))} />
+              <Input 
+                type="email" 
+                value={profileForm.email} 
+                onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))} 
+                required 
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Phone</Label>
-              <Input value={profileForm.phone} onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))} />
+              <Input 
+                value={profileForm.phone} 
+                onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))} 
+              />
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>
-              Save Changes
+              {loading ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>
@@ -118,7 +147,7 @@ export default function BranchSettings() {
 
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <Button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>
-              Update Password
+              {loading ? "Updating..." : "Update Password"}
             </Button>
           </div>
         </form>

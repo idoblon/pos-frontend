@@ -13,11 +13,15 @@ import {
   LogOut,
   Bell,
   Menu,
+  Truck,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { getBranchById } from "@/Redux Toolkit/Features/branch/branchThunk";
+import { getRestockRequestsByBranch } from "@/Redux Toolkit/Features/restock/restockThunk";
 import secureStorage from "@/util/secureStorage";
 import posLogo from "@/logo/pos.png";
 
@@ -25,6 +29,7 @@ const navItems = [
   { path: "/branch", label: "Overview", icon: LayoutDashboard },
   { path: "/branch/orders", label: "Orders", icon: ShoppingBag },
   { path: "/branch/inventory", label: "Inventory", icon: Package },
+  { path: "/branch/restock-requests", label: "Restock Requests", icon: Truck },
   { path: "/branch/customers", label: "Customers", icon: UserCircle },
   { path: "/branch/employees", label: "Employees", icon: Users },
   { path: "/branch/reports", label: "Reports", icon: BarChart2 },
@@ -32,10 +37,11 @@ const navItems = [
   { path: "/branch/settings", label: "Settings", icon: Settings },
 ];
 
-function NavLinks({ onClose }) {
+function NavLinks({ onClose, notificationCount }) {
   const location = useLocation();
   return navItems.map(({ path, label, icon: Icon }) => {
     const active = location.pathname === path;
+    const isRestockPage = path === "/branch/restock-requests";
     return (
       <Link
         key={path}
@@ -54,10 +60,30 @@ function NavLinks({ onClose }) {
             : "transparent",
           color: active ? "white" : "#4b5563",
           fontWeight: active ? 600 : 500,
+          position: "relative",
         }}
       >
         <Icon size={17} />
         {label}
+        {isRestockPage && notificationCount > 0 && (
+          <span style={{
+            position: "absolute",
+            right: 8,
+            top: 6,
+            background: "#059669",
+            color: "white",
+            borderRadius: "50%",
+            width: 18,
+            height: 18,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 10,
+            fontWeight: 700,
+          }}>
+            {notificationCount > 99 ? "99+" : notificationCount}
+          </span>
+        )}
       </Link>
     );
   });
@@ -65,17 +91,58 @@ function NavLinks({ onClose }) {
 
 export default function BranchLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Force re-render when notifications change
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
   const { branch } = useSelector((s) => s.branch);
+  const { requests: restockRequests } = useSelector((s) => s.restock);
   const userData = secureStorage.getUserData();
   const branchId = userData?.branchId;
 
   useEffect(() => {
     if (!userProfile) dispatch(getUserProfile());
-    if (branchId) dispatch(getBranchById(branchId));
+    if (branchId) {
+      dispatch(getBranchById(branchId));
+      dispatch(getRestockRequestsByBranch({ branchId }));
+    }
   }, [dispatch, userProfile, branchId]);
+
+  // Auto-refresh restock requests every 30 seconds
+  useEffect(() => {
+    if (!branchId) return;
+    const interval = setInterval(() => {
+      dispatch(getRestockRequestsByBranch({ branchId }));
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [dispatch, branchId]);
+
+  // Count approved/rejected/fulfilled requests (new notifications)
+  const readNotifications = JSON.parse(localStorage.getItem('readBranchNotifications') || '[]');
+  
+  const updatedRequests = restockRequests?.filter(r => 
+    (r.status === "APPROVED" || r.status === "REJECTED" || r.status === "FULFILLED") && !readNotifications.includes(r.id)
+  ) || [];
+  
+  const allNotifications = updatedRequests;
+  const notificationCount = allNotifications.length;
+  
+  const markAsRead = (requestId) => {
+    const currentRead = JSON.parse(localStorage.getItem('readBranchNotifications') || '[]');
+    if (!currentRead.includes(requestId)) {
+      const updatedRead = [...currentRead, requestId];
+      localStorage.setItem('readBranchNotifications', JSON.stringify(updatedRead));
+      setRefreshKey(prev => prev + 1); // Force re-render
+    }
+  };
+  
+  const markAllAsRead = () => {
+    const allIds = (restockRequests || []).map(r => r.id);
+    localStorage.setItem('readBranchNotifications', JSON.stringify(allIds));
+    setRefreshKey(prev => prev + 1); // Force re-render
+    setNotificationOpen(false);
+  };
 
   const handleLogout = () => {
     dispatch(logout());
@@ -149,6 +216,7 @@ export default function BranchLayout() {
       >
         <NavLinks
           onClose={showClose ? () => setSidebarOpen(false) : undefined}
+          notificationCount={notificationCount}
         />
       </nav>
       <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
@@ -299,34 +367,183 @@ export default function BranchLayout() {
 
           {/* Right — bell + user info */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button
-              style={{
-                position: "relative",
-                width: 36,
-                height: 36,
-                border: "none",
-                background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
-                borderRadius: 8,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              <Bell size={16} color="#fff" />
-              <span
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setNotificationOpen(!notificationOpen)}
                 style={{
-                  position: "absolute",
-                  top: 8,
-                  right: 8,
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: "#e53e3e",
-                  border: "1.5px solid white",
+                  position: "relative",
+                  width: 36,
+                  height: 36,
+                  border: "none",
+                  background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
+                  borderRadius: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
                 }}
-              />
-            </button>
+                title={`${notificationCount} restock request updates`}
+              >
+                <Bell size={16} color="#fff" />
+                {notificationCount > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 6,
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "#059669",
+                      border: "1.5px solid white",
+                    }}
+                  />
+                )}
+              </button>
+              
+              {/* Notification Dropdown */}
+              {notificationOpen && (
+                <>
+                  <div 
+                    style={{
+                      position: "fixed",
+                      inset: 0,
+                      zIndex: 10,
+                    }}
+                    onClick={() => setNotificationOpen(false)}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      right: 0,
+                      marginTop: 8,
+                      width: 320,
+                      maxHeight: 400,
+                      background: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 10,
+                      boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                      zIndex: 20,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1a1d23" }}>Request Updates</h3>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          {notificationCount > 0 && (
+                            <button
+                              onClick={markAllAsRead}
+                              style={{ fontSize: 11, color: "#6b7280", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                            >
+                              Mark all read
+                            </button>
+                          )}
+                          {notificationCount > 0 && (
+                            <Link 
+                              to="/branch/restock-requests"
+                              onClick={() => setNotificationOpen(false)}
+                              style={{ fontSize: 12, color: "#059669", textDecoration: "none", fontWeight: 600 }}
+                            >
+                              View All ({notificationCount})
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                      {notificationCount === 0 ? (
+                        <div style={{ padding: "20px 16px", textAlign: "center", color: "#6b7280" }}>
+                          <Bell size={24} color="#e5e7eb" style={{ margin: "0 auto 8px", display: "block" }} />
+                          <p style={{ margin: 0, fontSize: 13 }}>No new updates</p>
+                        </div>
+                      ) : (
+                        allNotifications.slice(0, 5).map((req, i) => {
+                          const isApproved = req.status === "APPROVED";
+                          const isPending = req.status === "PENDING";
+                          const isRejected = req.status === "REJECTED";
+                          const isFulfilled = req.status === "FULFILLED";
+                          
+                          let StatusIcon, statusColor, statusBg, statusText;
+                          
+                          if (isPending) {
+                            StatusIcon = Truck;
+                            statusColor = "#d97706";
+                            statusBg = "#fffbeb";
+                            statusText = "Request Submitted";
+                          } else if (isApproved) {
+                            StatusIcon = Truck;
+                            statusColor = "#059669";
+                            statusBg = "#f0fdf4";
+                            statusText = "Products Coming Soon";
+                          } else if (isFulfilled) {
+                            StatusIcon = CheckCircle;
+                            statusColor = "#1a1d23";
+                            statusBg = "#f0f0f0";
+                            statusText = "Products Received";
+                          } else {
+                            StatusIcon = XCircle;
+                            statusColor = "#e53e3e";
+                            statusBg = "#fef2f2";
+                            statusText = "Request Rejected";
+                          }
+                          
+                          return (
+                            <div
+                              key={`${req.id}-${refreshKey}`}
+                              style={{
+                                padding: "12px 16px",
+                                borderBottom: i < Math.min(allNotifications.length, 5) - 1 ? "1px solid #f3f4f6" : "none",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                              }}
+                              onClick={() => {
+                                markAsRead(req.id);
+                                navigate("/branch/restock-requests");
+                                setNotificationOpen(false);
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                              onMouseLeave={e => e.currentTarget.style.background = "white"}
+                            >
+                              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                                <div style={{ padding: 4, background: statusBg, borderRadius: 4, marginTop: 2 }}>
+                                  <StatusIcon size={12} color={statusColor} />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: statusColor }}>
+                                    {statusText}
+                                  </p>
+                                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {req.productName} - {req.requestedQuantity} units
+                                  </p>
+                                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#9ca3af" }}>
+                                    {req.createdAt ? new Date(req.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Just now"}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                    
+                    {notificationCount > 5 && (
+                      <div style={{ padding: "8px 16px", background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
+                        <Link 
+                          to="/branch/restock-requests"
+                          onClick={() => setNotificationOpen(false)}
+                          style={{ fontSize: 12, color: "#059669", textDecoration: "none", fontWeight: 600, display: "block", textAlign: "center" }}
+                        >
+                          View {notificationCount - 5} more updates
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             <div
               style={{

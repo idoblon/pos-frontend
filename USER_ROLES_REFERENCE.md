@@ -7,9 +7,10 @@ The backend accepts the following roles as defined in the `UserRole` enum:
 1. **ROLE_USER** - Basic user role
 2. **ROLE_ADMIN** - System administrator
 3. **ROLE_STORE_ADMIN** - Store administrator (can manage entire store)
-4. **ROLE_BRANCH_MANAGER** - Branch manager (can manage specific branch)
+4. **ROLE_BRANCH_MANAGER** - Branch manager (can manage specific branch with full authority)
 5. **ROLE_BRANCH_CASHIER** - Cashier (can process orders at branch)
-6. **ROLE_STORE_MANAGER** - Store manager
+
+**Note:** ROLE_STORE_MANAGER has been removed from the system. Branch Manager now handles all branch operations including financial management, inventory, and staff management.
 
 ---
 
@@ -22,7 +23,7 @@ The backend accepts the following roles as defined in the `UserRole` enum:
 ```
 JSON parse error: Cannot deserialize value of type `com.springboot.POS.domain.UserRole` 
 from String "store_admin": not one of the values accepted for Enum class: 
-[ROLE_USER, ROLE_ADMIN, ROLE_STORE_ADMIN, ROLE_BRANCH_MANAGER, ROLE_BRANCH_CASHIER, ROLE_STORE_MANAGER]
+[ROLE_USER, ROLE_ADMIN, ROLE_STORE_ADMIN, ROLE_BRANCH_MANAGER, ROLE_BRANCH_CASHIER]
 ```
 
 **Solution:** Updated `Signup.jsx` to use `"ROLE_STORE_ADMIN"` instead of `"store_admin"`
@@ -36,9 +37,8 @@ from String "store_admin": not one of the values accepted for Enum class:
 | Frontend Display | Backend Value | Description |
 |-----------------|---------------|-------------|
 | Store Admin | `ROLE_STORE_ADMIN` | Full store management access |
-| Branch Manager | `ROLE_BRANCH_MANAGER` | Branch-level management |
+| Branch Manager | `ROLE_BRANCH_MANAGER` | Complete branch management (financial, operational, staff) |
 | Cashier | `ROLE_BRANCH_CASHIER` | POS terminal access |
-| Store Manager | `ROLE_STORE_MANAGER` | Store operations management |
 | Admin | `ROLE_ADMIN` | System administrator |
 | User | `ROLE_USER` | Basic user |
 
@@ -50,31 +50,30 @@ from String "store_admin": not one of the values accepted for Enum class:
 - ✅ Create and manage stores
 - ✅ Create and manage branches
 - ✅ Manage products and categories
-- ✅ Manage employees
+- ✅ Manage employees across stores
 - ✅ View all reports
-- ✅ Manage inventory
+- ✅ Manage inventory across stores
 
-### ROLE_BRANCH_MANAGER
-- ✅ Manage branch operations
-- ✅ Manage branch employees
-- ✅ View branch reports
-- ✅ Manage branch inventory
-- ❌ Cannot create stores
+### ROLE_BRANCH_MANAGER (Enhanced)
+- ✅ Complete branch operations management
+- ✅ Financial control and analytics
+- ✅ Profit/loss tracking and business insights
+- ✅ Full employee management (hire/fire/salary)
+- ✅ Inventory management and procurement
+- ✅ Branch settings and system configuration
+- ✅ Advanced reporting and analytics
+- ✅ Customer management and loyalty programs
+- ❌ Cannot create stores or manage other branches
 
 ### ROLE_BRANCH_CASHIER
 - ✅ Process orders (POS terminal)
 - ✅ Handle refunds
 - ✅ View order history
 - ✅ Manage customers
-- ✅ View shift reports
+- ✅ View shift reports and working hours
 - ❌ Cannot manage products
 - ❌ Cannot manage employees
-
-### ROLE_STORE_MANAGER
-- ✅ Manage store operations
-- ✅ View store reports
-- ✅ Manage inventory
-- ❌ Cannot create stores
+- ❌ Cannot access financial analytics
 
 ---
 
@@ -84,6 +83,7 @@ from String "store_admin": not one of the values accepted for Enum class:
 2. **Case sensitive** - Must be uppercase (e.g., `ROLE_STORE_ADMIN` not `role_store_admin`)
 3. **Exact match required** - Backend will reject any role not in the enum
 4. **Default signup role** - Currently set to `ROLE_STORE_ADMIN` for new store registrations
+5. **ROLE_STORE_MANAGER removed** - All store manager functionality moved to Branch Manager
 
 ---
 
@@ -92,8 +92,7 @@ from String "store_admin": not one of the values accepted for Enum class:
 ### Test Case: Store Admin Signup
 ```json
 {
-  "firstName": "John",
-  "lastName": "Doe",
+  "fullName": "John Doe",
   "email": "john@example.com",
   "password": "password123",
   "role": "ROLE_STORE_ADMIN",
@@ -118,7 +117,7 @@ from String "store_admin": not one of the values accepted for Enum class:
 
 ### Error: "not one of the values accepted for Enum class"
 **Cause:** Role value doesn't match backend enum
-**Solution:** Use exact role values with `ROLE_` prefix
+**Solution:** Use exact role values with `ROLE_` prefix (excluding ROLE_STORE_MANAGER)
 
 ### Error: 500 Internal Server Error on signup
 **Possible Causes:**
@@ -144,14 +143,19 @@ const formData = {
   role: "ROLE_STORE_ADMIN"
 };
 
-// ❌ Wrong
+// ✅ Correct
 const formData = {
-  role: "store_admin"  // Missing ROLE_ prefix
+  role: "ROLE_BRANCH_MANAGER"
+};
+
+// ❌ Wrong - Role removed
+const formData = {
+  role: "ROLE_STORE_MANAGER"  // This role no longer exists
 };
 
 // ❌ Wrong
 const formData = {
-  role: "role_store_admin"  // Lowercase
+  role: "store_admin"  // Missing ROLE_ prefix
 };
 ```
 
@@ -174,8 +178,13 @@ If you need to add or modify roles:
 - [x] Use `ROLE_` prefix
 - [x] Uppercase values
 - [x] Match backend enum exactly
+- [x] Remove ROLE_STORE_MANAGER references
 - [x] Update Signup.jsx
+- [x] Update BranchEmployees.jsx
+- [x] Update roleMapper.js
+- [x] Update BranchDashboard.jsx
 - [ ] Update Login.jsx (if needed)
 - [ ] Update role-based routing
 - [ ] Update permission checks
 - [ ] Test all roles
+- [ ] Update backend enum (remove ROLE_STORE_MANAGER)

@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { ShoppingBag, Users, RotateCcw, TrendingUp } from "lucide-react";
+import { ShoppingBag, Users, RotateCcw, TrendingUp, RefreshCw } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -50,25 +50,60 @@ export default function BranchDashboard() {
   const dispatch = useDispatch();
   const userData = secureStorage.getUserData();
   const branchId = userData?.branchId;
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { todayOrders, orders, recentOrders } = useSelector((s) => s.order);
   const { employees } = useSelector((s) => s.employee);
-  const { refunds } = useSelector((s) => s.refund);
+  const { refundsByBranch: refunds } = useSelector((s) => s.refund);
   const { userProfile } = useSelector((s) => s.user);
   const { user } = useSelector((s) => s.auth);
 
-  useEffect(() => {
+  // Function to fetch all data
+  const fetchAllData = useCallback(async () => {
     if (!branchId) return;
-    dispatch(getTodayOrdersByBranch(branchId));
-    dispatch(getOrdersByBranch({ branchId }));
-    dispatch(getRecentOrdersByBranch(branchId));
-    dispatch(findBranchEmployee({ branchId }));
-    dispatch(getRefundsByBranch(branchId));
+    
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        dispatch(getTodayOrdersByBranch(branchId)),
+        dispatch(getOrdersByBranch({ branchId })),
+        dispatch(getRecentOrdersByBranch(branchId)),
+        dispatch(findBranchEmployee({ branchId })),
+        dispatch(getRefundsByBranch(branchId))
+      ]);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [dispatch, branchId]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAllData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchAllData]);
+
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    fetchAllData();
+  };
 
   // Get user role from various sources
   const userRole =
-    userProfile?.role || user?.role || userData?.role || "Branch Manager";
+    userProfile?.role || user?.role || userData?.role || "ROLE_BRANCH_MANAGER";
+  
+  const isBranchManager = userRole === "ROLE_BRANCH_MANAGER";
 
   // Format role for display
   const formatRole = (role) => {
@@ -83,11 +118,49 @@ export default function BranchDashboard() {
   const displayRole = formatRole(userRole);
   const email = userProfile?.email || user?.email || userData?.email;
 
+  // Calculate today's refunds and refund amount
+  const todayRefunds = refunds?.filter(r => {
+    if (!r.createdAt) return false;
+    const refundDate = new Date(r.createdAt).toDateString();
+    const today = new Date().toDateString();
+    return refundDate === today;
+  }) || [];
+  
+  const todayRefundAmount = todayRefunds.reduce((sum, refund) => sum + (refund.amount || 0), 0);
+
   const todayRevenue =
     todayOrders?.reduce((s, o) => s + (o.totalAmount ?? 0), 0) ?? 0;
   const totalOrders = orders?.length ?? 0;
   const totalRefunds = refunds?.length ?? 0;
   const totalEmployees = employees?.length ?? 0;
+
+  // Enhanced financial calculations for Store Manager
+  const weeklyRevenue = useMemo(() => {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return orders?.filter(o => new Date(o.createdAt) >= weekAgo)
+      .reduce((sum, o) => sum + (o.totalAmount ?? 0), 0) ?? 0;
+  }, [orders]);
+
+  const monthlyRevenue = useMemo(() => {
+    const monthAgo = new Date();
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    return orders?.filter(o => new Date(o.createdAt) >= monthAgo)
+      .reduce((sum, o) => sum + (o.totalAmount ?? 0), 0) ?? 0;
+  }, [orders]);
+
+  const avgOrderValue = totalOrders > 0 ? 
+    orders?.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0) / totalOrders : 0;
+
+  const totalRefundAmount = refunds?.reduce((sum, r) => sum + (r.amount ?? 0), 0) ?? 0;
+  const refundRate = totalOrders > 0 ? (totalRefunds / totalOrders) * 100 : 0;
+
+  // Profit estimation (assuming 30% margin)
+  const estimatedProfit = todayRevenue * 0.3;
+  const monthlyProfit = monthlyRevenue * 0.3;
+
+  // Employee productivity
+  const revenuePerEmployee = totalEmployees > 0 ? todayRevenue / totalEmployees : 0;
 
   const paymentBreakdown = {
     cash:
@@ -135,36 +208,45 @@ export default function BranchDashboard() {
     return days.map(({ label, revenue }) => ({ label, revenue }));
   }, [orders]);
 
-  const stats = [
-    {
-      label: "Today's Revenue",
-      value: `रु ${todayRevenue.toLocaleString("en-IN")}`,
-      sub: `${todayOrders?.length ?? 0} orders today`,
-      icon: TrendingUp,
-      color: "#1a1d23",
-    },
-    {
-      label: "Total Orders",
-      value: totalOrders,
-      sub: "all time",
-      icon: ShoppingBag,
-      color: "#4a4d55",
-    },
-    {
-      label: "Employees",
-      value: totalEmployees,
-      sub: "active staff",
-      icon: Users,
-      color: "#1a1d23",
-    },
-    {
-      label: "Refunds",
-      value: totalRefunds,
-      sub: "processed",
-      icon: RotateCcw,
-      color: "#e53e3e",
-    },
-  ];
+  // Stats for Branch Manager (now handles all operations)
+  const getStatsForRole = () => {
+    return [
+      {
+        label: "Today's Revenue",
+        value: `रु ${todayRevenue.toLocaleString("en-IN")}`,
+        sub: `${todayOrders?.length ?? 0} orders • Est. profit: रु ${estimatedProfit.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
+        icon: TrendingUp,
+        color: "#059669",
+        realTime: true,
+      },
+      {
+        label: "Monthly Revenue",
+        value: `रु ${monthlyRevenue.toLocaleString("en-IN")}`,
+        sub: `Est. profit: रु ${monthlyProfit.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
+        icon: ShoppingBag,
+        color: "#1a1d23",
+        realTime: false,
+      },
+      {
+        label: "Avg Order Value",
+        value: `रु ${avgOrderValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
+        sub: `${totalOrders} total orders`,
+        icon: Users,
+        color: "#3b82f6",
+        realTime: false,
+      },
+      {
+        label: "Refund Rate",
+        value: `${refundRate.toFixed(1)}%`,
+        sub: `रु ${totalRefundAmount.toLocaleString("en-IN")} total refunds`,
+        icon: RotateCcw,
+        color: refundRate > 5 ? "#e53e3e" : "#f59e0b",
+        realTime: true,
+      },
+    ];
+  };
+
+  const stats = getStatsForRole();
 
   const displayRecent = recentOrders?.length
     ? recentOrders
@@ -194,20 +276,62 @@ export default function BranchDashboard() {
       >
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-            Today's Overview
+            Financial Overview
           </h1>
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>
-            Real-time branch performance for{" "}
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+              Financial analytics and business insights for{" "}
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+            <span style={{ color: "#e5e7eb" }}>•</span>
+            <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>
+              Last updated: {lastUpdated.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+            <span style={{ color: "#e5e7eb" }}>•</span>
+            <span style={{ 
+              fontSize: 10, 
+              fontWeight: 600, 
+              padding: "2px 6px", 
+              borderRadius: 4,
+              background: "#fef3c7",
+              color: "#92400e"
+            }}>
+              {displayRole}
+            </span>
+          </div>
         </div>
 
-        {/* User Role & Email Card - styled like StoreAdminLayout header */}
-        
+        {/* Manual Refresh Button */}
+        <button
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 12px",
+            background: isRefreshing ? "#f3f4f6" : "#1a1d23",
+            color: isRefreshing ? "#6b7280" : "white",
+            border: "none",
+            borderRadius: 6,
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: isRefreshing ? "not-allowed" : "pointer",
+            transition: "all 0.2s ease"
+          }}
+        >
+          <RefreshCw 
+            size={14} 
+            style={{ 
+              animation: isRefreshing ? "spin 1s linear infinite" : "none"
+            }} 
+          />
+          {isRefreshing ? "Updating..." : "Refresh"}
+        </button>
       </div>
 
       {/* Stats */}
@@ -218,8 +342,24 @@ export default function BranchDashboard() {
           gap: 14,
         }}
       >
-        {stats.map(({ label, value, sub, icon: Icon, color }) => (
-          <div key={label} style={card}>
+        {stats.map(({ label, value, sub, icon: Icon, color, realTime }) => (
+          <div key={label} style={{
+            ...card,
+            position: "relative",
+            border: realTime ? "1px solid #059669" : "1px solid #e2e5e9"
+          }}>
+            {realTime && (
+              <div style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#059669",
+                animation: "pulse 2s infinite"
+              }} />
+            )}
             <div
               style={{
                 display: "flex",
@@ -228,9 +368,22 @@ export default function BranchDashboard() {
               }}
             >
               <div>
-                <p style={{ margin: 0, fontSize: 12, color: "#8a909c" }}>
-                  {label}
-                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: "#8a909c" }}>
+                    {label}
+                  </p>
+                  {realTime && (
+                    <span style={{ 
+                      fontSize: 9, 
+                      color: "#059669", 
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px"
+                    }}>
+                      LIVE
+                    </span>
+                  )}
+                </div>
                 <p
                   style={{
                     margin: "6px 0 2px",
@@ -251,67 +404,59 @@ export default function BranchDashboard() {
         ))}
       </div>
 
-      {/* Payment Breakdown */}
+      {/* Financial Breakdown - Enhanced for Branch Manager */}
       <div style={card}>
         <p style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700 }}>
-          Today's Payment Breakdown
+          Financial Breakdown
         </p>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-            gap: 12,
-          }}
-        >
+        
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
           {[
             {
-              label: "Cash",
+              label: "Cash Sales",
               amount: paymentBreakdown.cash,
+              percentage: todayRevenue > 0 ? (paymentBreakdown.cash / todayRevenue * 100).toFixed(1) : 0,
               color: "#1a1d23",
               bg: "#f5f5f5",
             },
             {
-              label: "Card",
+              label: "Card Sales",
               amount: paymentBreakdown.card,
+              percentage: todayRevenue > 0 ? (paymentBreakdown.card / todayRevenue * 100).toFixed(1) : 0,
               color: "#3b82f6",
               bg: "#eff6ff",
             },
             {
-              label: "eSewa",
+              label: "Digital (eSewa)",
               amount: paymentBreakdown.esewa,
+              percentage: todayRevenue > 0 ? (paymentBreakdown.esewa / todayRevenue * 100).toFixed(1) : 0,
               color: "#7c3aed",
               bg: "#f5f3ff",
             },
-          ].map(({ label, amount, color, bg }) => (
-            <div
-              key={label}
-              style={{
-                padding: "12px 16px",
-                borderRadius: 8,
-                background: bg,
-                textAlign: "center",
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 11,
-                  color: "#8a909c",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
+            {
+              label: "Est. Profit",
+              amount: estimatedProfit,
+              percentage: "30%",
+              color: "#059669",
+              bg: "#f0fdf4",
+            },
+            {
+              label: "Refunds",
+              amount: todayRefundAmount,
+              percentage: todayRevenue > 0 ? (todayRefundAmount / todayRevenue * 100).toFixed(1) : 0,
+              color: "#e53e3e",
+              bg: "#fef2f2",
+            },
+          ].map(({ label, amount, percentage, color, bg }) => (
+            <div key={label} style={{ padding: "12px 16px", borderRadius: 8, background: bg, textAlign: "center" }}>
+              <p style={{ margin: 0, fontSize: 11, color: "#8a909c", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 {label}
               </p>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color,
-                }}
-              >
-                रु {amount.toLocaleString("en-IN")}
+              <p style={{ margin: "4px 0 2px", fontSize: 16, fontWeight: 700, color }}>
+                रु {amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+              </p>
+              <p style={{ margin: 0, fontSize: 10, color: "#6b7280" }}>
+                {typeof percentage === 'string' ? percentage : `${percentage}%`}
               </p>
             </div>
           ))}
@@ -324,10 +469,10 @@ export default function BranchDashboard() {
       >
         <div style={{ ...card, padding: "20px 20px 12px" }}>
           <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700 }}>
-            Today's Sales Activity
+            Revenue Analytics
           </p>
           <p style={{ margin: "0 0 16px", fontSize: 11, color: "#8a909c" }}>
-            7-day revenue trend
+            7-day financial performance
           </p>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart
@@ -336,8 +481,8 @@ export default function BranchDashboard() {
             >
               <defs>
                 <linearGradient id="branchGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#059669" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -360,11 +505,11 @@ export default function BranchDashboard() {
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="#1a1d23"
+                stroke="#059669"
                 strokeWidth={2}
                 fill="url(#branchGrad)"
                 dot={false}
-                activeDot={{ r: 4, fill: "#1a1d23" }}
+                activeDot={{ r: 4, fill: "#059669" }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -372,18 +517,17 @@ export default function BranchDashboard() {
             style={{
               marginTop: 12,
               padding: "8px 12px",
-              background: "#f5f5f5",
+              background: "#f0fdf4",
               borderRadius: 6,
               fontSize: 12,
               color: "#1a1d23",
               textAlign: "center",
             }}
           >
-            Target: रु 15,000 • Current: रु{" "}
-            {todayRevenue.toLocaleString("en-IN")} •{" "}
-            {todayRevenue >= 15000
+            Monthly Target: रु 450,000 • Current: रु {monthlyRevenue.toLocaleString("en-IN")} •{" "}
+            {monthlyRevenue >= 450000
               ? "✅ Target Achieved!"
-              : `रु ${(15000 - todayRevenue).toLocaleString("en-IN")} to go`}
+              : `रु ${(450000 - monthlyRevenue).toLocaleString("en-IN")} to go`}
           </div>
         </div>
 
@@ -462,6 +606,17 @@ export default function BranchDashboard() {
           )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `}</style>
     </div>
   );
 }

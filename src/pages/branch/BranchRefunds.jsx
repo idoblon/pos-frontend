@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Search, RotateCcw } from "lucide-react";
+import { Search, RotateCcw, TrendingDown, DollarSign, Calendar, Users } from "lucide-react";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 import secureStorage from "@/util/secureStorage";
 
@@ -50,26 +50,66 @@ export default function BranchRefunds() {
   const dispatch = useDispatch();
   const userData = secureStorage.getUserData();
   const branchId = userData?.branchId;
-  const { refunds, loading } = useSelector((s) => s.refund);
+  const { refundsByBranch: refunds, loading, error } = useSelector((s) => s.refund);
   const [search, setSearch] = useState("");
 
+
   useEffect(() => {
-    if (branchId) dispatch(getRefundsByBranch(branchId));
+    if (branchId) {
+      dispatch(getRefundsByBranch(branchId));
+    }
   }, [dispatch, branchId]);
 
-  const filtered = refunds?.filter(
+  // Use only API data
+  const allRefunds = refunds || [];
+
+  const filtered = allRefunds?.filter(
     (r) =>
       (r.id ?? r._id ?? "").toString().includes(search) ||
-      (r.orderId ?? "").toString().includes(search),
+      (r.orderId ?? "").toString().includes(search) ||
+      (r.customerName ?? "").toLowerCase().includes(search.toLowerCase()),
   );
+
+  // Calculate refund statistics
+  const totalRefunds = allRefunds?.length || 0;
+  const totalAmount = allRefunds?.reduce((sum, refund) => sum + (refund.amount || 0), 0) || 0;
+  const todayRefunds = allRefunds?.filter(r => {
+    if (!r.createdAt) return false;
+    const refundDate = new Date(r.createdAt).toDateString();
+    const today = new Date().toDateString();
+    return refundDate === today;
+  }).length || 0;
+  const avgRefundAmount = totalRefunds > 0 ? totalAmount / totalRefunds : 0;
 
   return (
     <div style={s.page}>
       <div>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Refunds</h1>
         <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>
-          All branch refunds
+          All branch refunds and returns
         </p>
+      </div>
+
+      {/* Refund Statistics */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+        {[
+          { label: "Total Refunds", value: totalRefunds, icon: TrendingDown, color: "#e53e3e", bg: "#fef2f2" },
+          { label: "Total Amount", value: `रु ${totalAmount.toLocaleString("en-IN")}`, icon: DollarSign, color: "#dc2626", bg: "#fef2f2" },
+          { label: "Today's Refunds", value: todayRefunds, icon: Calendar, color: "#f59e0b", bg: "#fffbeb" },
+          { label: "Avg. Refund", value: `रु ${Math.round(avgRefundAmount).toLocaleString("en-IN")}`, icon: Users, color: "#6b7280", bg: "#f9fafb" },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <div key={label} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ padding: 6, background: bg, borderRadius: 6 }}>
+                <Icon size={16} color={color} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>{label}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 700, color }}>{value}</p>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div style={s.card}>
@@ -90,7 +130,7 @@ export default function BranchRefunds() {
             />
             <input
               style={s.searchInput}
-              placeholder="Search by refund or order ID..."
+              placeholder="Search by refund ID, order ID, or customer name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -103,7 +143,7 @@ export default function BranchRefunds() {
           </p>
         )}
 
-        {!loading && filtered?.length === 0 && (
+        {!loading && filtered?.length === 0 && allRefunds?.length === 0 && (
           <div
             style={{ textAlign: "center", padding: "40px 0", color: "#6b7280" }}
           >
@@ -113,6 +153,21 @@ export default function BranchRefunds() {
               style={{ margin: "0 auto 10px", display: "block" }}
             />
             <p style={{ margin: 0, fontWeight: 600 }}>No refunds found</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12 }}>Refunds will appear here when processed</p>
+          </div>
+        )}
+
+        {!loading && filtered?.length === 0 && allRefunds?.length > 0 && (
+          <div
+            style={{ textAlign: "center", padding: "40px 0", color: "#6b7280" }}
+          >
+            <RotateCcw
+              size={36}
+              color="#e2e5e9"
+              style={{ margin: "0 auto 10px", display: "block" }}
+            />
+            <p style={{ margin: 0, fontWeight: 600 }}>No matching refunds found</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12 }}>Try adjusting your search terms</p>
           </div>
         )}
 
@@ -121,13 +176,13 @@ export default function BranchRefunds() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  {["Refund ID", "Order ID", "Reason", "Date", "Amount"].map(
+                  {["Refund ID", "Order ID", "Customer", "Reason", "Date", "Amount"].map(
                     (h, i) => (
                       <th
                         key={h}
                         style={{
                           ...s.th,
-                          textAlign: i === 4 ? "right" : "left",
+                          textAlign: i === 5 ? "right" : "left",
                         }}
                       >
                         {h}
@@ -154,8 +209,13 @@ export default function BranchRefunds() {
                     <td style={{ ...s.td, color: "#8a909c" }}>
                       #{(r.orderId ?? "").toString().slice(-8)}
                     </td>
+                    <td style={{ ...s.td, color: "#1a1d23", fontWeight: 500 }}>
+                      {r.customerName ?? "—"}
+                    </td>
                     <td style={{ ...s.td, color: "#8a909c", maxWidth: 200 }}>
-                      {r.reason ?? "—"}
+                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.reason}>
+                        {r.reason ?? "—"}
+                      </div>
                     </td>
                     <td style={{ ...s.td, color: "#8a909c" }}>
                       {r.createdAt

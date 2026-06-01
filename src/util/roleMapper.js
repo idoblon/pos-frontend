@@ -6,7 +6,6 @@
 export const BACKEND_ROLES = {
   ROLE_ADMIN: 'ROLE_ADMIN',
   ROLE_STORE_ADMIN: 'ROLE_STORE_ADMIN',
-  ROLE_STORE_MANAGER: 'ROLE_STORE_MANAGER',
   ROLE_BRANCH_MANAGER: 'ROLE_BRANCH_MANAGER',
   ROLE_BRANCH_CASHIER: 'ROLE_BRANCH_CASHIER',
   ROLE_USER: 'ROLE_USER'
@@ -15,7 +14,6 @@ export const BACKEND_ROLES = {
 export const FRONTEND_ROLES = {
   admin: 'ROLE_ADMIN',
   store_admin: 'ROLE_STORE_ADMIN',
-  store_manager: 'ROLE_STORE_MANAGER',
   branch_manager: 'ROLE_BRANCH_MANAGER',
   cashier: 'ROLE_BRANCH_CASHIER',
   user: 'ROLE_USER'
@@ -26,7 +24,6 @@ export const getDisplayRole = (backendRole) => {
   const roleMap = {
     'ROLE_ADMIN': 'Super Admin',
     'ROLE_STORE_ADMIN': 'Store Admin',
-    'ROLE_STORE_MANAGER': 'Store Manager',
     'ROLE_BRANCH_MANAGER': 'Branch Manager',
     'ROLE_BRANCH_CASHIER': 'Cashier',
     'ROLE_USER': 'User'
@@ -44,7 +41,6 @@ export const hasPermission = (userRole, requiredRoles) => {
   const roleHierarchy = [
     'ROLE_ADMIN',
     'ROLE_STORE_ADMIN',
-    'ROLE_STORE_MANAGER',
     'ROLE_BRANCH_MANAGER',
     'ROLE_BRANCH_CASHIER',
     'ROLE_USER'
@@ -62,7 +58,6 @@ export const getAllowedRoutes = (userRole) => {
   const routes = {
     'ROLE_ADMIN': ['/admin', '/store-admin', '/cashier'],
     'ROLE_STORE_ADMIN': ['/store-admin', '/cashier'],
-    'ROLE_STORE_MANAGER': ['/store-admin', '/cashier'],
     'ROLE_BRANCH_MANAGER': ['/branch', '/cashier'],
     'ROLE_BRANCH_CASHIER': ['/cashier'],
     'ROLE_USER': []

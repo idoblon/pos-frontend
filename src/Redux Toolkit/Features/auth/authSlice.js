@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { signup, login } from "./authThunk";
+import { signup, login, logout as logoutThunk } from "./authThunk";
 import { getUserProfile } from "../user/userThunk";
 import secureStorage from "@/util/secureStorage";
 
@@ -84,6 +84,12 @@ const authSlice = createSlice({
             email: action.payload.email
           };
         }
+      })
+      // Handle logout thunk
+      .addCase(logoutThunk.fulfilled, (state) => {
+        state.user = null;
+        state.jwt = null;
+        state.isAuthenticated = false;
       });
   },
 });

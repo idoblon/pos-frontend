@@ -58,9 +58,13 @@ const ShiftSummaryPage = () => {
         <div className="p-4">
           <div className="space-y-4">
             {/* Top Row - Shift Info and Sales Summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ShiftInformation />
-              <SalesSummaryCard />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-1">
+                <ShiftInformation />
+              </div>
+              <div className="lg:col-span-2">
+                <SalesSummaryCard />
+              </div>
             </div>
 
             {/* Middle Row - Payment Summary and Top Selling */}

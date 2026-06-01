@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { BarChart2, TrendingUp, RotateCcw, ShoppingBag } from "lucide-react";
+import { BarChart2, TrendingUp, RotateCcw, ShoppingBag, User, Clock } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -15,6 +15,7 @@ import {
 import { getShiftsByBranch } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
+import { findBranchEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import secureStorage from "@/util/secureStorage";
 
 function CustomTooltip({ active, payload, label, primaryColor }) {
@@ -47,6 +48,7 @@ export default function BranchReports() {
   const { orders } = useSelector((s) => s.order);
   const { refunds } = useSelector((s) => s.refund);
   const { branch } = useSelector((s) => s.branch);
+  const { employees } = useSelector((s) => s.employee);
 
   // Get colors from branch settings or use defaults
   const primaryColor = branch?.settings?.primaryColor || "#059669";
@@ -73,6 +75,7 @@ export default function BranchReports() {
     dispatch(getShiftsByBranch(branchId));
     dispatch(getOrdersByBranch({ branchId }));
     dispatch(getRefundsByBranch(branchId));
+    dispatch(findBranchEmployee({ branchId }));
   }, [dispatch, branchId]);
 
   const days = Number(range);
@@ -93,11 +96,81 @@ export default function BranchReports() {
     return { label, revenue };
   });
 
+  // Use only API data - no mock data
+  const displayShifts = shiftsByBranch || [];
+
   const totalRevenue =
     orders?.reduce((s, o) => s + (o.totalAmount ?? 0), 0) ?? 0;
   const totalRefunds = refunds?.reduce((s, r) => s + (r.amount ?? 0), 0) ?? 0;
-  const totalShifts = shiftsByBranch?.length ?? 0;
+  const totalShifts = displayShifts?.length ?? 0;
   const totalOrders = orders?.length ?? 0;
+
+  // Helper function to get cashier name
+  const getCashierName = (shift) => {
+    // First try to get from shift data
+    if (shift.cashierName) return shift.cashierName;
+    
+    // Try to find employee by cashierId
+    if (shift.cashierId && employees) {
+      const employee = employees.find(emp => emp.id === shift.cashierId || emp.userId === shift.cashierId);
+      if (employee) {
+        return employee.fullName || `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.username;
+      }
+    }
+    
+    // Fallback to cashierId or unknown
+    return shift.cashierId ? `Cashier #${shift.cashierId}` : "Unknown Cashier";
+  };
+
+  // Helper function to format shift duration with 10-hour limit
+  const getShiftDuration = (shift) => {
+    console.log('🔍 DEBUG - Duration calculation for shift:', shift);
+    
+    // Try multiple possible start time fields
+    const startTimeValue = shift.startTime || shift.createdAt || shift.loginTime || shift.shiftStart;
+    
+    if (!startTimeValue) {
+      console.log('❌ DEBUG - No start time found for duration');
+      return "No data";
+    }
+    
+    const start = new Date(startTimeValue);
+    const end = shift.endTime ? new Date(shift.endTime) : new Date();
+    const totalMinutes = Math.floor((end - start) / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    
+    // Check if shift exceeds 10 hours
+    const maxHours = 10;
+    const isOvertime = hours >= maxHours;
+    
+    console.log('✅ DEBUG - Duration calculated:', { hours, minutes, isOvertime });
+    
+    if (isOvertime && !shift.endTime) {
+      return `${maxHours}h+ (Overtime!)`;
+    }
+    
+    if (hours === 0) return `${minutes}m`;
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Helper function to get shift status with overtime check
+  const getShiftStatus = (shift) => {
+    if (shift.endTime) return { status: "Closed", color: primaryColor, bg: `${primaryColor}15` };
+    
+    const startTimeValue = shift.startTime || shift.createdAt || shift.loginTime || shift.shiftStart;
+    if (!startTimeValue) return { status: "Unknown", color: "#6b7280", bg: "#f3f4f6" };
+    
+    const start = new Date(startTimeValue);
+    const now = new Date();
+    const hours = Math.floor((now - start) / (1000 * 60 * 60));
+    
+    if (hours >= 10) {
+      return { status: "Overtime", color: "#dc2626", bg: "#fef2f2" };
+    }
+    
+    return { status: "Active", color: "#16a34a", bg: "#dcfce7" };
+  };
 
   // Payment breakdown
   const paymentData = ["CASH", "CARD", "ESEWA"].map((method) => ({
@@ -329,10 +402,38 @@ export default function BranchReports() {
 
       {/* Shift Reports Table */}
       <div style={card}>
-        <p style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700 }}>
-          Shift History
-        </p>
-        {shiftsByBranch?.length === 0 ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
+              Shift History
+            </p>
+            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#8a909c" }}>
+              Cashier shifts with login times and performance
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <User size={16} color={primaryColor} />
+            <span style={{ fontSize: 12, color: "#8a909c" }}>
+              {employees?.length || 0} Active Cashiers
+            </span>
+          </div>
+        </div>
+        
+        {displayShifts?.length === 0 && (
+          <div style={{ 
+            padding: "12px 16px", 
+            background: "#f8fafc", 
+            border: "1px solid #e2e8f0", 
+            borderRadius: 6, 
+            marginBottom: 16,
+            textAlign: "center"
+          }}>
+            <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
+              📊 No shift data available - Shifts will appear here when cashiers log in
+            </p>
+          </div>
+        )}
+        {displayShifts?.length === 0 ? (
           <p
             style={{
               color: "#8a909c",
@@ -350,9 +451,9 @@ export default function BranchReports() {
                 <tr>
                   {[
                     "Shift ID",
-                    "Cashier",
-                    "Start Time",
-                    "End Time",
+                    "Cashier Details",
+                    "Login Time",
+                    "Duration",
                     "Total Sales",
                     "Status",
                   ].map((h, i) => (
@@ -374,7 +475,7 @@ export default function BranchReports() {
                 </tr>
               </thead>
               <tbody>
-                {shiftsByBranch?.map((shift, i) => (
+                {displayShifts?.map((shift, i) => (
                   <tr
                     key={shift.id ?? i}
                     style={{ background: "white" }}
@@ -400,44 +501,110 @@ export default function BranchReports() {
                         padding: "12px 16px",
                         fontSize: 13,
                         borderBottom: `1px solid ${primaryColor}30`,
-                        color: "#8a909c",
                       }}
                     >
-                      {shift.cashierName ?? shift.cashierId ?? "—"}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          background: `${primaryColor}15`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: primaryColor
+                        }}>
+                          {getCashierName(shift).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: textColor }}>
+                            {getCashierName(shift)}
+                          </p>
+                          <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>
+                            ID: {shift.cashierId || "N/A"}
+                          </p>
+                        </div>
+                      </div>
                     </td>
                     <td
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
                         borderBottom: `1px solid ${primaryColor}30`,
-                        color: "#8a909c",
                       }}
                     >
-                      {shift.startTime
-                        ? new Date(shift.startTime).toLocaleString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "—"}
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                          <Clock size={12} color={primaryColor} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: textColor }}>
+                            {(() => {
+                              console.log('🔍 DEBUG - Shift data:', shift);
+                              console.log('🔍 DEBUG - Start time:', shift.startTime);
+                              console.log('🔍 DEBUG - Created at:', shift.createdAt);
+                              
+                              // Try multiple possible time fields
+                              const timeValue = shift.startTime || shift.createdAt || shift.loginTime || shift.shiftStart;
+                              
+                              if (timeValue) {
+                                console.log('✅ DEBUG - Using time value:', timeValue);
+                                return new Date(timeValue).toLocaleString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                });
+                              } else {
+                                console.log('❌ DEBUG - No time value found');
+                                return "No login time";
+                              }
+                            })()
+                            }
+                          </span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>
+                          {(() => {
+                            const timeValue = shift.startTime || shift.createdAt || shift.loginTime || shift.shiftStart;
+                            if (timeValue) {
+                              return new Date(timeValue).toLocaleDateString("en-US", {
+                                weekday: "short",
+                                year: "numeric"
+                              });
+                            }
+                            return "Unknown date";
+                          })()
+                          }
+                        </p>
+                      </div>
                     </td>
                     <td
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
                         borderBottom: `1px solid ${primaryColor}30`,
-                        color: "#8a909c",
                       }}
                     >
-                      {shift.endTime
-                        ? new Date(shift.endTime).toLocaleString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "Active"}
+                      <div>
+                        <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: textColor }}>
+                          {getShiftDuration(shift)}
+                        </p>
+                        <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>
+                          {(() => {
+                            const startTimeValue = shift.startTime || shift.createdAt || shift.loginTime || shift.shiftStart;
+                            if (!startTimeValue) return "Unknown";
+                            
+                            const start = new Date(startTimeValue);
+                            const now = new Date();
+                            const hours = Math.floor((now - start) / (1000 * 60 * 60));
+                            
+                            if (shift.endTime) return "Completed";
+                            if (hours >= 10) return "Overtime Alert!";
+                            return `${10 - hours}h remaining`;
+                          })()
+                          }
+                        </p>
+                      </div>
                     </td>
                     <td
                       style={{
@@ -467,15 +634,23 @@ export default function BranchReports() {
                         style={{
                           fontSize: 11,
                           fontWeight: 600,
-                          padding: "3px 8px",
+                          padding: "4px 10px",
                           borderRadius: 20,
-                          background: shift.endTime
-                            ? `${primaryColor}15`
-                            : "#fffbeb",
-                          color: shift.endTime ? primaryColor : "#d97706",
+                          background: getShiftStatus(shift).bg,
+                          color: getShiftStatus(shift).color,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4
                         }}
                       >
-                        {shift.endTime ? "Closed" : "Active"}
+                        <div style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: getShiftStatus(shift).color,
+                          animation: shift.endTime ? "none" : "pulse 2s infinite"
+                        }} />
+                        {getShiftStatus(shift).status}
                       </span>
                     </td>
                   </tr>

@@ -9,6 +9,7 @@ import BranchCustomers from "@/pages/branch/BranchCustomers";
 import BranchTransactions from "@/pages/branch/BranchTransactions";
 import BranchReports from "@/pages/branch/BranchReports";
 import BranchSettings from "@/pages/branch/BranchSettings";
+import BranchRestockRequests from "@/pages/branch/BranchRestockRequests";
 
 const BranchRoutes = () => (
   <Routes>
@@ -16,6 +17,7 @@ const BranchRoutes = () => (
       <Route index                    element={<BranchDashboard />} />
       <Route path="orders"            element={<BranchOrders />} />
       <Route path="inventory"         element={<BranchInventory />} />
+      <Route path="restock-requests"  element={<BranchRestockRequests />} />
       <Route path="customers"         element={<BranchCustomers />} />
       <Route path="employees"         element={<BranchEmployees />} />
       <Route path="reports"           element={<BranchReports />} />
