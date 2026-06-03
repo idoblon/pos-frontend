@@ -12,12 +12,11 @@ import { toast } from "sonner";
 import secureStorage from "@/util/secureStorage";
 
 const EMPTY_FORM = { fullName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER", branchId: "" };
-const ROLES = ["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER", "ROLE_STORE_MANAGER"];
+const ROLES = ["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER"];
 
 const roleStyle = {
   ROLE_BRANCH_MANAGER: { background: "#f5f3ff", color: "#7c3aed" },
   ROLE_BRANCH_CASHIER: { background: "#eff6ff", color: "#3b82f6" },
-  ROLE_STORE_MANAGER: { background: "#fffbeb", color: "#d97706" },
 };
 
 const s = {

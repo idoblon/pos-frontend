@@ -3,10 +3,9 @@ import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import posLogo from "@/logo/pos.png";
-import { useDispatch, useSelector } from "react-redux";
-import { signup } from "@/Redux Toolkit/Features/auth/authThunk";
 import { useNavigate, Link } from "react-router-dom";
-import emailService from "@/util/emailService";
+import { toast } from "sonner";
+import { Check } from "lucide-react";
 
 const STORE_TYPES = [
   { value: "RETAIL", label: "Retail" },
@@ -18,10 +17,30 @@ const STORE_TYPES = [
   { value: "PLANT", label: "Plant" },
 ];
 
+const SUBSCRIPTION_PLANS = [
+  { 
+    value: "BASIC", 
+    label: "Basic", 
+    price: "रु 2,999/month",
+    features: ["1 Store", "3 Branches", "10 Users", "Basic Support"]
+  },
+  { 
+    value: "PROFESSIONAL", 
+    label: "Professional", 
+    price: "रु 5,999/month",
+    features: ["1 Store", "10 Branches", "50 Users", "Priority Support", "Advanced Reports"]
+  },
+  { 
+    value: "ENTERPRISE", 
+    label: "Enterprise", 
+    price: "रु 12,999/month",
+    features: ["Unlimited Stores", "Unlimited Branches", "Unlimited Users", "24/7 Support", "Custom Features"]
+  },
+];
+
 const Signup = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((s) => s.auth);
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -32,9 +51,8 @@ const Signup = () => {
     storeName: "",
     storeDescription: "",
     storeType: "",
-    storePhone: "",
-    storeEmail: "",
     storeAddress: "",
+    subscriptionPlan: "BASIC",
   });
   const [passwordError, setPasswordError] = useState("");
 
@@ -57,18 +75,35 @@ const Signup = () => {
       return;
     }
 
-    const { confirmPassword, ...rest } = formData;
-    const payload = { ...rest, role: "ROLE_STORE_ADMIN" };
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/public/store-registration-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          storeName: formData.storeName,
+          storeDescription: formData.storeDescription,
+          storeType: formData.storeType,
+          storeAddress: formData.storeAddress,
+          subscriptionPlan: formData.subscriptionPlan,
+        })
+      });
 
-    const result = await dispatch(signup(payload));
-    if (signup.fulfilled.match(result)) {
-      emailService.sendAccountCreatedEmail({
-        email: formData.email,
-        fullName: formData.fullName,
-        storeName: formData.storeName,
-        role: "ROLE_STORE_ADMIN",
-      }).catch((err) => console.warn("⚠️ Email failed:", err));
-      navigate("/login");
+      if (response.ok) {
+        toast.success("Registration request submitted! Admin will review and notify you via email.");
+        navigate("/login");
+      } else {
+        const error = await response.text();
+        setPasswordError(error || "Failed to submit registration request");
+      }
+    } catch (error) {
+      setPasswordError("Error submitting request. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,10 +126,10 @@ const Signup = () => {
             <span className="text-2xl font-bold text-slate-800">POS Pro</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-800">
-            Create Your Store Account
+            Request Store Registration
           </h1>
           <p className="text-slate-500 mt-1.5 text-sm">
-            Register your business to get started
+            Submit your registration request for admin approval
           </p>
         </div>
 
@@ -214,30 +249,6 @@ const Signup = () => {
                       ))}
                     </select>
                   </div>
-                  {/* <div>
-                    <Label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Store Email
-                    </Label>
-                    <Input
-                      name="storeEmail"
-                      type="email"
-                      value={formData.storeEmail}
-                      onChange={handleChange}
-                      className={fieldCls}
-                    />
-                  </div> */}
-                  {/* <div>
-                    <Label className="block text-sm font-medium text-slate-700 mb-1.5">
-                      Store Phone
-                    </Label>
-                    <Input
-                      name="storePhone"
-                      type="tel"
-                      value={formData.storePhone}
-                      onChange={handleChange}
-                      className={fieldCls}
-                    />
-                  </div> */}
                   <div>
                     <Label className="block text-sm font-medium text-slate-700 mb-1.5">
                       Store Address
@@ -258,7 +269,7 @@ const Signup = () => {
                       name="storeDescription"
                       value={formData.storeDescription}
                       onChange={handleChange}
-                      rows={3}
+                      rows={2}
                       className={`${fieldCls} resize-none`}
                     />
                   </div>
@@ -266,10 +277,50 @@ const Signup = () => {
               </div>
             </div>
 
+            {/* Subscription Plans */}
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">
+                Choose Subscription Plan
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {SUBSCRIPTION_PLANS.map((plan) => (
+                  <div
+                    key={plan.value}
+                    onClick={() => setFormData({ ...formData, subscriptionPlan: plan.value })}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.subscriptionPlan === plan.value
+                        ? "border-slate-800 bg-slate-50"
+                        : "border-gray-200 hover:border-slate-400"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h4 className="font-semibold text-slate-800">{plan.label}</h4>
+                        <p className="text-sm font-bold text-slate-600 mt-1">{plan.price}</p>
+                      </div>
+                      {formData.subscriptionPlan === plan.value && (
+                        <div className="w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center">
+                          <Check size={14} color="white" />
+                        </div>
+                      )}
+                    </div>
+                    <ul className="space-y-1 mt-3">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="text-xs text-slate-600 flex items-center gap-1.5">
+                          <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Error */}
-            {(passwordError || error) && (
+            {passwordError && (
               <p className="mt-5 text-sm text-red-500 text-center">
-                {passwordError || error}
+                {passwordError}
               </p>
             )}
 
@@ -280,7 +331,7 @@ const Signup = () => {
                 type="submit"
                 disabled={loading}
               >
-                {loading ? "Creating account…" : "Create Account"}
+                {loading ? "Submitting request…" : "Submit Registration Request"}
               </Button>
             </div>
           </form>

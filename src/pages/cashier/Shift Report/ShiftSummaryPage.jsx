@@ -12,6 +12,7 @@ import RefundsTable from "./RefundsTable";
 const ShiftSummaryPage = () => {
   const dispatch = useDispatch();
   const { currentShift, loading } = useSelector((s) => s.shiftReport);
+  const [initialLoading, setInitialLoading] = React.useState(true);
 
   useEffect(() => {
     console.log('📊 ShiftSummaryPage mounted, fetching current shift...');
@@ -27,9 +28,12 @@ const ShiftSummaryPage = () => {
 
   useEffect(() => {
     console.log('📊 Current shift data:', currentShift);
-  }, [currentShift]);
+    if (currentShift !== null || !loading) {
+      setInitialLoading(false);
+    }
+  }, [currentShift, loading]);
 
-  if (loading) {
+  if (initialLoading && loading) {
     return (
       <div className="h-full flex items-center justify-center">
         <p className="text-gray-500">Loading shift data...</p>
@@ -58,11 +62,11 @@ const ShiftSummaryPage = () => {
         <div className="p-4">
           <div className="space-y-4">
             {/* Top Row - Shift Info and Sales Summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
                 <ShiftInformation />
               </div>
-              <div className="lg:col-span-2">
+              <div>
                 <SalesSummaryCard />
               </div>
             </div>

@@ -56,7 +56,7 @@ export const hasPermission = (userRole, requiredRoles) => {
 // Get allowed routes for role
 export const getAllowedRoutes = (userRole) => {
   const routes = {
-    'ROLE_ADMIN': ['/admin', '/store-admin', '/cashier'],
+    'ROLE_ADMIN': ['/admin', '/store-admin', '/branch', '/cashier'],
     'ROLE_STORE_ADMIN': ['/store-admin', '/cashier'],
     'ROLE_BRANCH_MANAGER': ['/branch', '/cashier'],
     'ROLE_BRANCH_CASHIER': ['/cashier'],

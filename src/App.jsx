@@ -8,9 +8,11 @@ import "./App.css";
 import CashierRoutes from "./routes/CashierRoutes";
 import StoreAdminRoutes from "./routes/StoreAdminRoutes";
 import BranchRoutes from "./routes/BranchRoutes";
+import AdminRoutes from "./routes/AdminRoutes";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import Landing from "./pages/Landing";
+import AdminSeeder from "./pages/AdminSeeder";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -34,18 +36,26 @@ function App() {
           path="/dashboard"
           element={
             isAuthenticated ? (
-              userBackendRole === "ROLE_STORE_ADMIN" || userBackendRole === "ROLE_STORE_MANAGER" ? (
+              userBackendRole === "ROLE_ADMIN" ? (
+                <Navigate to="/admin" replace />
+              ) : userBackendRole === "ROLE_STORE_ADMIN" || userBackendRole === "ROLE_STORE_MANAGER" ? (
                 <Navigate to="/store-admin" replace />
               ) : userBackendRole === "ROLE_BRANCH_MANAGER" ? (
                 <Navigate to="/branch" replace />
-              ) : userBackendRole === "ROLE_ADMIN" ? (
-                <Navigate to="/admin" replace />
               ) : (
                 <Navigate to="/cashier" replace />
               )
             ) : (
               <Navigate to="/" replace />
             )
+          }
+        />
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute allowedRoles={["ROLE_ADMIN"]}>
+              <AdminRoutes />
+            </ProtectedRoute>
           }
         />
         <Route
@@ -67,6 +77,7 @@ function App() {
         <Route path="/branch/*" element={<BranchRoutes />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/setup-admin" element={<AdminSeeder />} />
         {/* Catch-all route for unauthorized access */}
         <Route 
           path="*" 
