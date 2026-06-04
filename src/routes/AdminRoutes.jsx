@@ -4,6 +4,7 @@ import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import StoreManagement from "@/pages/admin/Stores/StoreManagement";
 import StoreRegistrationRequests from "@/pages/admin/Stores/StoreRegistrationRequests";
+import SubscriptionManagement from "@/pages/admin/Subscriptions/SubscriptionManagement";
 import UserManagement from "@/pages/admin/Users/UserManagement";
 import SystemReports from "@/pages/admin/Reports/SystemReports";
 import SystemSettings from "@/pages/admin/Settings/SystemSettings";
@@ -15,6 +16,7 @@ export default function AdminRoutes() {
         <Route index element={<AdminDashboard />} />
         <Route path="registration-requests" element={<StoreRegistrationRequests />} />
         <Route path="stores" element={<StoreManagement />} />
+        <Route path="subscriptions" element={<SubscriptionManagement />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="reports" element={<SystemReports />} />
         <Route path="settings" element={<SystemSettings />} />

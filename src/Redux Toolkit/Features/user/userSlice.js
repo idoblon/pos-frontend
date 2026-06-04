@@ -4,11 +4,18 @@ import {
   getAllCustomer,
   getAllCashier,
   getUserById,
+  getAllUsers,
+  getAllStoreAdmins,
+  createUser,
+  updateUser,
+  deleteUser,
+  toggleUserStatus,
   logout,
 } from "./userThunk";
 
 const initialState = {
-  users: null,
+  users: [],
+  storeAdmins: [],
   userProfile: null,
   customers: [],
   cashiers: [],
@@ -22,7 +29,8 @@ const userSlice = createSlice({
   initialState,
   reducers: {
     clearUserState: (state) => {
-      state.user = [];
+      state.users = [];
+      state.storeAdmins = [];
       state.userProfile = null;
       state.selectedUser = null;
       state.customers = [];
@@ -86,9 +94,95 @@ const userSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+      // get all store admins
+      .addCase(getAllStoreAdmins.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getAllStoreAdmins.fulfilled, (state, action) => {
+        state.loading = false;
+        state.storeAdmins = action.payload;
+      })
+      .addCase(getAllStoreAdmins.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // get all users
+      .addCase(getAllUsers.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getAllUsers.fulfilled, (state, action) => {
+        state.loading = false;
+        state.users = action.payload;
+      })
+      .addCase(getAllUsers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // create user
+      .addCase(createUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.users.push(action.payload);
+      })
+      .addCase(createUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // update user
+      .addCase(updateUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateUser.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.users.findIndex(user => user.id === action.payload.id);
+        if (index !== -1) {
+          state.users[index] = action.payload;
+        }
+      })
+      .addCase(updateUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // delete user
+      .addCase(deleteUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.users = state.users.filter(user => user.id !== action.payload);
+      })
+      .addCase(deleteUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // toggle user status
+      .addCase(toggleUserStatus.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(toggleUserStatus.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.users.findIndex(user => user.id === action.payload.id);
+        if (index !== -1) {
+          state.users[index] = action.payload;
+        }
+      })
+      .addCase(toggleUserStatus.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
       // get logout
       .addCase(logout.fulfilled, (state) => {
         state.loading = false;
+        state.users = [];
+        state.storeAdmins = [];
         state.userProfile = null;
         state.selectedUser = null;
         state.customers = [];

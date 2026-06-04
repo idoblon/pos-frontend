@@ -100,6 +100,16 @@ const Login = () => {
         default:
           navigate("/dashboard");
       }
+    } else if (login.rejected.match(result)) {
+      // Handle suspension or access denied errors
+      const error = result.payload;
+      if (error && typeof error === 'object' && error.redirectTo) {
+        if (error.redirectTo === '/suspended') {
+          navigate('/suspended');
+        } else {
+          navigate(error.redirectTo);
+        }
+      }
     }
   };
 
@@ -170,7 +180,15 @@ const Login = () => {
 
               {error && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-600 text-center">{error}</p>
+                  <p className="text-sm text-red-600 text-center">
+                    {typeof error === 'string' ? error : error.message || 'Login failed'}
+                  </p>
+                  {error.suspensionDetails && (
+                    <div className="mt-2 text-xs text-red-500 text-center">
+                      <p>Suspension reason: {error.suspensionDetails.reason}</p>
+                      <p>Contact support for assistance</p>
+                    </div>
+                  )}
                 </div>
               )}
 

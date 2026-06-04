@@ -13,6 +13,7 @@ import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import Landing from "./pages/Landing";
 import AdminSeeder from "./pages/AdminSeeder";
+import StoreSuspended from "./pages/StoreSuspended";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -77,6 +78,7 @@ function App() {
         <Route path="/branch/*" element={<BranchRoutes />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/suspended" element={<StoreSuspended />} />
         <Route path="/setup-admin" element={<AdminSeeder />} />
         {/* Catch-all route for unauthorized access */}
         <Route 

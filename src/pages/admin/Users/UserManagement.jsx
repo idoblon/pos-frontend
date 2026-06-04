@@ -7,6 +7,14 @@ import {
 } from "lucide-react";
 import UserModal from "@/components/admin/UserModal";
 import { toast } from "sonner";
+import { 
+  getAllUsers, 
+  getAllStoreAdmins,
+  createUser, 
+  updateUser, 
+  deleteUser, 
+  toggleUserStatus 
+} from "@/Redux Toolkit/Features/user/userThunk";
 
 const roleIcons = {
   'ROLE_ADMIN': Crown,
@@ -17,19 +25,19 @@ const roleIcons = {
 };
 
 const roleColors = {
-  'ROLE_ADMIN': '#9f7aea',
-  'ROLE_STORE_ADMIN': '#667eea',
-  'ROLE_BRANCH_MANAGER': '#4299e1',
-  'ROLE_BRANCH_CASHIER': '#48bb78',
+  'ROLE_ADMIN': '#059669',
+  'ROLE_STORE_ADMIN': '#1a1d23',
+  'ROLE_BRANCH_MANAGER': '#6b7280',
+  'ROLE_BRANCH_CASHIER': '#dc2626',
   'ROLE_USER': '#718096'
 };
 
 const roleLabels = {
-  'ROLE_ADMIN': 'Super Admin',
-  'ROLE_STORE_ADMIN': 'Store Admin',
+  'ROLE_ADMIN': 'Platform Admin',
+  'ROLE_STORE_ADMIN': 'Store Owner',
   'ROLE_BRANCH_MANAGER': 'Branch Manager',
   'ROLE_BRANCH_CASHIER': 'Cashier',
-  'ROLE_USER': 'User'
+  'ROLE_USER': 'Employee'
 };
 
 function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
@@ -79,12 +87,12 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
               fontWeight: "600",
               color: roleColor
             }}>
-              {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
+              {(user.fullName || user.name)?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
             </span>
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#1a202c" }}>
-              {user.name || "Unnamed User"}
+              {user.fullName || user.name || "Unnamed User"}
             </h3>
             <p style={{ margin: "2px 0", fontSize: "14px", color: "#718096" }}>
               {user.email}
@@ -243,15 +251,15 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
           </div>
         </div>
         
-        {user.storeName && (
+        {user.store && (
           <div style={{ fontSize: "12px", color: "#718096", marginBottom: "4px" }}>
-            Store: <span style={{ color: "#4a5568", fontWeight: "500" }}>{user.storeName}</span>
+            Store: <span style={{ color: "#4a5568", fontWeight: "500" }}>{user.store.storeName || user.store.brand}</span>
           </div>
         )}
         
-        {user.branchName && (
+        {user.branch && (
           <div style={{ fontSize: "12px", color: "#718096" }}>
-            Branch: <span style={{ color: "#4a5568", fontWeight: "500" }}>{user.branchName}</span>
+            Branch: <span style={{ color: "#4a5568", fontWeight: "500" }}>{user.branch.branchName}</span>
           </div>
         )}
       </div>
@@ -294,74 +302,48 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
 }
 
 export default function UserManagement() {
+  const dispatch = useDispatch();
+  const { users, storeAdmins, loading, error } = useSelector((state) => state.user);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState([]);
 
-  // Initialize with mock data
+  // Fetch store admins (your customers) from database on component mount
   useEffect(() => {
-    setUsers([
-      {
-        id: 1,
-        name: "John Doe",
-        email: "john.doe@admin.com",
-        role: "ROLE_ADMIN",
-        status: "active",
-        lastLogin: "2024-01-15T10:30:00Z",
-        createdAt: "2024-01-01T00:00:00Z"
-      },
-      {
-        id: 2,
-        name: "Sarah Wilson",
-        email: "sarah.wilson@store1.com",
-        role: "ROLE_STORE_ADMIN",
-        status: "active",
-        storeName: "Downtown Store",
-        lastLogin: "2024-01-15T09:15:00Z",
-        createdAt: "2024-01-02T00:00:00Z"
-      },
-      {
-        id: 3,
-        name: "Mike Johnson",
-        email: "mike.johnson@branch1.com",
-        role: "ROLE_BRANCH_MANAGER",
-        status: "active",
-        storeName: "Downtown Store",
-        branchName: "Main Branch",
-        lastLogin: "2024-01-15T08:45:00Z",
-        createdAt: "2024-01-03T00:00:00Z"
-      },
-      {
-        id: 4,
-        name: "Lisa Chen",
-        email: "lisa.chen@cashier.com",
-        role: "ROLE_BRANCH_CASHIER",
-        status: "active",
-        storeName: "Mall Branch",
-        branchName: "Mall Counter",
-        lastLogin: "2024-01-15T11:20:00Z",
-        createdAt: "2024-01-04T00:00:00Z"
-      },
-      {
-        id: 5,
-        name: "David Brown",
-        email: "david.brown@inactive.com",
-        role: "ROLE_STORE_ADMIN",
-        status: "inactive",
-        storeName: "Airport Store",
-        lastLogin: "2024-01-10T15:30:00Z",
-        createdAt: "2024-01-05T00:00:00Z"
-      }
-    ]);
-  }, []);
+    console.log('🔍 Fetching store admins...');
+    // First try to get all store admins, if that fails, get all users and filter
+    dispatch(getAllStoreAdmins()).catch(() => {
+      console.log('⚠️ Store admins endpoint not available, fetching all users and filtering...');
+      dispatch(getAllUsers());
+    });
+  }, [dispatch]);
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+  // Debug: Log the data we have
+  useEffect(() => {
+    console.log('📊 Current data state:', {
+      storeAdmins: storeAdmins?.length || 0,
+      users: users?.length || 0,
+      loading,
+      error
+    });
+    if (users?.length > 0) {
+      console.log('👥 All users:', users);
+      const storeAdminUsers = users.filter(user => user.role === 'ROLE_STORE_ADMIN');
+      console.log('🏪 Store admin users found:', storeAdminUsers);
+    }
+  }, [storeAdmins, users, loading, error]);
+
+  // Use storeAdmins if available, otherwise filter users for store admins
+  const storeAdminUsers = storeAdmins && storeAdmins.length > 0 
+    ? storeAdmins 
+    : (users || []).filter(user => user.role === 'ROLE_STORE_ADMIN');
+
+  const filteredUsers = (storeAdminUsers || []).filter(user => {
+    const matchesSearch = (user.fullName || user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.store?.storeName || user.store?.brand || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === "all" || user.role === filterRole;
     const matchesStatus = filterStatus === "all" || user.status === filterStatus;
     return matchesSearch && matchesRole && matchesStatus;
@@ -377,33 +359,23 @@ export default function UserManagement() {
   };
 
   const handleDelete = async (user) => {
-    if (window.confirm(`Are you sure you want to delete user "${user.name}"?`)) {
+    if (window.confirm(`Are you sure you want to delete user "${user.fullName || user.name}"?`)) {
       try {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setUsers(prev => prev.filter(u => u.id !== user.id));
-        toast.success(`User "${user.name}" deleted successfully`);
+        await dispatch(deleteUser(user.id)).unwrap();
+        toast.success(`User "${user.fullName || user.name}" deleted successfully`);
       } catch (error) {
-        toast.error("Failed to delete user");
-      } finally {
-        setLoading(false);
+        toast.error(error || "Failed to delete user");
       }
     }
   };
 
   const handleToggleStatus = async (user) => {
     try {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
       const newStatus = user.status === 'active' ? 'inactive' : 'active';
-      setUsers(prev => prev.map(u => 
-        u.id === user.id ? { ...u, status: newStatus } : u
-      ));
+      await dispatch(toggleUserStatus({ userId: user.id, status: newStatus })).unwrap();
       toast.success(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
     } catch (error) {
-      toast.error("Failed to update user status");
-    } finally {
-      setLoading(false);
+      toast.error(error || "Failed to update user status");
     }
   };
 
@@ -414,36 +386,23 @@ export default function UserManagement() {
 
   const handleSaveUser = async (formData) => {
     try {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       if (selectedUser) {
-        setUsers(prev => prev.map(user => 
-          user.id === selectedUser.id ? { ...user, ...formData } : user
-        ));
+        await dispatch(updateUser({ userId: selectedUser.id, userData: formData })).unwrap();
         toast.success("User updated successfully");
       } else {
-        const newUser = {
-          id: Date.now(),
-          ...formData,
-          lastLogin: null,
-          createdAt: new Date().toISOString()
-        };
-        setUsers(prev => [...prev, newUser]);
+        await dispatch(createUser(formData)).unwrap();
         toast.success("User created successfully");
       }
       
       setShowModal(false);
       setSelectedUser(null);
     } catch (error) {
-      toast.error(selectedUser ? "Failed to update user" : "Failed to create user");
-    } finally {
-      setLoading(false);
+      toast.error(error || (selectedUser ? "Failed to update user" : "Failed to create user"));
     }
   };
 
-  // Get role distribution
-  const roleDistribution = users.reduce((acc, user) => {
+  // Get role distribution for store admins only
+  const roleDistribution = (storeAdminUsers || []).reduce((acc, user) => {
     acc[user.role] = (acc[user.role] || 0) + 1;
     return acc;
   }, {});
@@ -465,14 +424,14 @@ export default function UserManagement() {
             color: "#1a202c",
             letterSpacing: "-0.5px"
           }}>
-            User Management
+            Store Admin Management
           </h1>
           <p style={{
             margin: "4px 0 0",
             fontSize: "16px",
             color: "#718096"
           }}>
-            Manage system users, roles, and permissions
+            Manage your POS platform customers - store owners and their subscriptions
           </p>
         </div>
         
@@ -482,7 +441,7 @@ export default function UserManagement() {
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "#059669",
             color: "white",
             border: "none",
             borderRadius: "10px",
@@ -503,7 +462,7 @@ export default function UserManagement() {
           }}
         >
           <Plus size={18} />
-          Add New User
+          Add Store Customer
         </button>
       </div>
 
@@ -577,7 +536,7 @@ export default function UserManagement() {
           }} />
           <input
             type="text"
-            placeholder="Search users by name or email..."
+            placeholder="Search by store name, owner name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -651,26 +610,69 @@ export default function UserManagement() {
         </div>
       </div>
 
+      {/* Loading and Error States */}
+      {loading && (
+        <div style={{
+          background: "white",
+          border: "1px solid #e2e8f0",
+          borderRadius: "12px",
+          padding: "60px 20px",
+          textAlign: "center"
+        }}>
+          <div style={{ fontSize: "16px", color: "#6b7280" }}>Loading users...</div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          background: "white",
+          border: "1px solid #fecaca",
+          borderRadius: "12px",
+          padding: "20px",
+          textAlign: "center",
+          marginBottom: "20px"
+        }}>
+          <AlertCircle size={24} color="#dc2626" style={{ marginBottom: "8px" }} />
+          <div style={{ color: "#dc2626", fontSize: "14px" }}>{error}</div>
+          <button
+            onClick={() => dispatch(getAllUsers())}
+            style={{
+              marginTop: "12px",
+              padding: "8px 16px",
+              background: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* User Grid */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-        gap: "20px"
-      }}>
-        {filteredUsers.map((user) => (
-          <UserCard
-            key={user.id}
-            user={user}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onToggleStatus={handleToggleStatus}
-          />
-        ))}
-      </div>
+      {!loading && !error && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+          gap: "20px"
+        }}>
+          {filteredUsers.map((user) => (
+            <UserCard
+              key={user.id}
+              user={user}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onToggleStatus={handleToggleStatus}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredUsers.length === 0 && (
+      {!loading && !error && filteredUsers.length === 0 && (
         <div style={{
           background: "white",
           border: "1px solid #e2e8f0",
@@ -686,7 +688,7 @@ export default function UserManagement() {
             color: "#1a202c",
             marginBottom: "8px"
           }}>
-            No users found
+            No store customers found
           </h3>
           <p style={{ margin: 0, fontSize: "14px", color: "#718096", marginBottom: "20px" }}>
             {searchTerm || filterRole !== "all" || filterStatus !== "all" 

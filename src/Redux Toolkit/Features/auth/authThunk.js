@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/util/api";
 import secureStorage from "@/util/secureStorage";
 import shiftManager from "@/util/shiftManager";
+import { validateUserAccess, updateBranchStatus } from "@/util/storeStatusChecker";
 
 export const signup = createAsyncThunk(
   "auth/signup",
@@ -28,8 +29,33 @@ export const login = createAsyncThunk(
       const { jwt } = res.data;
       const { role, storeId, branchId, storeName, id: userId, email, fullName, username } = res.data.user ?? {};
 
-      secureStorage.setToken(jwt);
       const userDataToStore = { role, storeId, branchId, storeName, userId, email, fullName, username };
+      
+      // Validate store access for store/branch users
+      if (storeId && ['ROLE_STORE_ADMIN', 'ROLE_STORE_MANAGER', 'ROLE_BRANCH_MANAGER', 'ROLE_BRANCH_CASHIER'].includes(role)) {
+        const accessValidation = await validateUserAccess(userDataToStore);
+        
+        if (!accessValidation.allowed) {
+          console.error("❌ Store access denied:", accessValidation.reason);
+          
+          if (accessValidation.suspensionDetails) {
+            return rejectWithValue({
+              message: `Store access suspended: ${accessValidation.suspensionDetails.reason}`,
+              suspensionDetails: accessValidation.suspensionDetails,
+              redirectTo: accessValidation.redirectTo
+            });
+          }
+          
+          return rejectWithValue({
+            message: `Store access denied: ${accessValidation.reason}`,
+            redirectTo: accessValidation.redirectTo
+          });
+        }
+        
+        console.log("✅ Store access validated successfully");
+      }
+
+      secureStorage.setToken(jwt);
       secureStorage.setUserData(userDataToStore);
 
       // Auto-start shift for all roles after successful login

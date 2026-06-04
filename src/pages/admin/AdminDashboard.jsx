@@ -8,7 +8,7 @@ import {
 import {
   Store, Users, ShoppingCart, DollarSign,
   TrendingUp, Activity, Building2, UserCheck,
-  Calendar, Clock, BarChart3, RefreshCw, AlertCircle
+  Calendar, Clock, BarChart3, RefreshCw, AlertCircle, CreditCard
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -498,6 +498,13 @@ export default function AdminDashboard() {
           gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
           gap: "16px"
         }}>
+          <QuickAction
+            title="Subscription Management"
+            description="Monitor and manage store subscriptions"
+            icon={CreditCard}
+            color="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"
+            onClick={() => window.location.href = "/admin/subscriptions"}
+          />
           <QuickAction
             title="Manage Stores"
             description="Add, edit, or remove store locations"

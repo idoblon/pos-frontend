@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import {
   LayoutDashboard, Store, Users, BarChart3, Settings,
-  Menu, X, LogOut, ChevronDown, Bell, FileText
+  Menu, X, LogOut, ChevronDown, Bell, FileText, CreditCard
 } from "lucide-react";
 import posLogo from "@/logo/pos.png";
 
@@ -12,6 +12,7 @@ const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin", exact: true },
   { icon: FileText, label: "Registration Requests", path: "/admin/registration-requests" },
   { icon: Store, label: "Store Management", path: "/admin/stores" },
+  { icon: CreditCard, label: "Subscriptions", path: "/admin/subscriptions" },
   { icon: Users, label: "User Management", path: "/admin/users" },
   { icon: BarChart3, label: "System Reports", path: "/admin/reports" },
   { icon: Settings, label: "System Settings", path: "/admin/settings" },

@@ -174,6 +174,107 @@ export const changePassword = createAsyncThunk(
   },
 );
 
+export const getAllStoreAdmins = createAsyncThunk(
+  "user/getAllStoreAdmins",
+  async (_, { rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.get("/api/users/store-admins", { headers });
+      console.log("get all store admins success", res.data);
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch store admins");
+    }
+  },
+);
+
+export const getAllUsers = createAsyncThunk(
+  "user/getAllUsers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.get("/api/users", { headers });
+      console.log("get all users success", res.data);
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch all users");
+    }
+  },
+);
+
+export const createUser = createAsyncThunk(
+  "user/createUser",
+  async (userData, { rejectWithValue }) => {
+    try {
+      // Validate user data
+      const validation = validateUserData(userData);
+      if (!validation.isValid) {
+        return rejectWithValue(`Validation failed: ${Object.values(validation.errors).join(', ')}`);
+      }
+
+      const sanitizedData = sanitizeFormData(userData);
+      const headers = getAuthHeaders();
+      const res = await api.post("/api/users", sanitizedData, { headers });
+      console.log("create user success", res.data);
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to create user");
+    }
+  },
+);
+
+export const updateUser = createAsyncThunk(
+  "user/updateUser",
+  async ({ userId, userData }, { rejectWithValue }) => {
+    try {
+      // Validate user data
+      const validation = validateUserData(userData);
+      if (!validation.isValid) {
+        return rejectWithValue(`Validation failed: ${Object.values(validation.errors).join(', ')}`);
+      }
+
+      const sanitizedData = sanitizeFormData(userData);
+      const sanitizedParams = sanitizePathParams({ userId });
+      const headers = getAuthHeaders();
+      const res = await api.put(`/api/users/${sanitizedParams.userId}`, sanitizedData, { headers });
+      console.log("update user success", res.data);
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to update user");
+    }
+  },
+);
+
+export const deleteUser = createAsyncThunk(
+  "user/deleteUser",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const sanitizedParams = sanitizePathParams({ userId });
+      const headers = getAuthHeaders();
+      await api.delete(`/api/users/${sanitizedParams.userId}`, { headers });
+      console.log("delete user success");
+      return userId;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to delete user");
+    }
+  },
+);
+
+export const toggleUserStatus = createAsyncThunk(
+  "user/toggleUserStatus",
+  async ({ userId, status }, { rejectWithValue }) => {
+    try {
+      const sanitizedParams = sanitizePathParams({ userId });
+      const headers = getAuthHeaders();
+      const res = await api.patch(`/api/users/${sanitizedParams.userId}/status`, { status }, { headers });
+      console.log("toggle user status success", res.data);
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to update user status");
+    }
+  },
+);
+
 export const logout = createAsyncThunk(
   "user/logout",
   async (_, { rejectWithValue }) => {

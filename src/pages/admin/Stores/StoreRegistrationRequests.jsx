@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { Check, X, Clock, Mail, Phone, MapPin, Building2, Calendar, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import SubscriptionValidation from "@/components/admin/SubscriptionValidation";
 
 export default function StoreRegistrationRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [filter, setFilter] = useState("PENDING");
+  const [subscriptionValidations, setSubscriptionValidations] = useState({});
+
+  const handleSubscriptionValidation = (requestId, isValid) => {
+    setSubscriptionValidations(prev => ({ ...prev, [requestId]: isValid }));
+    // Update request in state if needed
+    setRequests(prev => prev.map(req => 
+      req.id === requestId ? { ...req, subscriptionValidated: isValid } : req
+    ));
+  };
 
   useEffect(() => {
     fetchRequests();
@@ -31,6 +41,13 @@ export default function StoreRegistrationRequests() {
   };
 
   const handleApprove = async (requestId) => {
+    // Check if subscription is validated for selected request
+    const request = requests.find(r => r.id === requestId);
+    if (request && !request.subscriptionValidated) {
+      toast.error("Please validate subscription before approving");
+      return;
+    }
+
     try {
       const jwt = localStorage.getItem("jwt");
       const response = await fetch(`http://localhost:8080/api/admin/store-requests/${requestId}/approve`, {
@@ -205,12 +222,12 @@ export default function StoreRegistrationRequests() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleApprove(req.id);
+                      setSelectedRequest(req); // Open modal for full validation
                     }}
                     style={{
                       flex: 1,
                       padding: "8px 16px",
-                      background: "linear-gradient(135deg, #1a1d23, #4a4d55)",
+                      background: "linear-gradient(135deg, #059669, #047857)",
                       color: "white",
                       border: "none",
                       borderRadius: "6px",
@@ -224,7 +241,7 @@ export default function StoreRegistrationRequests() {
                     }}
                   >
                     <Check size={14} />
-                    Approve
+                    Review & Approve
                   </button>
                   <button
                     onClick={(e) => {
@@ -373,53 +390,62 @@ export default function StoreRegistrationRequests() {
               )}
 
               {selectedRequest.status === "PENDING" && (
-                <div style={{ display: "flex", gap: "12px", marginTop: "8px", paddingTop: "16px", borderTop: "1px solid #e5e7eb" }}>
-                  <button
-                    onClick={() => handleApprove(selectedRequest.id)}
-                    style={{
-                      flex: 1,
-                      padding: "12px",
-                      background: "linear-gradient(135deg, #1a1d23, #4a4d55)",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px"
-                    }}
-                  >
-                    <Check size={16} />
-                    Approve Request
-                  </button>
-                  <button
-                    onClick={() => {
-                      const reason = prompt("Enter rejection reason:");
-                      if (reason) handleReject(selectedRequest.id, reason);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: "12px",
-                      background: "white",
-                      color: "#e53e3e",
-                      border: "2px solid #e53e3e",
-                      borderRadius: "8px",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px"
-                    }}
-                  >
-                    <X size={16} />
-                    Reject Request
-                  </button>
-                </div>
+                <>
+                  <SubscriptionValidation 
+                    request={selectedRequest}
+                    onValidation={(isValid) => handleSubscriptionValidation(selectedRequest.id, isValid)}
+                  />
+                  <div style={{ display: "flex", gap: "12px", marginTop: "8px", paddingTop: "16px", borderTop: "1px solid #e5e7eb" }}>
+                    <button
+                      onClick={() => handleApprove(selectedRequest.id)}
+                      disabled={!subscriptionValidations[selectedRequest.id]}
+                      style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: subscriptionValidations[selectedRequest.id] 
+                          ? "linear-gradient(135deg, #1a1d23, #4a4d55)"
+                          : "#e5e7eb",
+                        color: subscriptionValidations[selectedRequest.id] ? "white" : "#9ca3af",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        cursor: subscriptionValidations[selectedRequest.id] ? "pointer" : "not-allowed",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px"
+                      }}
+                    >
+                      <Check size={16} />
+                      Approve Request
+                    </button>
+                    <button
+                      onClick={() => {
+                        const reason = prompt("Enter rejection reason:");
+                        if (reason) handleReject(selectedRequest.id, reason);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "12px",
+                        background: "white",
+                        color: "#e53e3e",
+                        border: "2px solid #e53e3e",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px"
+                      }}
+                    >
+                      <X size={16} />
+                      Reject Request
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
