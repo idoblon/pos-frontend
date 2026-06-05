@@ -17,7 +17,7 @@ function SettingSection({ title, description, icon: Icon, children }) {
           width: "40px",
           height: "40px",
           borderRadius: "10px",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: "#1a1d23",
           display: "flex",
           alignItems: "center",
           justifyContent: "center"
@@ -164,7 +164,7 @@ export default function SystemSettings() {
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              background: "linear-gradient(135deg, #48bb78 0%, #38a169 100%)",
+              background: "#1a1d23",
               color: "white",
               border: "none",
               borderRadius: "8px",
@@ -174,7 +174,7 @@ export default function SystemSettings() {
               cursor: "pointer"
             }}
           >
-            <Save size={16} />
+            <Save size={16} color="white" />
             Save Changes
           </button>
         )}

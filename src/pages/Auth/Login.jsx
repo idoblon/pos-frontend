@@ -9,7 +9,6 @@ import { login } from "@/Redux Toolkit/Features/auth/authThunk";
 import { useNavigate, Link } from "react-router-dom";
 import { sanitizeInput, validateEmail } from "@/util/inputValidator";
 import { mapToBackendRole } from "@/util/roleMapper";
-import { POS_ADMIN_CREDENTIALS } from "@/util/adminSeeder";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 
@@ -21,8 +20,8 @@ const Login = () => {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({ 
-    email: POS_ADMIN_CREDENTIALS.email, 
-    password: POS_ADMIN_CREDENTIALS.password 
+    email: "", 
+    password: "" 
   });
   const [validationErrors, setValidationErrors] = useState({});
 

@@ -25,11 +25,11 @@ const roleIcons = {
 };
 
 const roleColors = {
-  'ROLE_ADMIN': '#059669',
+  'ROLE_ADMIN': '#1a1d23',
   'ROLE_STORE_ADMIN': '#1a1d23',
-  'ROLE_BRANCH_MANAGER': '#6b7280',
-  'ROLE_BRANCH_CASHIER': '#dc2626',
-  'ROLE_USER': '#718096'
+  'ROLE_BRANCH_MANAGER': '#1a1d23',
+  'ROLE_BRANCH_CASHIER': '#1a1d23',
+  'ROLE_USER': '#1a1d23'
 };
 
 const roleLabels = {
@@ -441,7 +441,7 @@ export default function UserManagement() {
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            background: "#059669",
+            background: "#1a1d23",
             color: "white",
             border: "none",
             borderRadius: "10px",
@@ -449,19 +449,19 @@ export default function UserManagement() {
             fontSize: "14px",
             fontWeight: "600",
             cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+            boxShadow: "0 4px 12px rgba(26, 29, 35, 0.4)",
             transition: "all 0.2s ease"
           }}
           onMouseEnter={(e) => {
             e.target.style.transform = "translateY(-2px)";
-            e.target.style.boxShadow = "0 6px 20px rgba(102, 126, 234, 0.4)";
+            e.target.style.boxShadow = "0 6px 20px rgba(26, 29, 35, 0.4)";
           }}
           onMouseLeave={(e) => {
             e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+            e.target.style.boxShadow = "0 4px 12px rgba(26, 29, 35, 0.4)";
           }}
         >
-          <Plus size={18} />
+          <Plus size={18} color="white" />
           Add Store Customer
         </button>
       </div>
@@ -493,7 +493,7 @@ export default function UserManagement() {
               alignItems: "center",
               justifyContent: "center"
             }}>
-              {React.createElement(roleIcons[role], { size: 20, color: roleColors[role] })}
+              {React.createElement(roleIcons[role], { size: 20, color: "#1a1d23" })}
             </div>
             <p style={{
               margin: 0,
@@ -680,7 +680,7 @@ export default function UserManagement() {
           padding: "60px 20px",
           textAlign: "center"
         }}>
-          <UserCheck size={48} color="#cbd5e0" style={{ marginBottom: "16px" }} />
+          <UserCheck size={48} color="#1a1d23" style={{ marginBottom: "16px" }} />
           <h3 style={{
             margin: 0,
             fontSize: "18px",

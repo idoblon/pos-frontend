@@ -2,7 +2,6 @@ import { Label } from "@radix-ui/react-label";
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import SubscriptionCalculator from "@/components/ui/SubscriptionCalculator";
 import posLogo from "@/logo/pos.png";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -42,7 +41,6 @@ const SUBSCRIPTION_PLANS = [
 const Signup = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [useCalculator, setUseCalculator] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -285,78 +283,53 @@ const Signup = () => {
 
             {/* Subscription Plans */}
             <div className="mt-6 pt-6 border-t border-gray-100">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Choose Subscription Plan
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setUseCalculator(!useCalculator)}
-                  style={{
-                    padding: "6px 12px",
-                    background: useCalculator ? "#1a1d23" : "white",
-                    color: useCalculator ? "white" : "#1a1d23", 
-                    border: "1px solid #1a1d23",
-                    borderRadius: "6px",
-                    fontSize: "11px",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  {useCalculator ? "Simple View" : "Smart Calculator"}
-                </button>
-              </div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">
+                Choose Subscription Plan
+              </h3>
 
-              {useCalculator ? (
-                <SubscriptionCalculator
-                  onPlanSelect={(plan) => setFormData({ ...formData, subscriptionPlan: plan })}
-                  selectedPlan={formData.subscriptionPlan}
-                />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {SUBSCRIPTION_PLANS.map((plan) => (
-                    <div
-                      key={plan.value}
-                      onClick={() => setFormData({ ...formData, subscriptionPlan: plan.value })}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        formData.subscriptionPlan === plan.value
-                          ? "border-slate-800 bg-slate-50"
-                          : "border-gray-200 hover:border-slate-400"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold text-slate-800">{plan.label}</h4>
-                          <p className="text-sm font-bold text-slate-600 mt-1">{plan.price}</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {SUBSCRIPTION_PLANS.map((plan) => (
+                  <div
+                    key={plan.value}
+                    onClick={() => setFormData({ ...formData, subscriptionPlan: plan.value })}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      formData.subscriptionPlan === plan.value
+                        ? "border-slate-800 bg-slate-50"
+                        : "border-gray-200 hover:border-slate-400"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h4 className="font-semibold text-slate-800">{plan.label}</h4>
+                        <p className="text-sm font-bold text-slate-600 mt-1">{plan.price}</p>
+                      </div>
+                      {formData.subscriptionPlan === plan.value && (
+                        <div className="w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center">
+                          <Check size={14} color="white" />
                         </div>
-                        {formData.subscriptionPlan === plan.value && (
-                          <div className="w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center">
-                            <Check size={14} color="white" />
-                          </div>
-                        )}
-                      </div>
-                      <ul className="space-y-1 mt-3">
-                        {plan.features.map((feature, idx) => (
-                          <li key={idx} className="text-xs text-slate-600 flex items-center gap-1.5">
-                            <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                      <div style={{
-                        marginTop: "8px",
-                        padding: "6px",
-                        background: "#fef3c7",
-                        borderRadius: "4px",
-                        fontSize: "10px",
-                        color: "#92400e"
-                      }}>
-                        Need more branches? Add रु 500/branch extra
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                    <ul className="space-y-1 mt-3">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="text-xs text-slate-600 flex items-center gap-1.5">
+                          <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <div style={{
+                      marginTop: "8px",
+                      padding: "6px",
+                      background: "#fef3c7",
+                      borderRadius: "4px",
+                      fontSize: "10px",
+                      color: "#92400e"
+                    }}>
+                      Need more branches? Add रु 500/branch extra
+                    </div>
+                  </div>
+                ))}
+              </div>
               
               {/* Usage Estimation */}
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">

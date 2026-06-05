@@ -63,7 +63,7 @@ function NavLinks({ onClose, notificationCount }) {
           position: "relative",
         }}
       >
-        <Icon size={17} />
+        <Icon size={17} color={active ? "white" : "#1a1d23"} />
         {label}
         {isRestockPage && notificationCount > 0 && (
           <span style={{
@@ -238,7 +238,7 @@ export default function BranchLayout() {
             fontWeight: 600,
           }}
         >
-          <LogOut size={17} />
+          <LogOut size={17} color="#e53e3e" />
           Logout
         </button>
       </div>

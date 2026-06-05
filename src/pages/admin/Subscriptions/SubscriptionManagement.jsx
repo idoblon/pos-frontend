@@ -37,7 +37,7 @@ function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction
   return (
     <div style={{
       background: "white",
-      border: `2px solid ${isActive ? legacyPlan.color : "#e5e7eb"}`,
+      border: `2px solid ${isActive ? "#1a1d23" : "#e5e7eb"}`,
       borderRadius: "12px",
       padding: "20px",
       position: "relative",
@@ -53,7 +53,7 @@ function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction
         fontSize: "11px",
         fontWeight: "700",
         textTransform: "uppercase",
-        background: isActive ? legacyPlan.color : "#6b7280",
+        background: isActive ? "#1a1d23" : "#6b7280",
         color: "white"
       }}>
         {subscription.status}
@@ -65,7 +65,7 @@ function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction
           width: "48px",
           height: "48px",
           borderRadius: "12px",
-          background: `linear-gradient(135deg, ${legacyPlan.color}, ${legacyPlan.color}dd)`,
+          background: "#1a1d23",
           display: "flex",
           alignItems: "center",
           justifyContent: "center"
@@ -224,9 +224,9 @@ function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction
             flex: 1,
             padding: "8px 12px",
             background: "white",
-            border: `1px solid ${legacyPlan.color}`,
+            border: `1px solid #1a1d23`,
             borderRadius: "6px",
-            color: legacyPlan.color,
+            color: "#1a1d23",
             fontSize: "12px",
             fontWeight: "600",
             cursor: "pointer",
@@ -236,7 +236,7 @@ function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction
             gap: "4px"
           }}
         >
-          <Eye size={12} />
+          <Eye size={12} color="#1a1d23" />
           Details
         </button>
         <button
@@ -244,7 +244,7 @@ function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction
           style={{
             flex: 1,
             padding: "8px 12px",
-            background: legacyPlan.color,
+            background: "#1a1d23",
             border: "none",
             borderRadius: "6px",
             color: "white",
@@ -257,7 +257,7 @@ function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction
             gap: "4px"
           }}
         >
-          <Settings size={12} />
+          <Settings size={12} color="white" />
           Manage
         </button>
       </div>
@@ -574,7 +574,7 @@ export default function SubscriptionManagement() {
           padding: "16px"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <DollarSign size={16} color="#059669" />
+            <DollarSign size={16} color="#1a1d23" />
             <span style={{ fontSize: "12px", fontWeight: "600", color: "#6b7280" }}>Total Revenue</span>
           </div>
           <p style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#1a1d23" }}>
@@ -589,7 +589,7 @@ export default function SubscriptionManagement() {
           padding: "16px"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <CheckCircle size={16} color="#059669" />
+            <CheckCircle size={16} color="#1a1d23" />
             <span style={{ fontSize: "12px", fontWeight: "600", color: "#6b7280" }}>Active Plans</span>
           </div>
           <p style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#1a1d23" }}>
@@ -604,7 +604,7 @@ export default function SubscriptionManagement() {
           padding: "16px"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <AlertCircle size={16} color="#f59e0b" />
+            <AlertCircle size={16} color="#1a1d23" />
             <span style={{ fontSize: "12px", fontWeight: "600", color: "#6b7280" }}>Expiring Soon</span>
           </div>
           <p style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#1a1d23" }}>
@@ -619,7 +619,7 @@ export default function SubscriptionManagement() {
           padding: "16px"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <Store size={16} color="#dc2626" />
+            <Store size={16} color="#1a1d23" />
             <span style={{ fontSize: "12px", fontWeight: "600", color: "#6b7280" }}>Expired</span>
           </div>
           <p style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#1a1d23" }}>
@@ -634,7 +634,7 @@ export default function SubscriptionManagement() {
           padding: "16px"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <TrendingUp size={16} color="#f59e0b" />
+            <TrendingUp size={16} color="#1a1d23" />
             <span style={{ fontSize: "12px", fontWeight: "600", color: "#6b7280" }}>Avg Revenue</span>
           </div>
           <p style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#1a1d23" }}>
@@ -755,7 +755,7 @@ export default function SubscriptionManagement() {
           padding: "40px",
           textAlign: "center"
         }}>
-          <Store size={48} color="#e5e7eb" style={{ margin: "0 auto 16px" }} />
+          <Store size={48} color="#1a1d23" style={{ margin: "0 auto 16px" }} />
           <h3 style={{ margin: "0 0 8px", fontSize: "16px", fontWeight: "600", color: "#1a1d23" }}>
             No Stores Found
           </h3>

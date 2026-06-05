@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Plus, Search, Filter, MoreHorizontal, Edit2,
-  Trash2, Eye, MapPin, Users, Store as StoreIcon,
-  Activity, AlertCircle, CheckCircle
+  Trash2, Eye, MapPin, Store as StoreIcon,
+  AlertCircle, CheckCircle, Activity
 } from "lucide-react";
 import StoreModal from "@/components/admin/StoreModal";
 import { toast } from "sonner";
+import { getAllStores, createStore, updateStore, deleteStore } from "@/Redux Toolkit/Features/Store/storeThunk";
 
 function StoreCard({ store, onEdit, onView, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -51,7 +52,7 @@ function StoreCard({ store, onEdit, onView, onDelete }) {
             width: "48px",
             height: "48px",
             borderRadius: "12px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "#1a1d23",
             display: "flex",
             alignItems: "center",
             justifyContent: "center"
@@ -228,68 +229,32 @@ function StoreCard({ store, onEdit, onView, onDelete }) {
 }
 
 export default function StoreManagement() {
+  const dispatch = useDispatch();
+  const { stores: reduxStores, loading: reduxLoading } = useSelector((s) => s.store);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [showModal, setShowModal] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [stores, setStores] = useState([]);
+  const [saving, setSaving] = useState(false);
 
-  // Initialize with mock data - replace with actual API calls
   useEffect(() => {
-    setStores([
-      {
-        id: 1,
-        name: "Downtown Store",
-        address: "123 Main St, City Center",
-        phone: "+977-1-4444444",
-        email: "downtown@pos.com",
-        status: "active",
-        branchCount: 3,
-        employeeCount: 25,
-        monthlyRevenue: 125000,
-        managerName: "John Smith",
-        managerEmail: "john.smith@pos.com"
-      },
-      {
-        id: 2,
-        name: "Mall Branch",
-        address: "456 Shopping Mall, Level 2",
-        phone: "+977-1-5555555",
-        email: "mall@pos.com",
-        status: "active",
-        branchCount: 2,
-        employeeCount: 18,
-        monthlyRevenue: 98000,
-        managerName: "Sarah Wilson",
-        managerEmail: "sarah.wilson@pos.com"
-      },
-      {
-        id: 3,
-        name: "Airport Store",
-        address: "Terminal 1, Departure Hall",
-        phone: "+977-1-6666666",
-        email: "airport@pos.com",
-        status: "inactive",
-        branchCount: 1,
-        employeeCount: 12,
-        monthlyRevenue: 45000
-      },
-      {
-        id: 4,
-        name: "Suburban Outlet",
-        address: "789 Residential Area",
-        phone: "+977-1-7777777",
-        email: "suburban@pos.com",
-        status: "active",
-        branchCount: 4,
-        employeeCount: 32,
-        monthlyRevenue: 87000,
-        managerName: "Mike Johnson",
-        managerEmail: "mike.johnson@pos.com"
-      }
-    ]);
-  }, []);
+    dispatch(getAllStores());
+  }, [dispatch]);
+
+  // Normalize store data from backend shape to UI shape
+  const stores = (reduxStores || []).map(s => ({
+    id: s._id || s.id,
+    name: s.brand || s.name || s.storeName || "Unnamed Store",
+    address: s.contact?.address || s.address || "",
+    phone: s.contact?.phone || s.phone || "",
+    email: s.contact?.email || s.email || "",
+    status: (s.status || "active").toLowerCase(),
+    branchCount: s.branches?.length || s.branchCount || 0,
+    employeeCount: s.employees?.length || s.employeeCount || 0,
+    monthlyRevenue: s.monthlyRevenue || 0,
+    managerName: s.storeAdmin?.fullName || s.managerName || "",
+    managerEmail: s.storeAdmin?.email || s.managerEmail || ""
+  }));
 
   const filteredStores = stores.filter(store => {
     const matchesSearch = store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -309,15 +274,12 @@ export default function StoreManagement() {
 
   const handleDelete = async (store) => {
     if (window.confirm(`Are you sure you want to delete "${store.name}"?`)) {
-      try {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setStores(prev => prev.filter(s => s.id !== store.id));
+      const result = await dispatch(deleteStore(store.id));
+      if (result.meta.requestStatus === "fulfilled") {
         toast.success(`Store "${store.name}" deleted successfully`);
-      } catch (error) {
-        toast.error("Failed to delete store");
-      } finally {
-        setLoading(false);
+        dispatch(getAllStores());
+      } else {
+        toast.error(result.payload || "Failed to delete store");
       }
     }
   };
@@ -328,33 +290,35 @@ export default function StoreManagement() {
   };
 
   const handleSaveStore = async (formData) => {
+    setSaving(true);
     try {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const storePayload = {
+        brand: formData.name,
+        status: formData.status,
+        contact: {
+          address: formData.address,
+          phone: formData.phone,
+          email: formData.email
+        }
+      };
+
+      let result;
       if (selectedStore) {
-        setStores(prev => prev.map(store => 
-          store.id === selectedStore.id ? { ...store, ...formData } : store
-        ));
-        toast.success("Store updated successfully");
+        result = await dispatch(updateStore({ id: selectedStore.id, storeData: storePayload }));
       } else {
-        const newStore = {
-          id: Date.now(),
-          ...formData,
-          branchCount: 0,
-          employeeCount: 0,
-          monthlyRevenue: 0
-        };
-        setStores(prev => [...prev, newStore]);
-        toast.success("Store created successfully");
+        result = await dispatch(createStore(storePayload));
       }
-      
-      setShowModal(false);
-      setSelectedStore(null);
-    } catch (error) {
-      toast.error(selectedStore ? "Failed to update store" : "Failed to create store");
+
+      if (result.meta.requestStatus === "fulfilled") {
+        toast.success(selectedStore ? "Store updated successfully" : "Store created successfully");
+        dispatch(getAllStores());
+        setShowModal(false);
+        setSelectedStore(null);
+      } else {
+        toast.error(result.payload || (selectedStore ? "Failed to update store" : "Failed to create store"));
+      }
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -392,7 +356,7 @@ export default function StoreManagement() {
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "#1a1d23",
             color: "white",
             border: "none",
             borderRadius: "10px",
@@ -400,16 +364,16 @@ export default function StoreManagement() {
             fontSize: "14px",
             fontWeight: "600",
             cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+            boxShadow: "0 4px 12px rgba(26, 29, 35, 0.4)",
             transition: "all 0.2s ease"
           }}
           onMouseEnter={(e) => {
             e.target.style.transform = "translateY(-2px)";
-            e.target.style.boxShadow = "0 6px 20px rgba(102, 126, 234, 0.4)";
+            e.target.style.boxShadow = "0 6px 20px rgba(26, 29, 35, 0.4)";
           }}
           onMouseLeave={(e) => {
             e.target.style.transform = "translateY(0)";
-            e.target.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+            e.target.style.boxShadow = "0 4px 12px rgba(26, 29, 35, 0.4)";
           }}
         >
           <Plus size={18} />
@@ -492,6 +456,12 @@ export default function StoreManagement() {
         </div>
       </div>
 
+      {reduxLoading && (
+        <div style={{ textAlign: "center", padding: "40px", color: "#718096" }}>
+          Loading stores...
+        </div>
+      )}
+
       {/* Store Grid */}
       <div style={{
         display: "grid",
@@ -518,7 +488,7 @@ export default function StoreManagement() {
           padding: "60px 20px",
           textAlign: "center"
         }}>
-          <StoreIcon size={48} color="#cbd5e0" style={{ marginBottom: "16px" }} />
+          <StoreIcon size={48} color="#1a1d23" style={{ marginBottom: "16px" }} />
           <h3 style={{
             margin: 0,
             fontSize: "18px",
@@ -538,7 +508,7 @@ export default function StoreManagement() {
             <button
               onClick={handleAddStore}
               style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "#1a1d23",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
@@ -564,7 +534,7 @@ export default function StoreManagement() {
         onClose={() => setShowModal(false)}
         store={selectedStore}
         onSave={handleSaveStore}
-        loading={loading}
+        loading={saving}
       />
     </div>
   );

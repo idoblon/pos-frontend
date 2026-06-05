@@ -97,7 +97,7 @@ export default function SystemReports() {
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "#1a1d23",
               color: "white",
               border: "none",
               borderRadius: "8px",
@@ -107,7 +107,7 @@ export default function SystemReports() {
               cursor: "pointer"
             }}
           >
-            <Download size={16} />
+            <Download size={16} color="white" />
             Export Report
           </button>
         </div>
@@ -135,7 +135,7 @@ export default function SystemReports() {
                 alignItems: "center",
                 gap: "8px",
                 padding: "10px 16px",
-                background: reportType === key ? "#667eea" : "transparent",
+                background: reportType === key ? "#1a1d23" : "transparent",
                 color: reportType === key ? "white" : "#718096",
                 border: "none",
                 borderRadius: "8px",
@@ -145,7 +145,7 @@ export default function SystemReports() {
                 transition: "all 0.2s ease"
               }}
             >
-              <Icon size={16} />
+              <Icon size={16} color={reportType === key ? "white" : "#1a1d23"} />
               {label}
             </button>
           ))}

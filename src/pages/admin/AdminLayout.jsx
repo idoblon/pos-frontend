@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import {
   LayoutDashboard, Store, Users, BarChart3, Settings,
-  Menu, X, LogOut, ChevronDown, Bell, FileText, CreditCard
+  Menu, X, LogOut, ChevronDown, Bell, FileText, CreditCard, Clock
 } from "lucide-react";
 import posLogo from "@/logo/pos.png";
 
@@ -22,6 +22,8 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -38,6 +40,17 @@ export default function AdminLayout({ children }) {
         if (response.ok) {
           const count = await response.json();
           setPendingRequests(count);
+          if (count > 0) {
+            const notifResponse = await fetch("http://localhost:8080/api/admin/store-requests?status=PENDING", {
+              headers: { Authorization: `Bearer ${jwt}` }
+            });
+            if (notifResponse.ok) {
+              const requests = await notifResponse.json();
+              setNotifications(requests.slice(0, 5));
+            }
+          } else {
+            setNotifications([]);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch pending requests");
@@ -45,7 +58,7 @@ export default function AdminLayout({ children }) {
     };
 
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 30000); // Refresh every 30s
+    const interval = setInterval(fetchPendingCount, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -224,8 +237,137 @@ export default function AdminLayout({ children }) {
             </h1>
           </div>
 
-          {/* User Profile */}
-          <div style={{ position: "relative" }}>
+          {/* Notifications + User Profile */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+
+            {/* Bell */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => { setShowNotifications(!showNotifications); setProfileDropdown(false); }}
+                style={{
+                  position: "relative",
+                  width: 36,
+                  height: 36,
+                  border: "none",
+                  background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
+                  borderRadius: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+                title={`${pendingRequests} pending registration requests`}
+              >
+                <Bell size={16} color="#fff" />
+                {pendingRequests > 0 && (
+                  <span style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#e53e3e",
+                    border: "1.5px solid white",
+                  }} />
+                )}
+              </button>
+
+              {showNotifications && (
+                <>
+                  <div
+                    style={{ position: "fixed", inset: 0, zIndex: 10 }}
+                    onClick={() => setShowNotifications(false)}
+                  />
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: 0,
+                    marginTop: 8,
+                    width: 320,
+                    maxHeight: 400,
+                    background: "white",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 10,
+                    boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                    zIndex: 20,
+                    overflow: "hidden",
+                  }}>
+                    {/* Header */}
+                    <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1a1d23" }}>
+                          Registration Requests
+                        </h3>
+                        {pendingRequests > 0 && (
+                          <button
+                            onClick={() => { navigate("/admin/registration-requests"); setShowNotifications(false); }}
+                            style={{ fontSize: 12, color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
+                          >
+                            View All ({pendingRequests})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Items */}
+                    <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: "20px 16px", textAlign: "center", color: "#6b7280" }}>
+                          <Bell size={24} color="#e5e7eb" style={{ margin: "0 auto 8px", display: "block" }} />
+                          <p style={{ margin: 0, fontSize: 13 }}>No pending requests</p>
+                        </div>
+                      ) : (
+                        notifications.map((notif, i) => (
+                          <div
+                            key={notif.id || i}
+                            onClick={() => { navigate("/admin/registration-requests"); setShowNotifications(false); }}
+                            style={{
+                              padding: "12px 16px",
+                              borderBottom: i < notifications.length - 1 ? "1px solid #f3f4f6" : "none",
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "#f9fafb"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                          >
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                              <div style={{ padding: 4, background: "#fffbeb", borderRadius: 4, marginTop: 2 }}>
+                                <Clock size={12} color="#d97706" />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1d23" }}>
+                                  New Store Registration
+                                </p>
+                                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {notif.storeName} — {notif.ownerName}
+                                </p>
+                                <p style={{ margin: "2px 0 0", fontSize: 11, color: "#9ca3af" }}>
+                                  {notif.createdAt ? new Date(notif.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Just now"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {pendingRequests > 5 && (
+                      <div style={{ padding: "8px 16px", background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
+                        <button
+                          onClick={() => { navigate("/admin/registration-requests"); setShowNotifications(false); }}
+                          style={{ fontSize: 12, color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: 600, width: "100%", textAlign: "center" }}
+                        >
+                          View {pendingRequests - 5} more requests
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* User Profile Button */}
+            <div style={{ position: "relative" }}>
             <button
               onClick={() => setProfileDropdown(!profileDropdown)}
               style={{
@@ -319,6 +461,7 @@ export default function AdminLayout({ children }) {
                 </button>
               </div>
             )}
+            </div>
           </div>
         </header>
 
@@ -336,12 +479,8 @@ export default function AdminLayout({ children }) {
       {/* Click outside to close dropdown */}
       {profileDropdown && (
         <div
-          onClick={() => setProfileDropdown(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 40
-          }}
+          onClick={() => { setProfileDropdown(false); setShowNotifications(false); }}
+          style={{ position: "fixed", inset: 0, zIndex: 40 }}
         />
       )}
     </div>
