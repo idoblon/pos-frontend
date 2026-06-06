@@ -22,6 +22,7 @@ const PAYMENT_METHODS = [
   { id: "CASH", label: "Cash", icon: Banknote },
   { id: "CARD", label: "Card", icon: CreditCard },
   { id: "ESEWA",  label: "eSewa",  icon: Smartphone },
+  { id: "KHALTI",  label: "Khalti",  icon: Smartphone },
 ];
 
 const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
@@ -232,13 +233,15 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                 </div>
               )}
 
-              {/* Card/eSewa Payment Info */}
-              {(paymentMethod === "CARD" || paymentMethod === "ESEWA") && (
+              {/* Card/eSewa/Khalti Payment Info */}
+              {(paymentMethod === "CARD" || paymentMethod === "ESEWA" || paymentMethod === "KHALTI") && (
                 <div style={{ background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 16px" }}>
                   <p style={{ margin: 0, fontSize: 13, color: "#6b7280", textAlign: "center" }}>
                     {paymentMethod === "CARD" 
                       ? "💳 Please process the card payment of रु" + total.toFixed(2)
-                      : "📱 Please confirm eSewa payment of रु" + total.toFixed(2)
+                      : paymentMethod === "ESEWA"
+                      ? "📱 Please confirm eSewa payment of रु" + total.toFixed(2)
+                      : "📱 Please confirm Khalti payment of रु" + total.toFixed(2)
                     }
                   </p>
                 </div>

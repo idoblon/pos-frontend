@@ -173,7 +173,7 @@ export default function BranchReports() {
   };
 
   // Payment breakdown
-  const paymentData = ["CASH", "CARD", "ESEWA"].map((method) => ({
+  const paymentData = ["CASH", "CARD", "ESEWA", "KHALTI"].map((method) => ({
     method,
     total:
       orders
