@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreditCard, Banknote, Smartphone, CheckCircle } from "lucide-react";
 import api from "@/util/api";
-import { getOrdersByCashier } from "@/Redux Toolkit/Features/order/orderThunk";
 import { patchOrder } from "@/Redux Toolkit/Features/order/orderSlice";
 import {
   selectCartItems,
@@ -17,6 +16,9 @@ import {
   clearCart
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
 import secureStorage from "@/util/secureStorage";
+import EsewaPaymentPopup from "./EsewaPaymentPopup";
+import KhaltiPaymentPopup from "./KhaltiPaymentPopup";
+import CardPaymentPopup from "./CardPaymentPopup";
 
 const PAYMENT_METHODS = [
   { id: "CASH", label: "Cash", icon: Banknote },
@@ -42,6 +44,9 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [showEsewa, setShowEsewa] = useState(false);
+  const [showKhalti, setShowKhalti] = useState(false);
+  const [showCard, setShowCard] = useState(false);
 
   const change = amountReceived ? Math.max(0, parseFloat(amountReceived) - total) : 0;
 
@@ -50,75 +55,67 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
     console.log('💳 PaymentDialog - Total:', total.toFixed(2), 'Discount:', discount);
   }, [total, discount]);
 
-  const handlePayment = async () => {
+  // Core order submission — called with gateway reference after popup confirms
+  const submitOrder = async (gatewayRef = null) => {
     setError("");
+
     if (cartItems.length === 0) {
       setError("Please add items to the cart first.");
       return;
     }
-    
-    // Validate product IDs
-    const hasInvalidProducts = cartItems.some(item => {
+
+    const hasInvalidProducts = cartItems.some((item) => {
       const productId = item.id || item._id;
-      return !productId || (typeof productId === 'string' && productId.startsWith('p'));
+      return !productId || (typeof productId === "string" && productId.startsWith("p"));
     });
-    
     if (hasInvalidProducts) {
-      setError("Cannot process order with invalid products. Please use real products from your inventory.");
+      setError("Cannot process order with invalid products.");
       return;
     }
-    
-    // Validate payment based on method
-    if (paymentMethod === "CASH") {
-      if (!amountReceived || parseFloat(amountReceived) < total) {
-        setError("Amount received must be at least रु " + total.toFixed(2));
-        return;
-      }
-    }
-    
+
     try {
       setLoading(true);
-      
-      // Ensure all product IDs are properly formatted
+
       const orderItems = cartItems.map((item) => {
         const productId = item.id || item._id;
         return {
-          productId: typeof productId === 'number' ? productId : parseInt(productId, 10),
+          productId: typeof productId === "number" ? productId : parseInt(productId, 10),
           quantity: item.quantity || 1,
           price: item.price || item.sellingPrice,
         };
       });
-      
+
       const orderData = {
         customerId: customer?.id || customer?._id || null,
         items: orderItems,
         discount: discount.value || 0,
         discountType: discount.type || "percentage",
         note: note || "",
-        paymentMethod: paymentMethod, // CASH, CARD, ESEWA
+        paymentMethod,
         amountReceived: paymentMethod === "CASH" ? parseFloat(amountReceived) : total,
+        paymentReference: gatewayRef || null,
         total,
       };
-      
-      const response = await api.post("/api/orders", orderData);
-      
-      setSuccess(true);
 
-      // Patch the order in Redux with correct data the backend doesn't return
+      const response = await api.post("/api/orders", orderData);
+
+      setSuccess(true);
       const isWalkIn = !customer?.id;
-      const patchedItems = response.data.items?.map(item => ({
+      const patchedItems = response.data.items?.map((item) => ({
         ...item,
-        unitPrice: item.unitPrice || (item.price / (item.quantity || 1)),
+        unitPrice: item.unitPrice || item.price / (item.quantity || 1),
       }));
-      dispatch(patchOrder({
-        ...response.data,
-        items: patchedItems,
-        status: "COMPLETED",
-        paymentMethod: paymentMethod,
-        paymentType: paymentMethod,
-        customer: isWalkIn ? null : customer,
-        customerId: customer?.id || null,
-      }));
+      dispatch(
+        patchOrder({
+          ...response.data,
+          items: patchedItems,
+          status: "COMPLETED",
+          paymentMethod,
+          paymentType: paymentMethod,
+          customer: isWalkIn ? null : customer,
+          customerId: customer?.id || null,
+        })
+      );
 
       setTimeout(() => {
         dispatch(clearCart());
@@ -126,17 +123,34 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         onOrderComplete?.();
       }, 2000);
     } catch (err) {
-      console.error("❌ Order creation failed:", err.response?.data);
       const errorMsg = err.response?.data?.message || "Payment failed. Please try again.";
-      
-      // Provide helpful error message for inventory issues
-      if (errorMsg.includes("not found in branch inventory") || errorMsg.includes("Product not found")) {
-        setError("⚠️ Some products are not available in your branch inventory. Please contact your Branch Manager to add these products to your branch first.");
-      } else {
-        setError(errorMsg);
-      }
+      setError(
+        errorMsg.includes("not found in branch inventory") || errorMsg.includes("Product not found")
+          ? "⚠️ Some products are not available in your branch inventory."
+          : errorMsg
+      );
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Called when cashier clicks "Complete Payment" on the main dialog
+  const handlePayment = () => {
+    setError("");
+    if (cartItems.length === 0) { setError("Please add items to the cart first."); return; }
+
+    if (paymentMethod === "CASH") {
+      if (!amountReceived || parseFloat(amountReceived) < total) {
+        setError("Amount received must be at least रु " + total.toFixed(2));
+        return;
+      }
+      submitOrder();
+    } else if (paymentMethod === "ESEWA") {
+      setShowEsewa(true);
+    } else if (paymentMethod === "KHALTI") {
+      setShowKhalti(true);
+    } else if (paymentMethod === "CARD") {
+      setShowCard(true);
     }
   };
 
@@ -146,10 +160,14 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
     setPaymentMethod("CASH");
     setSuccess(false);
     setError("");
+    setShowEsewa(false);
+    setShowKhalti(false);
+    setShowCard(false);
     onClose();
   };
 
   return (
+    <>  
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         {success ? (
@@ -233,17 +251,27 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                 </div>
               )}
 
-              {/* Card/eSewa/Khalti Payment Info */}
+              {/* Digital payment info pill */}
               {(paymentMethod === "CARD" || paymentMethod === "ESEWA" || paymentMethod === "KHALTI") && (
-                <div style={{ background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 16px" }}>
-                  <p style={{ margin: 0, fontSize: 13, color: "#6b7280", textAlign: "center" }}>
-                    {paymentMethod === "CARD" 
-                      ? "💳 Please process the card payment of रु" + total.toFixed(2)
-                      : paymentMethod === "ESEWA"
-                      ? "📱 Please confirm eSewa payment of रु" + total.toFixed(2)
-                      : "📱 Please confirm Khalti payment of रु" + total.toFixed(2)
-                    }
-                  </p>
+                <div
+                  style={{
+                    background:
+                      paymentMethod === "ESEWA" ? "#f0fdf4" :
+                      paymentMethod === "KHALTI" ? "#faf5ff" : "#f5f5f5",
+                    border: `1px solid ${
+                      paymentMethod === "ESEWA" ? "#bbf7d0" :
+                      paymentMethod === "KHALTI" ? "#e9d5ff" : "#e5e7eb"
+                    }`,
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                    fontSize: 12,
+                    color: "#6b7280",
+                    textAlign: "center",
+                  }}
+                >
+                  {paymentMethod === "ESEWA" && "A payment confirmation popup will appear after clicking \"Complete Payment\"."}
+                  {paymentMethod === "KHALTI" && "Enter your Khalti mobile and transaction token in the next step."}
+                  {paymentMethod === "CARD" && "You will be asked to enter card details in the next step."}
                 </div>
               )}
 
@@ -270,6 +298,34 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         )}
       </DialogContent>
     </Dialog>
+
+    {/* eSewa popup */}
+    <EsewaPaymentPopup
+      open={showEsewa}
+      onClose={() => setShowEsewa(false)}
+      amount={total}
+      loading={loading}
+      onConfirm={(ref) => { setShowEsewa(false); submitOrder(ref); }}
+    />
+
+    {/* Khalti popup */}
+    <KhaltiPaymentPopup
+      open={showKhalti}
+      onClose={() => setShowKhalti(false)}
+      amount={total}
+      loading={loading}
+      onConfirm={(data) => { setShowKhalti(false); submitOrder(data.token); }}
+    />
+
+    {/* Card popup */}
+    <CardPaymentPopup
+      open={showCard}
+      onClose={() => setShowCard(false)}
+      amount={total}
+      loading={loading}
+      onConfirm={(data) => { setShowCard(false); submitOrder(data.cardNumber.slice(-4)); }}
+    />
+    </>
   );
 };
 

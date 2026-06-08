@@ -21,19 +21,19 @@ const SUBSCRIPTION_PLANS = [
   { 
     value: "BASIC", 
     label: "Basic", 
-    price: "रु 2,999/month",
+    price: "रु 3,500/year",
     features: ["1 Store", "3 Branches", "10 Users", "Basic Support"]
   },
   { 
     value: "PROFESSIONAL", 
     label: "Professional", 
-    price: "रु 5,999/month",
+    price: "रु 7,000/year",
     features: ["1 Store", "10 Branches", "50 Users", "Priority Support", "Advanced Reports"]
   },
   { 
     value: "ENTERPRISE", 
     label: "Enterprise", 
-    price: "रु 12,999/month",
+    price: "रु 10,000/year",
     features: ["Unlimited Stores", "Unlimited Branches", "Unlimited Users", "24/7 Support", "Custom Features"]
   },
 ];
@@ -325,7 +325,7 @@ const Signup = () => {
                       fontSize: "10px",
                       color: "#92400e"
                     }}>
-                      Need more branches? Add रु 500/branch extra
+                      Need more branches? Add रु 500/branch/year extra
                     </div>
                   </div>
                 ))}

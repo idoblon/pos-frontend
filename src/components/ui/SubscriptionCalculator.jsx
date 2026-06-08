@@ -243,7 +243,7 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
           Example: Basic Plan + 2 Extra Branches
         </div>
         <div style={{ fontSize: "10px", color: "#166534" }}>
-          रु 2,999 (Base) + रु 1,000 (2 × रु 500/branch) = रु 3,999/month
+          रु 3,500 (Base) + रु 1,000 (2 × रु 500/branch) = रु 4,500/year
         </div>
       </div>
     </div>

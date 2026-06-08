@@ -1,9 +1,9 @@
 export const SUBSCRIPTION_PLANS = {
   BASIC: {
     name: "Basic",
-    basePrice: 2999,
+    basePrice: 3500,
     currency: "रु",
-    billing: "month",
+    billing: "year",
     included: {
       stores: 1,
       branches: 3,
@@ -15,17 +15,17 @@ export const SUBSCRIPTION_PLANS = {
       extraBranch: {
         price: 500,
         name: "Additional Branch",
-        description: "Per branch beyond the included limit"
+        description: "Per branch beyond the included limit (yearly)"
       },
       extraUser: {
         price: 100,
         name: "Additional User", 
-        description: "Per user beyond the included limit"
+        description: "Per user beyond the included limit (yearly)"
       },
       extraStorage: {
         price: 200,
         name: "Extra Storage",
-        description: "Per GB beyond the included limit"
+        description: "Per GB beyond the included limit (yearly)"
       }
     },
     features: [
@@ -37,9 +37,9 @@ export const SUBSCRIPTION_PLANS = {
   },
   PROFESSIONAL: {
     name: "Professional",
-    basePrice: 5999,
+    basePrice: 7000,
     currency: "रु", 
-    billing: "month",
+    billing: "year",
     included: {
       stores: 1,
       branches: 10,
@@ -51,17 +51,17 @@ export const SUBSCRIPTION_PLANS = {
       extraBranch: {
         price: 400,
         name: "Additional Branch",
-        description: "Per branch beyond the included limit"
+        description: "Per branch beyond the included limit (yearly)"
       },
       extraUser: {
         price: 80,
         name: "Additional User",
-        description: "Per user beyond the included limit"
+        description: "Per user beyond the included limit (yearly)"
       },
       extraStorage: {
         price: 150,
         name: "Extra Storage", 
-        description: "Per GB beyond the included limit"
+        description: "Per GB beyond the included limit (yearly)"
       }
     },
     features: [
@@ -74,9 +74,9 @@ export const SUBSCRIPTION_PLANS = {
   },
   ENTERPRISE: {
     name: "Enterprise",
-    basePrice: 12999,
+    basePrice: 10000,
     currency: "रु",
-    billing: "month", 
+    billing: "year", 
     included: {
       stores: "unlimited",
       branches: 25,
@@ -88,17 +88,17 @@ export const SUBSCRIPTION_PLANS = {
       extraBranch: {
         price: 300,
         name: "Additional Branch",
-        description: "Per branch beyond the included limit"
+        description: "Per branch beyond the included limit (yearly)"
       },
       extraUser: {
         price: 50,
         name: "Additional User",
-        description: "Per user beyond the included limit"
+        description: "Per user beyond the included limit (yearly)"
       },
       extraStorage: {
         price: 100,
         name: "Extra Storage",
-        description: "Per GB beyond the included limit"
+        description: "Per GB beyond the included limit (yearly)"
       }
     },
     features: [

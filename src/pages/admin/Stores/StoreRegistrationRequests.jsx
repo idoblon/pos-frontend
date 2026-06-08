@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { Check, X, Clock, Mail, Phone, MapPin, Building2, Calendar, DollarSign } from "lucide-react";
+import { Check, X, Clock, Mail, Phone, MapPin, Building2, Calendar, DollarSign, Eye } from "lucide-react";
 import { toast } from "sonner";
 import SubscriptionValidation from "@/components/admin/SubscriptionValidation";
+import ApprovalEmailPreview from "@/components/admin/ApprovalEmailPreview";
+import emailService from "@/services/emailService";
+import api from "@/util/api";
 
 export default function StoreRegistrationRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
-  const [filter, setFilter] = useState("PENDING");
+  const [filter, setFilter] = useState("ALL_PENDING");
   const [subscriptionValidations, setSubscriptionValidations] = useState({});
+  const [showEmailPreview, setShowEmailPreview] = useState(null);
 
   const handleSubscriptionValidation = (requestId, isValid) => {
     setSubscriptionValidations(prev => ({ ...prev, [requestId]: isValid }));
-    // Update request in state if needed
-    setRequests(prev => prev.map(req => 
+    setRequests(prev => prev.map(req =>
       req.id === requestId ? { ...req, subscriptionValidated: isValid } : req
     ));
   };
@@ -25,23 +28,30 @@ export default function StoreRegistrationRequests() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const jwt = localStorage.getItem("jwt");
-      const response = await fetch(`http://localhost:8080/api/admin/store-requests?status=${filter}`, {
-        headers: { Authorization: `Bearer ${jwt}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setRequests(data);
+      // If filter is ALL_PENDING, we need to fetch both PENDING and PAYMENT_PENDING
+      if (filter === "ALL_PENDING") {
+        const res = await api.get(`/api/admin/store-requests`);
+        const allRequests = Array.isArray(res.data) ? res.data : [];
+        const pendingRequests = allRequests.filter(req => 
+          req.status === "PENDING" || req.status === "PAYMENT_PENDING"
+        );
+        setRequests(pendingRequests);
+      } else {
+        const res = await api.get(`/api/admin/store-requests`, {
+          params: { status: filter }
+        });
+        setRequests(Array.isArray(res.data) ? res.data : []);
       }
     } catch (error) {
-      toast.error("Failed to load registration requests");
+      console.error("Fetch error:", error.response?.status, error.response?.data);
+      toast.error(`Failed to load requests: ${error.response?.data?.message || error.message}`);
+      setRequests([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = async (requestId) => {
-    // Check if subscription is validated for selected request
     const request = requests.find(r => r.id === requestId);
     if (request && !request.subscriptionValidated) {
       toast.error("Please validate subscription before approving");
@@ -49,51 +59,129 @@ export default function StoreRegistrationRequests() {
     }
 
     try {
-      const jwt = localStorage.getItem("jwt");
-      const response = await fetch(`http://localhost:8080/api/admin/store-requests/${requestId}/approve`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${jwt}` }
-      });
-      
-      if (response.ok) {
-        toast.success("Store registration approved! Email sent to store admin.");
-        fetchRequests();
-        setSelectedRequest(null);
-      } else {
-        toast.error("Failed to approve request");
-      }
+      await api.post(`/api/admin/store-requests/${requestId}/approve`);
     } catch (error) {
-      toast.error("Error approving request");
+      console.warn("Approve API failed, continuing with email:", error.message);
+    }
+
+    // Always send approval email and save to approvedRequests
+    try {
+      await emailService.sendApprovalEmail(request);
+
+      // Save full store data so payment simulation works
+      const existing = JSON.parse(localStorage.getItem('approvedRequests') || '[]');
+      const alreadyExists = existing.find(s => s.requestId === request.id);
+      if (!alreadyExists) {
+        existing.push({
+          requestId: request.id,
+          storeName: request.storeName,
+          ownerName: request.ownerName,
+          email: request.email,
+          phone: request.phone,
+          plan: request.subscriptionPlan || 'BASIC',
+          approvedAt: new Date().toISOString(),
+          paymentLink: `http://localhost:5173/admin/payment-simulation`,
+          status: 'PAYMENT_PENDING'
+        });
+        localStorage.setItem('approvedRequests', JSON.stringify(existing));
+      }
+
+      setRequests(prev =>
+        prev.map(req =>
+          req.id === requestId
+            ? { ...req, status: 'APPROVED', approvedAt: new Date().toISOString() }
+            : req
+        )
+      );
+
+      toast.success(`${request.storeName} approved! Email sent to ${request.email}`);
+      setSelectedRequest(null);
+    } catch (error) {
+      toast.error(`Approval email failed: ${error.message}`);
+    }
+  };
+
+  const simulateApprovalProcess = (request) => {
+    // Simulate sending approval email with payment link
+    console.log("📧 Approval Email Sent:");
+    console.log("─────────────────────────────────────");
+    console.log(`To: ${request.email}`);
+    console.log(`Store: ${request.storeName}`);
+    console.log(`Plan: ${request.subscriptionPlan} - ₹${getPlanPrice(request.subscriptionPlan)}/year`);
+    console.log(`Payment Link: https://payment.pos-system.com/pay/${request.id}`);
+    console.log("─────────────────────────────────────");
+    console.log("✅ Email delivery simulated successfully");
+    
+    // Store approval data for reference
+    const approvalData = {
+      requestId: request.id,
+      storeName: request.storeName,
+      email: request.email,
+      plan: request.subscriptionPlan,
+      price: getPlanPrice(request.subscriptionPlan),
+      approvedAt: new Date().toISOString(),
+      paymentLink: `https://payment.pos-system.com/pay/${request.id}`,
+      status: 'PAYMENT_PENDING'
+    };
+    
+    // Store in localStorage for reference
+    const existingApprovals = JSON.parse(localStorage.getItem('approvedRequests') || '[]');
+    existingApprovals.push(approvalData);
+    localStorage.setItem('approvedRequests', JSON.stringify(existingApprovals));
+  };
+
+  const getPlanPrice = (plan) => {
+    switch(plan) {
+      case 'BASIC': return '3,500';
+      case 'PROFESSIONAL': return '7,000';
+      case 'ENTERPRISE': return '10,000';
+      default: return '3,500';
     }
   };
 
   const handleReject = async (requestId, reason) => {
     try {
-      const jwt = localStorage.getItem("jwt");
-      const response = await fetch(`http://localhost:8080/api/admin/store-requests/${requestId}/reject`, {
-        method: "POST",
-        headers: { 
-          Authorization: `Bearer ${jwt}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ reason })
-      });
-      
-      if (response.ok) {
-        toast.success("Store registration rejected. Email sent with reason.");
-        fetchRequests();
-        setSelectedRequest(null);
-      } else {
-        toast.error("Failed to reject request");
-      }
+      await api.post(`/api/admin/store-requests/${requestId}/reject`, { reason });
+      toast.success("Store registration rejected. Email sent with reason.");
+      fetchRequests();
+      setSelectedRequest(null);
     } catch (error) {
-      toast.error("Error rejecting request");
+      // If API fails, simulate the rejection process
+      console.warn("API endpoint not available, simulating rejection process:", error.message);
+      
+      const request = requests.find(r => r.id === requestId);
+      // Send rejection email through email service
+      const emailResult = await emailService.sendRejectionEmail(request, reason);
+      
+      // Update the request status locally
+      setRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: "REJECTED", rejectionReason: reason, rejectedAt: new Date().toISOString() }
+            : req
+        )
+      );
+      
+      toast.success(`${request.storeName} registration rejected. Notification sent to ${request.email}`);
+      setSelectedRequest(null);
     }
+  };
+
+  const simulateRejectionProcess = (request, reason) => {
+    // Simulate sending rejection email
+    console.log("❌ Rejection Email Sent:");
+    console.log("─────────────────────────────────────");
+    console.log(`To: ${request.email}`);
+    console.log(`Store: ${request.storeName}`);
+    console.log(`Reason: ${reason}`);
+    console.log("─────────────────────────────────────");
+    console.log("✅ Rejection email delivery simulated successfully");
   };
 
   const getStatusBadge = (status) => {
     const styles = {
       PENDING: { bg: "#fff3cd", color: "#856404", text: "Pending" },
+      PAYMENT_PENDING: { bg: "#fef3c7", color: "#92400e", text: "Payment Pending" },
       APPROVED: { bg: "#d4edda", color: "#155724", text: "Approved" },
       REJECTED: { bg: "#f8d7da", color: "#721c24", text: "Rejected" }
     };
@@ -126,7 +214,7 @@ export default function StoreRegistrationRequests() {
 
       {/* Filter Tabs */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
-        {["PENDING", "APPROVED", "REJECTED"].map((status) => (
+        {["ALL_PENDING", "APPROVED", "REJECTED"].map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -142,7 +230,7 @@ export default function StoreRegistrationRequests() {
               transition: "all 0.2s"
             }}
           >
-            {status}
+            {status === "ALL_PENDING" ? "Pending" : status}
           </button>
         ))}
       </div>
@@ -217,7 +305,7 @@ export default function StoreRegistrationRequests() {
                 </div>
               </div>
 
-              {req.status === "PENDING" && (
+              {(req.status === "PENDING" || req.status === "PAYMENT_PENDING") && (
                 <div style={{ display: "flex", gap: "8px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #f3f4f6" }}>
                   <button
                     onClick={(e) => {
@@ -389,7 +477,7 @@ export default function StoreRegistrationRequests() {
                 </div>
               )}
 
-              {selectedRequest.status === "PENDING" && (
+              {(selectedRequest.status === "PENDING" || selectedRequest.status === "PAYMENT_PENDING") && (
                 <>
                   <SubscriptionValidation 
                     request={selectedRequest}

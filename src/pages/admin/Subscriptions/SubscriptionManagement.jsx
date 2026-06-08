@@ -11,9 +11,9 @@ import { updateBranchStatus } from "@/util/storeStatusChecker";
 import { SUBSCRIPTION_PLANS, calculateSubscriptionCost } from "@/util/subscriptionLogic";
 
 const LEGACY_SUBSCRIPTION_PLANS = {
-  BASIC: { name: "Basic", price: 2999, color: "#059669", features: ["1 Store", "3 Branches", "10 Users"] },
-  PROFESSIONAL: { name: "Professional", price: 5999, color: "#1a1d23", features: ["1 Store", "10 Branches", "50 Users"] },
-  ENTERPRISE: { name: "Enterprise", price: 12999, color: "#6b7280", features: ["Unlimited", "Unlimited", "Unlimited"] }
+  BASIC: { name: "Basic", price: 3500, color: "#059669", features: ["1 Store", "3 Branches", "10 Users"] },
+  PROFESSIONAL: { name: "Professional", price: 7000, color: "#1a1d23", features: ["1 Store", "10 Branches", "50 Users"] },
+  ENTERPRISE: { name: "Enterprise", price: 10000, color: "#6b7280", features: ["Unlimited", "Unlimited", "Unlimited"] }
 };
 
 function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction }) {
@@ -77,7 +77,7 @@ function SubscriptionCard({ subscription, onViewDetails, onManage, onQuickAction
             {subscription.storeName}
           </h3>
           <p style={{ margin: 0, fontSize: "12px", color: "#6b7280", marginBottom: "2px" }}>
-            {planDetails.name} Plan • रु {actualMonthlyPrice.toLocaleString("en-IN")}/month
+            {planDetails.name} Plan • रु {actualMonthlyPrice.toLocaleString("en-IN")}/year
           </p>
           <p style={{ margin: 0, fontSize: "10px", color: "#059669", fontWeight: "600" }}>
             Admin: {subscription.adminName || "N/A"}
@@ -829,7 +829,7 @@ export default function SubscriptionManagement() {
                 marginBottom: "12px"
               }}>
                 <label style={{ fontSize: "11px", fontWeight: "600", color: "#6b7280", display: "block", marginBottom: "6px" }}>
-                  Monthly Pricing Breakdown
+                  Yearly Pricing Breakdown
                 </label>
                 {(() => {
                   const usage = {
@@ -861,7 +861,7 @@ export default function SubscriptionManagement() {
                         fontSize: "14px", 
                         fontWeight: "700"
                       }}>
-                        <span>Total Monthly</span>
+                        <span>Total Yearly</span>
                         <span>रु {costCalc.total.toLocaleString("en-IN")}</span>
                       </div>
                     </div>
@@ -1090,11 +1090,11 @@ export default function SubscriptionManagement() {
               switch (type) {
                 case "BILLING":
                   const billingHistory = [
-                    { date: "2024-01-15", amount: 2999, status: "Paid", method: "Card", invoice: "INV-001" },
-                    { date: "2023-12-15", amount: 2999, status: "Paid", method: "eSewa", invoice: "INV-002" },
-                    { date: "2023-11-15", amount: 2999, status: "Paid", method: "Card", invoice: "INV-003" },
-                    { date: "2023-10-15", amount: 2999, status: "Failed", method: "Card", invoice: "INV-004" },
-                    { date: "2023-09-15", amount: 2999, status: "Paid", method: "eSewa", invoice: "INV-005" }
+                    { date: "2024-01-15", amount: 3500, status: "Paid", method: "Card", invoice: "INV-001" },
+                    { date: "2023-01-15", amount: 3500, status: "Paid", method: "eSewa", invoice: "INV-002" },
+                    { date: "2022-01-15", amount: 3500, status: "Paid", method: "Card", invoice: "INV-003" },
+                    { date: "2021-01-15", amount: 3500, status: "Failed", method: "Card", invoice: "INV-004" },
+                    { date: "2020-01-15", amount: 3500, status: "Paid", method: "eSewa", invoice: "INV-005" }
                   ];
                   
                   return (
@@ -1105,15 +1105,15 @@ export default function SubscriptionManagement() {
                       <div style={{ marginBottom: "20px" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "20px" }}>
                           <div style={{ background: "#f0fdf4", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
-                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#059669" }}>रु 14,995</div>
+                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#059669" }}>रु 17,500</div>
                             <div style={{ fontSize: "11px", color: "#6b7280" }}>Total Paid</div>
                           </div>
                           <div style={{ background: "#fef2f2", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
-                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#dc2626" }}>रु 2,999</div>
+                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#dc2626" }}>रु 3,500</div>
                             <div style={{ fontSize: "11px", color: "#6b7280" }}>Failed Payments</div>
                           </div>
                           <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
-                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#1a1d23" }}>रु 2,999</div>
+                            <div style={{ fontSize: "14px", fontWeight: "700", color: "#1a1d23" }}>रु 3,500</div>
                             <div style={{ fontSize: "11px", color: "#6b7280" }}>Next Payment</div>
                           </div>
                         </div>
@@ -1382,9 +1382,9 @@ export default function SubscriptionManagement() {
                   
                 case "UPGRADE_PLANS":
                   const plans = [
-                    { key: "BASIC", name: "Basic", price: 2999, color: "#059669", features: ["1 Store", "3 Branches", "10 Users"] },
-                    { key: "PROFESSIONAL", name: "Professional", price: 5999, color: "#1a1d23", features: ["1 Store", "10 Branches", "50 Users"] },
-                    { key: "ENTERPRISE", name: "Enterprise", price: 12999, color: "#6b7280", features: ["Unlimited Stores", "Unlimited Branches", "Unlimited Users"] }
+                    { key: "BASIC", name: "Basic", price: 3500, color: "#059669", features: ["1 Store", "3 Branches", "10 Users"] },
+                    { key: "PROFESSIONAL", name: "Professional", price: 7000, color: "#1a1d23", features: ["1 Store", "10 Branches", "50 Users"] },
+                    { key: "ENTERPRISE", name: "Enterprise", price: 10000, color: "#6b7280", features: ["Unlimited Stores", "Unlimited Branches", "Unlimited Users"] }
                   ];
                   
                   return (
@@ -1460,7 +1460,7 @@ export default function SubscriptionManagement() {
                                 </div>
                               </div>
                               <div style={{ fontSize: "18px", fontWeight: "700", color: plan.color }}>
-                                रु {plan.price.toLocaleString("en-IN")}/mo
+                                रु {plan.price.toLocaleString("en-IN")}/yr
                               </div>
                             </button>
                           ))}

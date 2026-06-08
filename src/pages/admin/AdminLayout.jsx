@@ -4,9 +4,11 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import {
   LayoutDashboard, Store, Users, BarChart3, Settings,
-  Menu, X, LogOut, ChevronDown, Bell, FileText, CreditCard, Clock
+  Menu, X, LogOut, ChevronDown, Bell, FileText, CreditCard, Clock, DollarSign
 } from "lucide-react";
 import posLogo from "@/logo/pos.png";
+import api from "@/util/api";
+import paymentNotificationService from "@/services/paymentNotificationService";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin", exact: true },
@@ -15,6 +17,8 @@ const sidebarItems = [
   { icon: CreditCard, label: "Subscriptions", path: "/admin/subscriptions" },
   { icon: Users, label: "User Management", path: "/admin/users" },
   { icon: BarChart3, label: "System Reports", path: "/admin/reports" },
+  { icon: DollarSign, label: "Payments", path: "/admin/payment-notifications", paymentBadge: true },
+  { icon: CreditCard, label: "Pay Simulation", path: "/admin/payment-simulation" },
   { icon: Settings, label: "System Settings", path: "/admin/settings" },
 ];
 
@@ -24,6 +28,7 @@ export default function AdminLayout({ children }) {
   const [pendingRequests, setPendingRequests] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadPayments, setUnreadPayments] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -33,32 +38,33 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     const fetchPendingCount = async () => {
       try {
-        const jwt = localStorage.getItem("jwt");
-        const response = await fetch("http://localhost:8080/api/admin/store-requests/pending/count", {
-          headers: { Authorization: `Bearer ${jwt}` }
-        });
-        if (response.ok) {
-          const count = await response.json();
-          setPendingRequests(count);
-          if (count > 0) {
-            const notifResponse = await fetch("http://localhost:8080/api/admin/store-requests?status=PENDING", {
-              headers: { Authorization: `Bearer ${jwt}` }
-            });
-            if (notifResponse.ok) {
-              const requests = await notifResponse.json();
-              setNotifications(requests.slice(0, 5));
-            }
-          } else {
-            setNotifications([]);
-          }
-        }
+        // Fetch all requests and count both PENDING and PAYMENT_PENDING
+        const listRes = await api.get("/api/admin/store-requests");
+        const allRequests = Array.isArray(listRes.data) ? listRes.data : [];
+        const pendingRequests = allRequests.filter(req => 
+          req.status === "PENDING" || req.status === "PAYMENT_PENDING"
+        );
+        const count = pendingRequests.length;
+        setPendingRequests(count);
+        setNotifications(pendingRequests.slice(0, 5));
       } catch (error) {
-        console.error("Failed to fetch pending requests");
+        console.error("Failed to fetch pending requests", error.response?.status, error.response?.data);
       }
     };
 
     fetchPendingCount();
     const interval = setInterval(fetchPendingCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Poll unread payment notifications
+  useEffect(() => {
+    const loadPaymentBadge = () => {
+      const stats = paymentNotificationService.getPaymentStats();
+      setUnreadPayments(stats.unreadCount || 0);
+    };
+    loadPaymentBadge();
+    const interval = setInterval(loadPaymentBadge, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -124,6 +130,7 @@ export default function AdminLayout({ children }) {
             const Icon = item.icon;
             const active = isActive(item.path, item.exact);
             const showBadge = item.path === "/admin/registration-requests" && pendingRequests > 0;
+            const showPaymentBadge = item.paymentBadge && unreadPayments > 0;
             
             return (
               <Link
@@ -170,6 +177,20 @@ export default function AdminLayout({ children }) {
                     textAlign: "center"
                   }}>
                     {pendingRequests}
+                  </span>
+                )}
+                {showPaymentBadge && (
+                  <span style={{
+                    background: "#059669",
+                    color: "white",
+                    borderRadius: "12px",
+                    padding: "2px 6px",
+                    fontSize: "10px",
+                    fontWeight: "700",
+                    minWidth: "18px",
+                    textAlign: "center"
+                  }}>
+                    {unreadPayments}
                   </span>
                 )}
               </Link>

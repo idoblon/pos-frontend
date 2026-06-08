@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,10 +7,11 @@ import {
 } from "recharts";
 import {
   Store, Users, ShoppingCart, DollarSign,
-  TrendingUp, Building2, UserCheck, BarChart3, FileText, CreditCard
+  TrendingUp, Building2, UserCheck, BarChart3, FileText, CreditCard, Bell
 } from "lucide-react";
 import { getAllStores } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getAllUsers } from "@/Redux Toolkit/Features/user/userThunk";
+import paymentNotificationService from "@/services/paymentNotificationService";
 
 const ROLE_COLORS = ["#1a1d23", "#3d3d3d", "#6b6b6b", "#9e9e9e"];
 
@@ -105,6 +106,7 @@ function QuickAction({ title, description, icon: Icon, onClick }) {
 export default function AdminDashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [paymentStats, setPaymentStats] = useState({});
 
   const { stores, loading: storesLoading } = useSelector((s) => s.store);
   const { users, loading: usersLoading } = useSelector((s) => s.user);
@@ -112,7 +114,17 @@ export default function AdminDashboard() {
   useEffect(() => {
     dispatch(getAllStores());
     dispatch(getAllUsers());
+    loadPaymentStats();
+    
+    // Refresh payment stats every 10 seconds
+    const interval = setInterval(loadPaymentStats, 10000);
+    return () => clearInterval(interval);
   }, [dispatch]);
+
+  const loadPaymentStats = () => {
+    const stats = paymentNotificationService.getPaymentStats();
+    setPaymentStats(stats);
+  };
 
   // --- Derived metrics from real data ---
   const totalStores = stores?.length || 0;
@@ -191,13 +203,57 @@ export default function AdminDashboard() {
       fontFamily: "'DM Sans','Inter',sans-serif"
     }}>
       {/* Header */}
-      <div>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#1a1d23", letterSpacing: "-0.3px" }}>
-          System Dashboard
-        </h1>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
-          Live overview of your entire POS network
-        </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#1a1d23", letterSpacing: "-0.3px" }}>
+            System Dashboard
+          </h1>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+            Live overview of your entire POS network
+          </p>
+        </div>
+        
+        {/* Payment Notification Bell */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => navigate("/admin/payment-notifications")}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              background: paymentStats.unreadCount > 0 ? "#059669" : "#f3f4f6",
+              color: paymentStats.unreadCount > 0 ? "white" : "#6b7280",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s"
+            }}
+            title="Payment Notifications"
+          >
+            <Bell size={20} />
+          </button>
+          {paymentStats.unreadCount > 0 && (
+            <div style={{
+              position: "absolute",
+              top: -6,
+              right: -6,
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              background: "#dc2626",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 11,
+              fontWeight: 700
+            }}>
+              {paymentStats.unreadCount}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -228,9 +284,9 @@ export default function AdminDashboard() {
           loading={storesLoading}
         />
         <StatCard
-          title="Total Revenue"
-          value={totalRevenue > 0 ? `रु ${totalRevenue.toLocaleString("en-IN")}` : "—"}
-          subtitle="Across all stores"
+          title="Subscription Revenue"
+          value={paymentStats.totalRevenue > 0 ? `₹${paymentStats.totalRevenue?.toLocaleString("en-IN")}` : "—"}
+          subtitle="From store subscriptions"
           icon={DollarSign}
           loading={storesLoading}
         />
@@ -512,6 +568,18 @@ export default function AdminDashboard() {
             description="View analytics and reports"
             icon={BarChart3}
             onClick={() => navigate("/admin/reports")}
+          />
+          <QuickAction
+            title="Payment Notifications"
+            description={`${paymentStats.unreadCount || 0} unread payments`}
+            icon={Bell}
+            onClick={() => navigate("/admin/payment-notifications")}
+          />
+          <QuickAction
+            title="Payment Simulation"
+            description="Test store payment process"
+            icon={CreditCard}
+            onClick={() => navigate("/admin/payment-simulation")}
           />
         </div>
       </div>
