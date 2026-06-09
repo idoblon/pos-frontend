@@ -5,6 +5,7 @@ import {
   getAllStores,
   updateStore,
   moderateStore,
+  getStoreByAdmin,
 } from "./storeThunk";
 const initialState = {
   store: null,
@@ -85,6 +86,19 @@ const storeSlice = createSlice({
         );
       })
       .addCase(moderateStore.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // store by admin
+      .addCase(getStoreByAdmin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getStoreByAdmin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.store = action.payload;
+      })
+      .addCase(getStoreByAdmin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

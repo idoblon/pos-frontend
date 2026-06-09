@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { 
   Store, CreditCard, Calendar, AlertTriangle, CheckCircle,
-  Eye, Settings, Search, Filter, RefreshCw, DollarSign,
+  Eye, Settings, Search, Filter, RefreshCw,
   Users, Building2, TrendingUp, ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
@@ -408,7 +408,7 @@ export default function StoreSubscriptionOverview() {
             padding: "16px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <DollarSign size={16} color="#7c3aed" />
+              <span style={{ fontSize: 16, fontWeight: 700, color: "#7c3aed" }}>रु</span>
               <span style={{ fontSize: "12px", fontWeight: "600", color: "#6b7280" }}>Monthly Revenue</span>
             </div>
             <p style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#1a1d23" }}>

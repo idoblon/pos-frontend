@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Check, X, Clock, Mail, Phone, MapPin, Building2, Calendar, DollarSign, Eye } from "lucide-react";
+import { Check, X, Clock, Mail, Phone, MapPin, Building2, Calendar, Eye } from "lucide-react";
 import { toast } from "sonner";
 import SubscriptionValidation from "@/components/admin/SubscriptionValidation";
 import ApprovalEmailPreview from "@/components/admin/ApprovalEmailPreview";
@@ -30,17 +30,16 @@ export default function StoreRegistrationRequests() {
     try {
       // If filter is ALL_PENDING, we need to fetch both PENDING and PAYMENT_PENDING
       if (filter === "ALL_PENDING") {
-        const res = await api.get(`/api/admin/store-requests`);
+        const res = await api.get(`/api/admin/registration-requests`);
         const allRequests = Array.isArray(res.data) ? res.data : [];
-        const pendingRequests = allRequests.filter(req => 
+        const pendingRequests = allRequests.filter(req =>
           req.status === "PENDING" || req.status === "PAYMENT_PENDING"
         );
         setRequests(pendingRequests);
       } else {
-        const res = await api.get(`/api/admin/store-requests`, {
-          params: { status: filter }
-        });
-        setRequests(Array.isArray(res.data) ? res.data : []);
+        const res = await api.get(`/api/admin/registration-requests`);
+        const allRequests = Array.isArray(res.data) ? res.data : [];
+        setRequests(allRequests.filter(req => req.status === filter));
       }
     } catch (error) {
       console.error("Fetch error:", error.response?.status, error.response?.data);
@@ -59,45 +58,22 @@ export default function StoreRegistrationRequests() {
     }
 
     try {
-      await api.post(`/api/admin/store-requests/${requestId}/approve`);
-    } catch (error) {
-      console.warn("Approve API failed, continuing with email:", error.message);
-    }
-
-    // Always send approval email and save to approvedRequests
-    try {
-      await emailService.sendApprovalEmail(request);
-
-      // Save full store data so payment simulation works
-      const existing = JSON.parse(localStorage.getItem('approvedRequests') || '[]');
-      const alreadyExists = existing.find(s => s.requestId === request.id);
-      if (!alreadyExists) {
-        existing.push({
-          requestId: request.id,
-          storeName: request.storeName,
-          ownerName: request.ownerName,
-          email: request.email,
-          phone: request.phone,
-          plan: request.subscriptionPlan || 'BASIC',
-          approvedAt: new Date().toISOString(),
-          paymentLink: `http://localhost:5173/admin/payment-simulation`,
-          status: 'PAYMENT_PENDING'
-        });
-        localStorage.setItem('approvedRequests', JSON.stringify(existing));
+      if (request.status === "PAYMENT_PENDING") {
+        await api.post(`/api/admin/registration-requests/${requestId}/approve-final`, {}, { timeout: 30000 });
+        setRequests(prev => prev.filter(req => req.id !== requestId));
+        toast.success(`Store approved! Login credentials sent to ${request.email}.`);
+      } else {
+        // Send payment link email, move to PAYMENT_PENDING
+        await api.post(`/api/admin/registration-requests/${requestId}/approve`);
+        setRequests(prev => prev.map(req =>
+          req.id === requestId ? { ...req, status: "PAYMENT_PENDING" } : req
+        ));
+        toast.success(`Approved! Payment link sent to ${request.email}.`);
       }
-
-      setRequests(prev =>
-        prev.map(req =>
-          req.id === requestId
-            ? { ...req, status: 'APPROVED', approvedAt: new Date().toISOString() }
-            : req
-        )
-      );
-
-      toast.success(`${request.storeName} approved! Email sent to ${request.email}`);
       setSelectedRequest(null);
     } catch (error) {
-      toast.error(`Approval email failed: ${error.message}`);
+      console.error('Approval process failed:', error);
+      toast.error(`Failed: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -107,7 +83,7 @@ export default function StoreRegistrationRequests() {
     console.log("─────────────────────────────────────");
     console.log(`To: ${request.email}`);
     console.log(`Store: ${request.storeName}`);
-    console.log(`Plan: ${request.subscriptionPlan} - ₹${getPlanPrice(request.subscriptionPlan)}/year`);
+    console.log(`Plan: ${request.subscriptionPlan} - रु ${getPlanPrice(request.subscriptionPlan)}/year`);
     console.log(`Payment Link: https://payment.pos-system.com/pay/${request.id}`);
     console.log("─────────────────────────────────────");
     console.log("✅ Email delivery simulated successfully");
@@ -141,7 +117,7 @@ export default function StoreRegistrationRequests() {
 
   const handleReject = async (requestId, reason) => {
     try {
-      await api.post(`/api/admin/store-requests/${requestId}/reject`, { reason });
+      await api.post(`/api/admin/registration-requests/${requestId}/reject`, { reason });
       toast.success("Store registration rejected. Email sent with reason.");
       fetchRequests();
       setSelectedRequest(null);
@@ -292,7 +268,7 @@ export default function StoreRegistrationRequests() {
                   <span style={{ fontSize: "12px", color: "#6b7280" }}>{req.phone}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <DollarSign size={14} color="#6b7280" />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#6b7280" }}>रु</span>
                   <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "600" }}>
                     {req.subscriptionPlan || "Basic"} Plan
                   </span>
@@ -329,7 +305,7 @@ export default function StoreRegistrationRequests() {
                     }}
                   >
                     <Check size={14} />
-                    Review & Approve
+                    Approve
                   </button>
                   <button
                     onClick={(e) => {
@@ -445,7 +421,7 @@ export default function StoreRegistrationRequests() {
                 <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
                   Store Address
                 </label>
-                <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23" }}>{selectedRequest.address}</p>
+                <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23" }}>{selectedRequest.storeAddress}</p>
               </div>
 
               <div>
@@ -506,7 +482,7 @@ export default function StoreRegistrationRequests() {
                       }}
                     >
                       <Check size={16} />
-                      Approve Request
+                      Approve
                     </button>
                     <button
                       onClick={() => {

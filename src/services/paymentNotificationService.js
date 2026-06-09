@@ -1,40 +1,74 @@
 // Payment Notification Service for Admin
-// Handles payment confirmations from stores and notifies admin
+// Handles payment confirmations and backend integration
 
 class PaymentNotificationService {
   constructor() {
+    // Keep minimal local cache for UI notifications
     this.notifications = JSON.parse(localStorage.getItem('adminPaymentNotifications') || '[]');
   }
 
-  // Simulate store making payment after approval
-  simulateStorePayment(storeData, paymentDetails) {
-    const paymentNotification = {
-      id: `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      storeId: storeData.id,
-      storeName: storeData.storeName,
-      ownerName: storeData.ownerName,
-      email: storeData.email,
-      phone: storeData.phone,
-      subscriptionPlan: storeData.subscriptionPlan,
-      amount: paymentDetails.amount,
-      paymentMethod: paymentDetails.method || 'Online Payment',
-      transactionId: paymentDetails.transactionId || `TXN${Date.now()}`,
-      status: 'COMPLETED',
-      paidAt: new Date().toISOString(),
-      notifiedAt: new Date().toISOString(),
-      isRead: false
-    };
+  // Process store payment through backend
+  async processStorePayment(storeData, paymentDetails) {
+    try {
+      // Call backend payment completion endpoint
+      const api = await import('@/util/api');
+      const response = await api.default.post('/api/admin/store-payment/complete', {
+        storeId: storeData.id,
+        storeName: storeData.storeName,
+        ownerName: storeData.ownerName,
+        email: storeData.email,
+        phone: storeData.phone,
+        subscriptionPlan: storeData.subscriptionPlan,
+        paymentDetails: {
+          amount: paymentDetails.amount,
+          method: paymentDetails.method,
+          transactionId: paymentDetails.transactionId
+        }
+      });
 
-    // Add to notifications
-    this.notifications.unshift(paymentNotification);
-    this.saveNotifications();
+      console.log(`💰 Payment processed: ${storeData.storeName} - ₹${paymentDetails.amount.toLocaleString('en-IN')}`);
+      
+      // Update local notification cache
+      const paymentNotification = {
+        id: response.data.paymentId || `payment_${Date.now()}`,
+        storeId: storeData.id,
+        storeName: storeData.storeName,
+        ownerName: storeData.ownerName,
+        email: storeData.email,
+        amount: paymentDetails.amount,
+        paymentMethod: paymentDetails.method,
+        transactionId: paymentDetails.transactionId,
+        status: 'COMPLETED',
+        paidAt: new Date().toISOString(),
+        isRead: false
+      };
 
-    // Update store status to ACTIVE
-    this.updateStoreStatus(storeData.id, 'ACTIVE');
+      this.notifications.unshift(paymentNotification);
+      this.saveNotifications();
+      
+      return response.data;
+    } catch (error) {
+      console.error('Backend payment processing failed:', error);
+      throw error;
+    }
+  }
 
-    console.log(`💰 Payment Received - Store: ${storeData.storeName} - Amount: ₹${paymentDetails.amount}`);
-    
-    return paymentNotification;
+  // Get payment notifications from backend
+  async getPaymentNotifications() {
+    try {
+      const api = await import('@/util/api');
+      const response = await api.default.get('/api/admin/payment-notifications');
+      
+      // Update local cache
+      this.notifications = response.data;
+      this.saveNotifications();
+      
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch payment notifications:', error);
+      // Return cached data as fallback
+      return this.notifications;
+    }
   }
 
   // Get all payment notifications
@@ -47,47 +81,54 @@ class PaymentNotificationService {
     return this.notifications.filter(n => !n.isRead);
   }
 
-  // Mark notification as read
-  markAsRead(notificationId) {
-    this.notifications = this.notifications.map(n =>
-      n.id === notificationId ? { ...n, isRead: true } : n
-    );
-    this.saveNotifications();
+  // Mark notification as read via backend
+  async markAsRead(notificationId) {
+    try {
+      const api = await import('@/util/api');
+      await api.default.patch(`/api/admin/payment-notifications/${notificationId}/read`);
+      
+      // Update local cache
+      this.notifications = this.notifications.map(n =>
+        n.id === notificationId ? { ...n, isRead: true } : n
+      );
+      this.saveNotifications();
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   }
 
-  // Mark all notifications as read
-  markAllAsRead() {
-    this.notifications = this.notifications.map(n => ({ ...n, isRead: true }));
-    this.saveNotifications();
+  // Mark all notifications as read via backend
+  async markAllAsRead() {
+    try {
+      const api = await import('@/util/api');
+      await api.default.patch('/api/admin/payment-notifications/mark-all-read');
+      
+      // Update local cache
+      this.notifications = this.notifications.map(n => ({ ...n, isRead: true }));
+      this.saveNotifications();
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
   }
 
-  // Update store status after payment
-  updateStoreStatus(storeId, status) {
-    const approvedStores = JSON.parse(localStorage.getItem('approvedRequests') || '[]');
-    const updatedStores = approvedStores.map(store =>
-      store.requestId === storeId 
-        ? { ...store, status: status, activatedAt: new Date().toISOString() }
-        : store
-    );
-    localStorage.setItem('approvedRequests', JSON.stringify(updatedStores));
-  }
-
-  // Save notifications to localStorage
+  // Save notifications to localStorage (cache only)
   saveNotifications() {
     localStorage.setItem('adminPaymentNotifications', JSON.stringify(this.notifications));
   }
 
-  // Clear old notifications (older than 30 days)
-  clearOldNotifications() {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    this.notifications = this.notifications.filter(n => 
-      new Date(n.paidAt) > thirtyDaysAgo
-    );
-    this.saveNotifications();
+  // Get payment statistics from backend
+  async getPaymentStats() {
+    try {
+      const api = await import('@/util/api');
+      const response = await api.default.get('/api/admin/payment-stats');
+      return response.data;
+    } catch {
+      return this.calculateLocalStats();
+    }
   }
 
-  // Get payment statistics
-  getPaymentStats() {
+  // Fallback local stats calculation
+  calculateLocalStats() {
     const today = new Date().toDateString();
     const thisMonth = new Date().getMonth();
     const thisYear = new Date().getFullYear();

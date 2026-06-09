@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import {
   LayoutDashboard, Store, Users, BarChart3, Settings,
-  Menu, X, LogOut, ChevronDown, Bell, FileText, CreditCard, Clock, DollarSign
+  Menu, X, LogOut, ChevronDown, Bell, FileText, CreditCard, Clock
 } from "lucide-react";
 import posLogo from "@/logo/pos.png";
 import api from "@/util/api";
@@ -17,8 +17,7 @@ const sidebarItems = [
   { icon: CreditCard, label: "Subscriptions", path: "/admin/subscriptions" },
   { icon: Users, label: "User Management", path: "/admin/users" },
   { icon: BarChart3, label: "System Reports", path: "/admin/reports" },
-  { icon: DollarSign, label: "Payments", path: "/admin/payment-notifications", paymentBadge: true },
-  { icon: CreditCard, label: "Pay Simulation", path: "/admin/payment-simulation" },
+  { icon: () => <span style={{ fontSize: 15, fontWeight: 700, color: "inherit" }}>रु</span>, label: "Payments", path: "/admin/payment-notifications", paymentBadge: true },
   { icon: Settings, label: "System Settings", path: "/admin/settings" },
 ];
 
@@ -39,9 +38,9 @@ export default function AdminLayout({ children }) {
     const fetchPendingCount = async () => {
       try {
         // Fetch all requests and count both PENDING and PAYMENT_PENDING
-        const listRes = await api.get("/api/admin/store-requests");
+        const listRes = await api.get("/api/admin/registration-requests");
         const allRequests = Array.isArray(listRes.data) ? listRes.data : [];
-        const pendingRequests = allRequests.filter(req => 
+        const pendingRequests = allRequests.filter(req =>
           req.status === "PENDING" || req.status === "PAYMENT_PENDING"
         );
         const count = pendingRequests.length;
@@ -57,10 +56,10 @@ export default function AdminLayout({ children }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Poll unread payment notifications
+  // Poll unread payment notifications (local only)
   useEffect(() => {
     const loadPaymentBadge = () => {
-      const stats = paymentNotificationService.getPaymentStats();
+      const stats = paymentNotificationService.calculateLocalStats();
       setUnreadPayments(stats.unreadCount || 0);
     };
     loadPaymentBadge();

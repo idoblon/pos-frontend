@@ -14,6 +14,8 @@ import Signup from "./pages/Auth/Signup";
 import Landing from "./pages/Landing";
 import AdminSeeder from "./pages/AdminSeeder";
 import StoreSuspended from "./pages/StoreSuspended";
+import PaymentRequired from "./pages/PaymentRequired";
+import StorePaymentPage from "./pages/Payment/StorePaymentPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -79,6 +81,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/suspended" element={<StoreSuspended />} />
+        <Route path="/payment-required" element={<PaymentRequired />} />
+        <Route path="/pay" element={<StorePaymentPage />} />
         <Route path="/setup-admin" element={<AdminSeeder />} />
         {/* Catch-all route for unauthorized access */}
         <Route 

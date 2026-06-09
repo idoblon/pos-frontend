@@ -11,6 +11,7 @@ import { sanitizeInput, validateEmail } from "@/util/inputValidator";
 import { mapToBackendRole } from "@/util/roleMapper";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
+import { enforcePaymentRequirement } from "@/util/paymentValidator";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -66,6 +67,17 @@ const Login = () => {
     if (login.fulfilled.match(result)) {
       const profileResult = await dispatch(getUserProfile());
       const role = mapToBackendRole(result.payload?.role);
+      
+      // Check payment requirement for store-related roles
+      const paymentCheck = enforcePaymentRequirement(role, {
+        storeId: result.payload?.storeId,
+        email: formData.email
+      });
+      
+      if (!paymentCheck.allowed && paymentCheck.redirectTo === '/payment-required') {
+        navigate('/payment-required');
+        return;
+      }
       
       if (role === 'ROLE_BRANCH_CASHIER') {
         try {

@@ -19,8 +19,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { getRestockRequestsByStore } from "@/Redux Toolkit/Features/restock/restockThunk";
+import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
 import secureStorage from "@/util/secureStorage";
 import posLogo from "@/logo/pos.png";
+import ChangePasswordDialog from "@/pages/cashier/Settings/ChangePasswordDialog";
 
 const navItems = [
   { path: "/store-admin", label: "Dashboard", icon: LayoutDashboard },
@@ -97,22 +99,36 @@ function NavLinks({ onClose, pendingCount }) {
 export default function StoreAdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // Force re-render when notifications change
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const { userProfile } = useSelector((s) => s.user);
   const { user } = useSelector((s) => s.auth);
-  const { requests: restockRequests } = useSelector((s) => s.restock);
+  const { requests: restockRequests, } = useSelector((s) => s.restock);
+  const { store: currentStore } = useSelector((s) => s.store);
   const userData = secureStorage.getUserData();
   const storeId = userData?.storeId;
-  const storeName = localStorage.getItem("storeName") || "Indoor Plant World";
+  const storeName = currentStore?.brand || currentStore?.name || "Store";
   const jwt = localStorage.getItem("jwt");
 
   useEffect(() => {
     if (jwt && !userProfile) dispatch(getUserProfile());
     if (storeId) dispatch(getRestockRequestsByStore({ storeId }));
+    dispatch(getStoreByAdmin());
   }, [dispatch, jwt, userProfile, storeId]);
+
+  // Auto-open change password on first login (temp password)
+  useEffect(() => {
+    const userData = secureStorage.getUserData();
+    const userId = userData?.userId;
+    if (!userId) return;
+    const key = `pwd_changed_${userId}`;
+    if (!sessionStorage.getItem(key)) {
+      setShowChangePassword(true);
+    }
+  }, []);
 
   // Auto-refresh restock requests every 30 seconds
   useEffect(() => {
@@ -492,52 +508,15 @@ export default function StoreAdminLayout() {
             </div>
 
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 4px",
-              }}
+              onClick={() => setShowChangePassword(true)}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px", cursor: "pointer" }}
             >
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
-              >
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#1a1d23,#4a4d55)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                 {initials}
               </div>
               <div style={{ textAlign: "left" }}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "#1a1d23",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {displayName}
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    color: "#6b7280",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {displayEmail}
-                </p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#1a1d23", lineHeight: 1.3 }}>{displayName}</p>
+                <p style={{ margin: 0, fontSize: 11, color: "#6b7280", lineHeight: 1.3 }}>{displayEmail}</p>
               </div>
             </div>
           </div>
@@ -546,6 +525,15 @@ export default function StoreAdminLayout() {
         <main style={{ flex: 1, overflowY: "auto" }}>
           <Outlet />
         </main>
+
+        <ChangePasswordDialog
+          open={showChangePassword}
+          onClose={() => {
+            const ud = secureStorage.getUserData();
+            if (ud?.userId) sessionStorage.setItem(`pwd_changed_${ud.userId}`, "1");
+            setShowChangePassword(false);
+          }}
+        />
       </div>
 
       <style>{`

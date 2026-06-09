@@ -13,11 +13,11 @@ class EmailService {
   async sendApprovalEmail(requestData) {
     const payload = {
       to: requestData.email,
-      fullName: requestData.ownerName,
+      fullName: requestData.ownerName || requestData.fullName || 'Store Owner',
       storeName: requestData.storeName,
       subscriptionPlan: requestData.subscriptionPlan,
       planPrice: this.getPlanPrice(requestData.subscriptionPlan),
-      paymentLink: `http://localhost:5173/admin/payment-simulation`,
+      paymentLink: `http://localhost:5173/payment/${requestData.id}`
     };
 
     try {
@@ -30,10 +30,29 @@ class EmailService {
     }
   }
 
+  async sendCredentialsEmail(storeData, credentials) {
+    const payload = {
+      to: storeData.email,
+      fullName: storeData.ownerName || storeData.fullName,
+      storeName: storeData.storeName,
+      email: storeData.email,
+      tempPassword: credentials.tempPassword,
+      status: 'APPROVED'
+    };
+
+    try {
+      const res = await api.post('/api/email/store-credentials', payload);
+      console.log(`✅ Login credentials sent to ${storeData.email}`);
+      return res.data;
+    } catch (error) {
+      console.error('Credentials email failed:', error.response?.data || error.message);
+      throw error;
+    }
+  }
   async sendRejectionEmail(requestData, reason) {
     const payload = {
       to: requestData.email,
-      fullName: requestData.ownerName,
+      fullName: requestData.ownerName || requestData.fullName,
       storeName: requestData.storeName,
       reason,
     };

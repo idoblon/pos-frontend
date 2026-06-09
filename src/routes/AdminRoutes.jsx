@@ -9,7 +9,6 @@ import UserManagement from "@/pages/admin/Users/UserManagement";
 import SystemReports from "@/pages/admin/Reports/SystemReports";
 import SystemSettings from "@/pages/admin/Settings/SystemSettings";
 import PaymentNotifications from "@/components/admin/PaymentNotifications";
-import StorePaymentSimulation from "@/components/admin/StorePaymentSimulation";
 
 export default function AdminRoutes() {
   return (
@@ -23,7 +22,6 @@ export default function AdminRoutes() {
         <Route path="reports" element={<SystemReports />} />
         <Route path="settings" element={<SystemSettings />} />
         <Route path="payment-notifications" element={<PaymentNotifications />} />
-        <Route path="payment-simulation" element={<StorePaymentSimulation />} />
       </Routes>
     </AdminLayout>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, Check, Clock, Store, DollarSign, Mail, ExternalLink } from 'lucide-react';
 import paymentNotificationService from '@/services/paymentNotificationService';
 import { toast } from 'sonner';
+import api from '@/util/api';
 
 export default function StorePaymentSimulation() {
   const [approvedStores, setApprovedStores] = useState([]);
@@ -13,12 +14,16 @@ export default function StorePaymentSimulation() {
     loadApprovedStores();
   }, []);
 
-  const loadApprovedStores = () => {
-    const approvedRequests = JSON.parse(localStorage.getItem('approvedRequests') || '[]');
-    const pendingPaymentStores = approvedRequests.filter(store => 
-      store.status === 'PAYMENT_PENDING' || !store.status || store.status === 'APPROVED'
-    );
-    setApprovedStores(pendingPaymentStores);
+  const loadApprovedStores = async () => {
+    try {
+      // Fetch from backend instead of localStorage
+      const res = await api.get('/api/admin/store-requests/payment-pending');
+      setApprovedStores(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error('Failed to load pending payment stores:', error);
+      toast.error('Failed to load stores awaiting payment');
+      setApprovedStores([]);
+    }
   };
 
   const getPlanPrice = (plan) => {
@@ -37,25 +42,25 @@ export default function StorePaymentSimulation() {
       // Simulate payment processing delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const amount = getPlanPrice(storeData.plan);
+      const amount = getPlanPrice(storeData.plan || storeData.subscriptionPlan);
       const paymentDetails = {
         amount: amount,
         method: paymentMethod === 'online' ? 'Online Payment' : 'Bank Transfer',
         transactionId: `TXN${Date.now()}${Math.floor(Math.random() * 1000)}`
       };
 
-      // Process payment and notify admin
-      const notification = paymentNotificationService.simulateStorePayment({
-        id: storeData.requestId,
+      // Process payment through backend
+      await paymentNotificationService.processStorePayment({
+        id: storeData.id || storeData.requestId,
         storeName: storeData.storeName,
-        ownerName: 'Store Owner', // In real app, this would come from the store data
-        email: 'store@example.com', // In real app, this would come from the store data
-        phone: '+977-98-1234567', // In real app, this would come from the store data
-        subscriptionPlan: storeData.plan
+        ownerName: storeData.ownerName || 'Store Owner',
+        email: storeData.email,
+        phone: storeData.phone || '+977-98-1234567',
+        subscriptionPlan: storeData.plan || storeData.subscriptionPlan
       }, paymentDetails);
 
       // Show success message
-      toast.success(`Payment successful! ₹${amount.toLocaleString('en-IN')} paid for ${storeData.plan} plan`);
+      toast.success(`Payment successful! ₹${amount.toLocaleString('en-IN')} paid for ${storeData.plan || storeData.subscriptionPlan} plan`);
       
       // Refresh approved stores list
       loadApprovedStores();
@@ -63,7 +68,7 @@ export default function StorePaymentSimulation() {
       
     } catch (error) {
       console.error('Payment failed:', error);
-      toast.error('Payment failed. Please try again.');
+      toast.error(`Payment failed: ${error.response?.data?.message || error.message}`);
     } finally {
       setProcessing(false);
     }

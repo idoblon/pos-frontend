@@ -6,7 +6,7 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import {
-  Store, Users, ShoppingCart, DollarSign,
+  Store, Users, ShoppingCart,
   TrendingUp, Building2, UserCheck, BarChart3, FileText, CreditCard, Bell
 } from "lucide-react";
 import { getAllStores } from "@/Redux Toolkit/Features/Store/storeThunk";
@@ -285,9 +285,9 @@ export default function AdminDashboard() {
         />
         <StatCard
           title="Subscription Revenue"
-          value={paymentStats.totalRevenue > 0 ? `₹${paymentStats.totalRevenue?.toLocaleString("en-IN")}` : "—"}
+          value={paymentStats.totalRevenue > 0 ? `रु ${paymentStats.totalRevenue?.toLocaleString("en-IN")}` : "—"}
           subtitle="From store subscriptions"
-          icon={DollarSign}
+          icon={() => <span style={{ fontSize: 18, fontWeight: 700, color: "white", lineHeight: 1 }}>रु</span>}
           loading={storesLoading}
         />
       </div>

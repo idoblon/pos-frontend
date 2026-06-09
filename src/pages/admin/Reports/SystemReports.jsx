@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import {
   Download, Calendar, TrendingUp, Users, Store,
-  ShoppingCart, DollarSign, BarChart3, FileText
+  ShoppingCart, BarChart3, FileText
 } from "lucide-react";
 
 const COLORS = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#ffa726'];
@@ -125,7 +125,7 @@ export default function SystemReports() {
             { key: "overview", label: "System Overview", icon: BarChart3 },
             { key: "stores", label: "Store Performance", icon: Store },
             { key: "users", label: "User Analytics", icon: Users },
-            { key: "financial", label: "Financial Summary", icon: DollarSign }
+            { key: "financial", label: "Financial Summary", icon: () => <span style={{ fontSize: 15, fontWeight: 700 }}>रु</span> }
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
