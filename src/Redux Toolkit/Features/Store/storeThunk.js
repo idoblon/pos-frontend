@@ -3,6 +3,7 @@ import { getAuthHeaders } from "@/util/getAuthHeader";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { sanitizePathParams } from "@/util/urlValidator";
 import { sanitizeFormData, sanitizeInput } from "@/util/inputValidator";
+import { mergeRegistrationDataWithStores } from "@/util/registrationDataMerger";
 
 // Validate store data
 const validateStoreData = (data) => {
@@ -12,14 +13,9 @@ const validateStoreData = (data) => {
     errors.brand = 'Store brand must be at least 2 characters';
   }
   
-  if (data.contact) {
-    if (!data.contact.address || data.contact.address.trim().length < 5) {
-      errors.address = 'Store address must be at least 5 characters';
-    }
-    
-    if (!data.contact.phone || data.contact.phone.trim().length < 10) {
-      errors.phone = 'Phone number must be at least 10 digits';
-    }
+  // contact fields are optional — only validate email format if provided
+  if (data.contact?.email && !/\S+@\S+\.\S+/.test(data.contact.email)) {
+    errors.email = 'Invalid contact email format';
   }
   
   return {
@@ -85,7 +81,8 @@ export const getAllStores = createAsyncThunk(
         params: Object.keys(params).length > 0 ? params : undefined,
       });
       console.log("get all stores success", res.data);
-      return res.data;
+      const mergedStores = await mergeRegistrationDataWithStores(res.data, headers);
+      return mergedStores;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch stores");
     }

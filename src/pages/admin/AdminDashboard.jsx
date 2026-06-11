@@ -121,9 +121,9 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, [dispatch]);
 
-  const loadPaymentStats = () => {
-    const stats = paymentNotificationService.getPaymentStats();
-    setPaymentStats(stats);
+  const loadPaymentStats = async () => {
+    const stats = await paymentNotificationService.getPaymentStats();
+    setPaymentStats(stats || {});
   };
 
   // --- Derived metrics from real data ---

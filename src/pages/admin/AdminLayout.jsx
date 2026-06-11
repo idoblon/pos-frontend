@@ -58,13 +58,18 @@ export default function AdminLayout({ children }) {
 
   // Poll unread payment notifications (local only)
   useEffect(() => {
-    const loadPaymentBadge = () => {
-      const stats = paymentNotificationService.calculateLocalStats();
-      setUnreadPayments(stats.unreadCount || 0);
+    let mounted = true;
+    const loadPaymentBadge = async () => {
+      const stats = await paymentNotificationService.getPaymentStats();
+      if (!mounted) return;
+      setUnreadPayments(stats?.unreadCount || 0);
     };
     loadPaymentBadge();
-    const interval = setInterval(loadPaymentBadge, 5000);
-    return () => clearInterval(interval);
+    const interval = setInterval(loadPaymentBadge, 10000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleLogout = () => {

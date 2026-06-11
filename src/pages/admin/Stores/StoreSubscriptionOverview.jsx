@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { getAllStores } from "@/Redux Toolkit/Features/Store/storeThunk";
+import { getStoreName, resolveSubscriptionPlan } from "@/util/registrationDataMerger";
 
 const SUBSCRIPTION_STATUS = {
   ACTIVE: { color: "#059669", bg: "#dcfce7", text: "Active" },
@@ -214,8 +215,8 @@ export default function StoreSubscriptionOverview() {
     const transformedStores = stores.map((store) => {
       const getSubscriptionStatus = () => {
         if (!store.status) return "ACTIVE";
-        
-        switch (store.status.toLowerCase()) {
+
+        switch (String(store.status).toLowerCase()) {
           case "active":
             return "ACTIVE";
           case "inactive":
@@ -226,48 +227,23 @@ export default function StoreSubscriptionOverview() {
         }
       };
 
-      const getSubscriptionPlan = () => {
-        const employeeCount = store.employees?.length || 0;
-        const branchCount = store.branches?.length || 1;
-        
-        if (employeeCount > 50 || branchCount > 10) {
-          return "ENTERPRISE";
-        } else if (employeeCount > 15 || branchCount > 3) {
-          return "PROFESSIONAL";
-        }
-        return "BASIC";
-      };
-
-      const generateExpiryDate = () => {
-        const today = new Date();
-        const expiry = new Date(today);
-        
-        // Add variation - some expiring soon, some later
-        const variation = Math.random() * 60 - 15; // -15 to +45 days
-        expiry.setDate(expiry.getDate() + variation);
-        
-        return expiry.toISOString().split('T')[0];
-      };
-
-      const expiryDate = generateExpiryDate();
-      const daysUntilExpiry = Math.ceil((new Date(expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
+      const plan = resolveSubscriptionPlan(store);
       const baseStatus = getSubscriptionStatus();
-      const finalStatus = daysUntilExpiry <= 7 && daysUntilExpiry > 0 && baseStatus === "ACTIVE" ? "EXPIRING_SOON" : baseStatus;
 
       return {
         id: store._id || store.id,
-        name: store.brand || store.name || "Unnamed Store",
-        address: store.contact?.address || "Address not provided",
-        branchCount: store.branches?.length || 1,
-        employeeCount: store.employees?.length || 0,
-        monthlyRevenue: Math.floor(Math.random() * 150000) + 30000,
-        subscriptionPlan: getSubscriptionPlan(),
-        subscriptionStatus: finalStatus,
-        subscriptionExpiry: expiryDate,
-        lastPayment: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        storePhone: store.contact?.phone || "Not provided",
-        storeEmail: store.contact?.email || "Not provided",
-        originalStore: store // Keep reference to original store data
+        name: getStoreName(store) || "Unnamed Store",
+        address: store.storeAddress || store.contact?.address || "Address not provided",
+        branchCount: store.estimatedBranches ?? store.branches?.length ?? 1,
+        employeeCount: store.estimatedUsers ?? store.employees?.length ?? 1,
+        monthlyRevenue: store.totalRevenue || 0,
+        subscriptionPlan: plan,
+        subscriptionStatus: baseStatus,
+        subscriptionExpiry: null,
+        lastPayment: store.approvedAt || store.createdAt || null,
+        storePhone: store.phone || store.contact?.phone || "Not provided",
+        storeEmail: store.email || store.contact?.email || "Not provided",
+        originalStore: store,
       };
     });
 
@@ -276,7 +252,7 @@ export default function StoreSubscriptionOverview() {
 
   const filteredStores = storesWithSubscriptions.filter(store => {
     const matchesSearch = store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         store.id.toLowerCase().includes(searchTerm.toLowerCase());
+                         String(store.id).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "ALL" || store.subscriptionStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });

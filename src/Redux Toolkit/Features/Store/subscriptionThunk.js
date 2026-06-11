@@ -1,6 +1,7 @@
 import api from "@/util/api";
 import { getAuthHeaders } from "@/util/getAuthHeader";
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { resolveSubscriptionPlan } from "@/util/registrationDataMerger";
 
 export const getStoresWithSubscriptions = createAsyncThunk(
   "/subscription/getStoresWithSubscriptions",
@@ -29,18 +30,7 @@ export const getStoresWithSubscriptions = createAsyncThunk(
           }
         };
 
-        const getSubscriptionPlan = (store) => {
-          // Assign plans based on store size/characteristics
-          const employeeCount = store.employees?.length || 0;
-          const branchCount = store.branches?.length || 1;
-          
-          if (employeeCount > 50 || branchCount > 10) {
-            return "ENTERPRISE";
-          } else if (employeeCount > 15 || branchCount > 3) {
-            return "PROFESSIONAL";
-          }
-          return "BASIC";
-        };
+        const getSubscriptionPlan = (store) => resolveSubscriptionPlan(store);
 
         const generateSubscriptionDates = () => {
           const today = new Date();
