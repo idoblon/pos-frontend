@@ -24,6 +24,8 @@ import { getBranchById } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { getRestockRequestsByBranch } from "@/Redux Toolkit/Features/restock/restockThunk";
 import secureStorage from "@/util/secureStorage";
 import posLogo from "@/logo/pos.png";
+import ChangePasswordDialog from "@/pages/cashier/Settings/ChangePasswordDialog";
+import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
 
 const navItems = [
   { path: "/branch", label: "Overview", icon: LayoutDashboard },
@@ -93,6 +95,7 @@ export default function BranchLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // Force re-render when notifications change
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
@@ -108,6 +111,13 @@ export default function BranchLayout() {
       dispatch(getRestockRequestsByBranch({ branchId }));
     }
   }, [dispatch, userProfile, branchId]);
+
+  useEffect(() => {
+    const userId = secureStorage.getUserData()?.userId;
+    if (isPasswordChangeRequired(userId)) {
+      setShowChangePassword(true);
+    }
+  }, []);
 
   // Auto-refresh restock requests every 30 seconds
   useEffect(() => {
@@ -600,6 +610,12 @@ export default function BranchLayout() {
         <main style={{ flex: 1, overflowY: "auto" }}>
           <Outlet />
         </main>
+
+        <ChangePasswordDialog
+          open={showChangePassword}
+          onSuccess={() => markPasswordChanged(secureStorage.getUserData()?.userId)}
+          onClose={() => setShowChangePassword(false)}
+        />
       </div>
 
       <style>{`

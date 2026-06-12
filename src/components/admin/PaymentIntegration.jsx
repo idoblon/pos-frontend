@@ -39,10 +39,10 @@ export default function PaymentIntegration({ subscription, onPaymentSuccess, onC
   });
 
   const plan = {
-    BASIC: { name: "Basic", price: 2999 },
-    PROFESSIONAL: { name: "Professional", price: 5999 },
-    ENTERPRISE: { name: "Enterprise", price: 12999 }
-  }[subscription?.plan] || { name: "Basic", price: 2999 };
+    BASIC: { name: "Basic", price: 3500 },
+    PROFESSIONAL: { name: "Professional", price: 7000 },
+    ENTERPRISE: { name: "Enterprise", price: 10000 }
+  }[subscription?.plan] || { name: "Basic", price: 3500 };
 
   const handleInputChange = (field, value) => {
     setPaymentData(prev => ({ ...prev, [field]: value }));
@@ -68,7 +68,7 @@ export default function PaymentIntegration({ subscription, onPaymentSuccess, onC
       } else {
         toast.error("Payment failed. Please try again.");
       }
-    } catch (error) {
+    } catch {
       toast.error("Payment processing error");
     } finally {
       setProcessing(false);

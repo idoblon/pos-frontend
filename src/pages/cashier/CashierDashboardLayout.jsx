@@ -31,6 +31,8 @@ import PaymentSection from "./CustomerPaymentSection/PaymentSection";
 import ProductSection from "./ProductSection/ProductSection";
 import ChangePasswordDialog from "./Settings/ChangePasswordDialog";
 import secureStorage from "@/util/secureStorage";
+import { getAdminTaxRate, getLowStockThreshold } from "@/util/adminSystemSettings";
+import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
 import "./cashier-styles.css";
 
 export default function CashierDashboardLayout() {
@@ -42,7 +44,6 @@ export default function CashierDashboardLayout() {
   const { userProfile } = useSelector((s) => s.user);
 const { user } = useSelector((s) => s.auth);
 const userData = secureStorage.getUserData();
-  const { currentShift } = useSelector((s) => s.shiftReport);
   
   // Check for active shift on mount
   useEffect(() => {
@@ -51,6 +52,13 @@ const userData = secureStorage.getUserData();
       console.log("No active shift found");
     });
   }, [dispatch]);
+
+  useEffect(() => {
+    const userId = secureStorage.getUserData()?.userId;
+    if (isPasswordChangeRequired(userId)) {
+      setPasswordDialogOpen(true);
+    }
+  }, []);
   
   // Redux cart state
   const cart = useSelector(selectCartItems);
@@ -61,6 +69,8 @@ const userData = secureStorage.getUserData();
   const tax = useSelector(selectTax);
   const discountAmt = useSelector(selectDiscountAmount);
   const total = useSelector(selectTotal);
+  const taxRate = getAdminTaxRate();
+  const lowStockThreshold = getLowStockThreshold();
 
   // Debug logging
   useEffect(() => {
@@ -231,7 +241,7 @@ const initials = fullName
                 <div className="ci-info">
                   <div className="ci-name">{item.name}</div>
                   <div className="ci-sku">{item.sku}</div>
-                  {stock > 0 && stock <= 10 && (
+                  {stock > 0 && stock <= lowStockThreshold && (
                     <div style={{ fontSize: 9, color: "#d97706", marginTop: 2 }}>Only {stock} in stock</div>
                   )}
                 </div>
@@ -257,7 +267,7 @@ const initials = fullName
             {cart.length > 0 && (
               <div className="cart-foot">
                 <div className="cf-row"><span className="cf-label">Subtotal</span><span className="cf-val">रु{subtotal.toFixed(2)}</span></div>
-                <div className="cf-row"><span className="cf-label">Tax (13%)</span><span className="cf-val">रु{tax.toFixed(2)}</span></div>
+                <div className="cf-row"><span className="cf-label">Tax ({taxRate}%)</span><span className="cf-val">रु{tax.toFixed(2)}</span></div>
                 {discountAmt > 0 && (
                   <div className="cf-row"><span className="cf-label">Discount</span><span className="cf-val" style={{ color: "#e53e3e" }}>-रु{discountAmt.toFixed(2)}</span></div>
                 )}
@@ -293,6 +303,7 @@ const initials = fullName
       
       <ChangePasswordDialog 
         open={passwordDialogOpen} 
+        onSuccess={() => markPasswordChanged(secureStorage.getUserData()?.userId)}
         onClose={() => setPasswordDialogOpen(false)} 
       />
     </div>

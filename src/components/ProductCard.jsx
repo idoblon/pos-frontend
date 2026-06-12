@@ -1,15 +1,14 @@
-import { addToCart } from "@/Redux Toolkit/Features/Cart/cartSlice";
-import { useDispatch } from "react-redux";
 import { Package } from "lucide-react";
+import { getLowStockThreshold } from "@/util/adminSystemSettings";
 
 export default function ProductCard({ product, stock, onAddToCart }) {
   const id = product.id || product._id;
   const outOfStock = stock === 0 || stock === undefined || stock === null;
-  const dispatch = useDispatch();
   const image = product.image || product.imageUrl;
   const description = product.description || product.desciption;
   const categoryName = product.category?.name || "—";
   const price = product.sellingPrice || product.price || 0;
+  const lowStockThreshold = getLowStockThreshold();
 
   const handleAddProductToCart = () => {
     if (outOfStock) return;
@@ -44,7 +43,7 @@ export default function ProductCard({ product, stock, onAddToCart }) {
           <span className="prod-price">रु {price}</span>
           <span className="prod-tag">{categoryName}</span>
         </div>
-        <div style={{ fontSize: 10, marginTop: 3, color: outOfStock ? "#e53e3e" : stock <= 10 ? "#d97706" : "#1a1d23", fontWeight: 600 }}>
+        <div style={{ fontSize: 10, marginTop: 3, color: outOfStock ? "#e53e3e" : stock <= lowStockThreshold ? "#d97706" : "#1a1d23", fontWeight: 600 }}>
           {outOfStock ? "Out of Stock" : `Stock: ${stock}`}
         </div>
       </div>

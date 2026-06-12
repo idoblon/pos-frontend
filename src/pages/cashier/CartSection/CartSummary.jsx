@@ -9,6 +9,7 @@ import {
   selectDiscount,
   selectCartItemsCount
 } from '@/Redux Toolkit/Features/Cart/cartSlice';
+import { getAdminTaxRate } from '@/util/adminSystemSettings';
 
 const CartSummary = () => {
   const itemsCount = useSelector(selectCartItemsCount);
@@ -17,6 +18,7 @@ const CartSummary = () => {
   const discountAmount = useSelector(selectDiscountAmount);
   const total = useSelector(selectTotal);
   const discount = useSelector(selectDiscount);
+  const taxRate = getAdminTaxRate();
 
   if (itemsCount === 0) {
     return null;
@@ -40,7 +42,7 @@ const CartSummary = () => {
         )}
 
         <div className="flex justify-between text-sm transition-all duration-200">
-          <span>Tax (13%)</span>
+          <span>Tax ({taxRate}%)</span>
           <span className="font-medium transition-all duration-200">रु{tax.toFixed(2)}</span>
         </div>
 

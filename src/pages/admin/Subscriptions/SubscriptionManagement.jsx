@@ -1,127 +1,273 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Store, RefreshCw, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  RefreshCw,
+  Search,
+  Store,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getAllStores } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getStoreName, resolveSubscriptionPlan } from "@/util/registrationDataMerger";
+import { getAuthHeaders } from "@/util/getAuthHeader";
+import api from "@/util/api";
+
+const STORAGE_KEYS = {
+  requests: "subscriptionUpgradeRequests",
+  overrides: "subscriptionPlanOverrides",
+};
 
 const SUBSCRIPTION_PLANS = {
-  BASIC: { 
-    name: "Basic", 
-    price: "रु 3,500/year",
+  BASIC: {
+    name: "Basic",
+    price: "NPR 3,500/year",
     priceValue: 3500,
     color: "#1a1d23",
-    features: ["1 Store", "3 Branches", "10 Users", "Basic Support"]
+    features: ["1 Store", "3 Branches", "10 Users", "Basic Support"],
   },
-  PROFESSIONAL: { 
-    name: "Professional", 
-    price: "रु 7,000/year",
+  PROFESSIONAL: {
+    name: "Professional",
+    price: "NPR 7,000/year",
     priceValue: 7000,
     color: "#1a1d23",
-    features: ["1 Store", "10 Branches", "50 Users", "Priority Support", "Advanced Reports"]
+    features: ["1 Store", "10 Branches", "50 Users", "Priority Support", "Advanced Reports"],
   },
-  ENTERPRISE: { 
-    name: "Enterprise", 
-    price: "रु 10,000/year",
+  ENTERPRISE: {
+    name: "Enterprise",
+    price: "NPR 10,000/year",
     priceValue: 10000,
     color: "#1a1d23",
-    features: ["Unlimited Stores", "Unlimited Branches", "Unlimited Users", "24/7 Support", "Custom Features"]
+    features: ["Unlimited Stores", "Unlimited Branches", "Unlimited Users", "24/7 Support", "Custom Features"],
   },
 };
 
-function StoreSubscriptionCard({ store }) {
+const REQUEST_STATUS = {
+  PAYMENT_PENDING: { label: "Payment Pending", color: "#92400e", bg: "#fef3c7" },
+  PAID: { label: "Paid", color: "#1d4ed8", bg: "#dbeafe" },
+  APPROVED: { label: "Approved", color: "#166534", bg: "#dcfce7" },
+  REJECTED: { label: "Rejected", color: "#991b1b", bg: "#fee2e2" },
+};
+
+const readJson = (key, fallback) => {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const saveJson = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
+const normalizeRequest = (request) => ({
+  ...request,
+  id: request.id || request._id || request.requestId || `REQ_${Date.now()}`,
+  storeId: String(request.storeId ?? request.store?.id ?? request.store?._id ?? ""),
+  requestedPlan: String(request.requestedPlan || request.toPlan || request.subscriptionPlan || "BASIC").toUpperCase(),
+  currentPlan: String(request.currentPlan || request.fromPlan || "BASIC").toUpperCase(),
+  status: String(request.status || request.paymentStatus || "PAYMENT_PENDING").toUpperCase(),
+});
+
+const getUpgradeAmount = (currentPlan, requestedPlan) => {
+  const current = SUBSCRIPTION_PLANS[currentPlan]?.priceValue || 0;
+  const requested = SUBSCRIPTION_PLANS[requestedPlan]?.priceValue || current;
+  return Math.max(requested - current, requested);
+};
+
+function StatusPill({ status }) {
+  const style = REQUEST_STATUS[status] || REQUEST_STATUS.PAYMENT_PENDING;
+  return (
+    <span
+      style={{
+        padding: "4px 8px",
+        borderRadius: 999,
+        background: style.bg,
+        color: style.color,
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: "uppercase",
+      }}
+    >
+      {style.label}
+    </span>
+  );
+}
+
+function StoreSubscriptionCard({ store, onMarkPaid, onApprove }) {
   const planDetails = SUBSCRIPTION_PLANS[store.plan] || SUBSCRIPTION_PLANS.BASIC;
+  const pendingRequest = store.upgradeRequest;
 
   return (
     <div
       style={{
         background: "white",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        padding: "20px",
+        border: pendingRequest ? "1px solid #f59e0b" : "1px solid #e5e7eb",
+        borderRadius: 10,
+        padding: 20,
         transition: "all 0.2s ease",
       }}
       onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)")}
       onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
     >
-      {/* Store Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-        <div style={{
-          width: "48px", height: "48px", borderRadius: "12px",
-          background: "#1a1d23", display: "flex",
-          alignItems: "center", justifyContent: "center",
-        }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 10,
+            background: "#1a1d23",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
           <Store size={20} color="white" />
         </div>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#1a1d23" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1a1d23" }}>
             {store.storeName}
           </h3>
-          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#6b7280" }}>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>
             Admin: {store.adminName || "N/A"}
           </p>
         </div>
+        {pendingRequest && <StatusPill status={pendingRequest.status} />}
       </div>
 
-      {/* Subscription Plan */}
-      <div style={{
-        background: "#f8fafc",
-        border: "2px solid #1a1d23",
-        borderRadius: "8px",
-        padding: "16px",
-        textAlign: "center",
-      }}>
-        <div style={{
-          fontSize: "12px", fontWeight: "600", color: "#1a1d23",
-          textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px",
-        }}>
-          Subscription Plan
-        </div>
-        <div style={{ fontSize: "24px", fontWeight: "700", color: "#1a1d23", marginBottom: "4px" }}>
-          {planDetails.name}
-        </div>
-        <div style={{ fontSize: "14px", color: "#6b7280" }}>
-          {planDetails.price}
-        </div>
-        {planDetails.features && (
-          <div style={{ marginTop: "12px", textAlign: "left" }}>
-            {planDetails.features.map((feature, idx) => (
-              <div key={idx} style={{ 
-                fontSize: "11px", 
-                color: "#6b7280", 
-                marginBottom: "4px",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px"
-              }}>
-                <span style={{ 
-                  width: "4px", 
-                  height: "4px", 
-                  borderRadius: "50%", 
-                  background: "#1a1d23" 
-                }} />
-                {feature}
-              </div>
-            ))}
+      <div
+        style={{
+          background: "#f8fafc",
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: 14,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#6b7280",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Current Plan
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#1a1d23", marginTop: 4 }}>
+              {planDetails.name}
+            </div>
           </div>
-        )}
+          <div style={{ textAlign: "right", fontSize: 13, color: "#6b7280", fontWeight: 600 }}>
+            {planDetails.price}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 12, display: "grid", gap: 5 }}>
+          {planDetails.features.map((feature) => (
+            <div key={feature} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, color: "#6b7280" }}>
+              <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#1a1d23" }} />
+              {feature}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Store Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "16px" }}>
-        <div style={{ textAlign: "center", padding: "8px", background: "#f8fafc", borderRadius: "6px" }}>
-          <p style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#1a1d23" }}>
-            {store.branches || 0}
-          </p>
-          <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#6b7280" }}>Branches</p>
+      {pendingRequest && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 12,
+            borderRadius: 8,
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 12, color: "#92400e", fontWeight: 700 }}>
+                Upgrade request
+              </p>
+              <p style={{ margin: "3px 0 0", fontSize: 12, color: "#6b7280" }}>
+                {SUBSCRIPTION_PLANS[pendingRequest.currentPlan]?.name || pendingRequest.currentPlan} to{" "}
+                {SUBSCRIPTION_PLANS[pendingRequest.requestedPlan]?.name || pendingRequest.requestedPlan}
+              </p>
+            </div>
+            <strong style={{ fontSize: 13, color: "#1a1d23" }}>
+              NPR {(pendingRequest.amount || getUpgradeAmount(pendingRequest.currentPlan, pendingRequest.requestedPlan)).toLocaleString("en-IN")}
+            </strong>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <button
+              onClick={() => onMarkPaid(pendingRequest)}
+              disabled={pendingRequest.status !== "PAYMENT_PENDING"}
+              style={{
+                padding: "8px 10px",
+                border: "1px solid #d1d5db",
+                borderRadius: 6,
+                background: pendingRequest.status === "PAYMENT_PENDING" ? "white" : "#f3f4f6",
+                color: pendingRequest.status === "PAYMENT_PENDING" ? "#1a1d23" : "#9ca3af",
+                cursor: pendingRequest.status === "PAYMENT_PENDING" ? "pointer" : "not-allowed",
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              Mark Paid
+            </button>
+            <button
+              onClick={() => onApprove(pendingRequest)}
+              disabled={pendingRequest.status !== "PAID"}
+              style={{
+                padding: "8px 10px",
+                border: "none",
+                borderRadius: 6,
+                background: pendingRequest.status === "PAID" ? "#1a1d23" : "#e5e7eb",
+                color: pendingRequest.status === "PAID" ? "white" : "#9ca3af",
+                cursor: pendingRequest.status === "PAID" ? "pointer" : "not-allowed",
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              Approve Upgrade
+            </button>
+          </div>
         </div>
-        <div style={{ textAlign: "center", padding: "8px", background: "#f8fafc", borderRadius: "6px" }}>
-          <p style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#1a1d23" }}>
-            {store.users || 0}
-          </p>
-          <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#6b7280" }}>Users</p>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
+        <div style={{ textAlign: "center", padding: 8, background: "#f8fafc", borderRadius: 6 }}>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1a1d23" }}>{store.branches || 0}</p>
+          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280" }}>Branches</p>
+        </div>
+        <div style={{ textAlign: "center", padding: 8, background: "#f8fafc", borderRadius: 6 }}>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1a1d23" }}>{store.users || 0}</p>
+          <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280" }}>Users</p>
         </div>
       </div>
+
+      {!pendingRequest && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "10px 12px",
+            borderRadius: 7,
+            background: "#f8fafc",
+            color: "#6b7280",
+            fontSize: 12,
+            fontWeight: 700,
+            textAlign: "center",
+          }}
+        >
+          No plan change request
+        </div>
+      )}
     </div>
   );
 }
@@ -130,52 +276,164 @@ export default function SubscriptionManagement() {
   const dispatch = useDispatch();
   const { stores, loading: storesLoading } = useSelector((s) => s.store);
   const [searchTerm, setSearchTerm] = useState("");
-  const [subscriptionData, setSubscriptionData] = useState([]);
+  const [upgradeRequests, setUpgradeRequests] = useState([]);
+  const [planOverrides, setPlanOverrides] = useState(() => readJson(STORAGE_KEYS.overrides, {}));
+
+  const loadUpgradeRequests = async () => {
+    const headers = getAuthHeaders();
+    try {
+      const res = await api.get("/api/admin/subscription-upgrade-requests", { headers });
+      const requests = Array.isArray(res.data) ? res.data.map(normalizeRequest) : [];
+      setUpgradeRequests(requests);
+      saveJson(STORAGE_KEYS.requests, requests);
+    } catch {
+      setUpgradeRequests(readJson(STORAGE_KEYS.requests, []).map(normalizeRequest));
+    }
+  };
 
   useEffect(() => {
     dispatch(getAllStores());
+    const timer = setTimeout(loadUpgradeRequests, 0);
+    return () => clearTimeout(timer);
   }, [dispatch]);
 
-  useEffect(() => {
+  const subscriptionData = useMemo(() => {
     if (stores && stores.length > 0) {
-      const transformed = stores.map((store) => {
-        const plan = resolveSubscriptionPlan(store);
+      return stores.map((store) => {
+        const id = String(store._id || store.id);
+        const plan = planOverrides[id] || resolveSubscriptionPlan(store);
 
         return {
-          id: store._id || store.id,
+          id,
           storeName: getStoreName(store) || "Unnamed Store",
           plan,
           branches: store.estimatedBranches ?? store.branches?.length ?? 1,
           users: store.estimatedUsers ?? store.employees?.length ?? 1,
           adminName: store.fullName || store.ownerName || "Store Admin",
+          email: store.email || store.contact?.email || "",
+          phone: store.phone || store.contact?.phone || "",
         };
       });
-      setSubscriptionData(transformed);
-    } else {
-      setSubscriptionData([]);
     }
-  }, [stores]);
+    return [];
+  }, [stores, planOverrides]);
 
-  const filtered = subscriptionData.filter((s) =>
-    s.storeName.toLowerCase().includes(searchTerm.toLowerCase())
+  const activeRequestsByStore = useMemo(() => {
+    return upgradeRequests.reduce((acc, request) => {
+      if (!["APPROVED", "REJECTED"].includes(request.status)) {
+        acc[String(request.storeId)] = request;
+      }
+      return acc;
+    }, {});
+  }, [upgradeRequests]);
+
+  const storesWithRequests = subscriptionData.map((store) => ({
+    ...store,
+    upgradeRequest: activeRequestsByStore[store.id],
+  }));
+
+  const filtered = storesWithRequests.filter((store) =>
+    store.storeName.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  return (
-    <div style={{ padding: "24px", fontFamily: "'DM Sans','Inter',sans-serif" }}>
+  const pendingCount = upgradeRequests.filter((request) => request.status === "PAYMENT_PENDING").length;
+  const paidCount = upgradeRequests.filter((request) => request.status === "PAID").length;
 
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
+  const replaceRequest = (updatedRequest) => {
+    setUpgradeRequests((current) => {
+      const normalized = normalizeRequest(updatedRequest);
+      const next = current.some((request) => request.id === normalized.id)
+        ? current.map((request) => (request.id === normalized.id ? normalized : request))
+        : [normalized, ...current];
+      saveJson(STORAGE_KEYS.requests, next);
+      return next;
+    });
+  };
+
+  const markPaid = async (request) => {
+    const transactionId = window.prompt("Enter payment reference", `SUB_UPG_${Date.now()}`);
+    if (!transactionId) return;
+
+    const updated = {
+      ...request,
+      status: "PAID",
+      paymentReference: transactionId,
+      paidAt: new Date().toISOString(),
+    };
+
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.post(
+        `/api/admin/subscription-upgrade-requests/${request.id}/mark-paid`,
+        { reference: transactionId },
+        { headers },
+      );
+      replaceRequest(res.data || updated);
+      toast.success("Payment marked as paid");
+    } catch {
+      replaceRequest(updated);
+      toast.success("Payment marked as paid locally");
+    }
+  };
+
+  const approveUpgrade = async (request) => {
+    if (!window.confirm(`Approve upgrade to ${SUBSCRIPTION_PLANS[request.requestedPlan]?.name || request.requestedPlan}?`)) {
+      return;
+    }
+
+    const updated = {
+      ...request,
+      status: "APPROVED",
+      approvedAt: new Date().toISOString(),
+    };
+
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.post(`/api/admin/subscription-upgrade-requests/${request.id}/approve`, {}, { headers });
+      replaceRequest(res.data || updated);
+      toast.success("Subscription upgraded");
+    } catch {
+      replaceRequest(updated);
+      toast.success("Subscription upgraded locally");
+    }
+
+    setPlanOverrides((current) => {
+      const next = { ...current, [String(request.storeId)]: request.requestedPlan };
+      saveJson(STORAGE_KEYS.overrides, next);
+      return next;
+    });
+  };
+
+  const refreshData = () => {
+    dispatch(getAllStores());
+    loadUpgradeRequests();
+    toast.success("Refreshed");
+  };
+
+  return (
+    <div style={{ padding: 24, fontFamily: "'DM Sans','Inter',sans-serif" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, gap: 16 }}>
         <div>
-          <h1 style={{ margin: "0 0 8px", fontSize: "20px", fontWeight: "700", color: "#1a1d23" }}>
+          <h1 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>
             Subscription Plans
           </h1>
-          <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
-            View subscription plan for each store
+          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+            Review store-admin plan change requests and accept paid upgrades
           </p>
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ padding: "8px 10px", border: "1px solid #e5e7eb", borderRadius: 7, background: "white", fontSize: 12 }}>
+              <Clock size={12} style={{ verticalAlign: "middle", marginRight: 5 }} />
+              {pendingCount} payment pending
+            </div>
+            <div style={{ padding: "8px 10px", border: "1px solid #e5e7eb", borderRadius: 7, background: "white", fontSize: 12 }}>
+              <CheckCircle size={12} style={{ verticalAlign: "middle", marginRight: 5 }} />
+              {paidCount} ready
+            </div>
+          </div>
           <div style={{ position: "relative" }}>
-            <Search size={14} color="#6b7280" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+            <Search size={14} color="#6b7280" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
             <input
               type="text"
               placeholder="Search stores..."
@@ -184,19 +442,26 @@ export default function SubscriptionManagement() {
               style={{
                 padding: "8px 12px 8px 32px",
                 border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "12px",
+                borderRadius: 6,
+                fontSize: 12,
                 outline: "none",
-                width: "200px",
+                width: 200,
               }}
             />
           </div>
           <button
-            onClick={() => { dispatch(getAllStores()); toast.success("Refreshed"); }}
+            onClick={refreshData}
             style={{
-              padding: "8px 12px", background: "white", border: "1px solid #e5e7eb",
-              borderRadius: "6px", cursor: "pointer", display: "flex",
-              alignItems: "center", gap: "4px", fontSize: "12px", color: "#6b7280",
+              padding: "8px 12px",
+              background: "white",
+              border: "1px solid #e5e7eb",
+              borderRadius: 6,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 12,
+              color: "#6b7280",
             }}
           >
             <RefreshCw size={12} />
@@ -205,28 +470,53 @@ export default function SubscriptionManagement() {
         </div>
       </div>
 
-      {/* Grid */}
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "flex-start",
+          padding: 12,
+          borderRadius: 8,
+          background: "#f8fafc",
+          border: "1px solid #e5e7eb",
+          marginBottom: 18,
+          color: "#4b5563",
+          fontSize: 12,
+        }}
+      >
+        <AlertTriangle size={15} color="#92400e" style={{ marginTop: 1, flexShrink: 0 }} />
+        Store admins request plan changes from their subscription page. POS admin only accepts the plan after payment has been submitted or verified.
+      </div>
+
       {storesLoading ? (
-        <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
-          Loading...
-        </div>
+        <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>Loading...</div>
       ) : filtered.length === 0 ? (
-        <div style={{
-          background: "white", border: "1px solid #e5e7eb",
-          borderRadius: "10px", padding: "40px", textAlign: "center",
-        }}>
+        <div
+          style={{
+            background: "white",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            padding: 40,
+            textAlign: "center",
+          }}
+        >
           <Store size={48} color="#e5e7eb" style={{ margin: "0 auto 16px", display: "block" }} />
-          <h3 style={{ margin: "0 0 8px", fontSize: "16px", fontWeight: "600", color: "#1a1d23" }}>
+          <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 600, color: "#1a1d23" }}>
             No Stores Found
           </h3>
-          <p style={{ margin: 0, fontSize: "14px", color: "#6b7280" }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#6b7280" }}>
             No stores are currently registered in the system
           </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
           {filtered.map((store) => (
-            <StoreSubscriptionCard key={store.id} store={store} />
+            <StoreSubscriptionCard
+              key={store.id}
+              store={store}
+              onMarkPaid={markPaid}
+              onApprove={approveUpgrade}
+            />
           ))}
         </div>
       )}

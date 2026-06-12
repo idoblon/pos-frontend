@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import secureStorage from "@/util/secureStorage";
+import { getLowStockThreshold } from "@/util/adminSystemSettings";
 
 const s = {
   page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
@@ -24,9 +25,9 @@ const s = {
   select: { width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 10px", fontFamily: "inherit", fontSize: 13, background: "#f5f5f5", outline: "none" },
 };
 
-const getStockStyle = (qty) => {
+const getStockStyle = (qty, lowStockThreshold) => {
   if (qty <= 0) return { background: "#fef2f2", color: "#e53e3e" };
-  if (qty <= 10) return { background: "#fffbeb", color: "#d97706" };
+  if (qty <= lowStockThreshold) return { background: "#fffbeb", color: "#d97706" };
   return { background: "#f0fdf4", color: "#059669" };
 };
 
@@ -49,6 +50,7 @@ export default function InventoryManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ branchId: "", productId: "", quantity: "" });
+  const lowStockThreshold = getLowStockThreshold();
 
   useEffect(() => {
     if (storeId) {
@@ -69,7 +71,7 @@ export default function InventoryManagement() {
   // Handle both array and paginated response for products
   const productList = Array.isArray(products) ? products : (products?.content || []);
 
-  const lowStockCount = filtered?.filter(item => item.quantity > 0 && item.quantity <= 10).length || 0;
+  const lowStockCount = filtered?.filter(item => item.quantity > 0 && item.quantity <= lowStockThreshold).length || 0;
   const outOfStockCount = filtered?.filter(item => item.quantity === 0).length || 0;
 
   const openAdd = () => {
@@ -242,7 +244,7 @@ export default function InventoryManagement() {
                       {branches?.find(b => (b._id || b.id) === item.branchId)?.name || "—"}
                     </td>
                     <td style={s.td}>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, ...getStockStyle(item.quantity) }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, ...getStockStyle(item.quantity, lowStockThreshold) }}>
                         {item.quantity} units
                       </span>
                     </td>

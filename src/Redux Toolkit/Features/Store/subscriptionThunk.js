@@ -70,9 +70,9 @@ export const getStoresWithSubscriptions = createAsyncThunk(
             monthlyRevenue: Math.floor(Math.random() * 150000) + 20000,
             totalRevenue: Math.floor(Math.random() * 500000) + 100000,
             planDetails: {
-              BASIC: { name: "Basic", price: 2999, maxBranches: 3, maxUsers: 10 },
-              PROFESSIONAL: { name: "Professional", price: 5999, maxBranches: 10, maxUsers: 50 },
-              ENTERPRISE: { name: "Enterprise", price: 12999, maxBranches: -1, maxUsers: -1 }
+              BASIC: { name: "Basic", price: 3500, maxBranches: 3, maxUsers: 10 },
+              PROFESSIONAL: { name: "Professional", price: 7000, maxBranches: 10, maxUsers: 50 },
+              ENTERPRISE: { name: "Enterprise", price: 10000, maxBranches: -1, maxUsers: -1 }
             }[plan]
           }
         };

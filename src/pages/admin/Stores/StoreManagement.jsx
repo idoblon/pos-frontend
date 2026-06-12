@@ -20,7 +20,16 @@ function getStatusColor(status) {
   if (s === "active") return { bg: "#dcfce7", text: "#16a34a", dot: "#22c55e" };
   if (s === "inactive") return { bg: "#fef3c7", text: "#d97706", dot: "#f59e0b" };
   if (s === "suspended") return { bg: "#fee2e2", text: "#dc2626", dot: "#ef4444" };
+  if (s === "pending") return { bg: "#e0f2fe", text: "#0369a1", dot: "#0ea5e9" };
+  if (s === "payment_pending") return { bg: "#fef3c7", text: "#92400e", dot: "#f59e0b" };
   return { bg: "#f1f5f9", text: "#64748b", dot: "#94a3b8" };
+}
+
+function formatStatus(status) {
+  return (status || "active")
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function formatCurrency(amount) {
@@ -30,6 +39,97 @@ function formatCurrency(amount) {
 function formatDate(dt) {
   if (!dt) return "—";
   return new Date(dt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function toNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function getCollection(value) {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+
+  const nested = [
+    value.data,
+    value.items,
+    value.results,
+    value.content,
+    value.branches,
+    value.employees,
+  ].find(Array.isArray);
+
+  return nested || [];
+}
+
+function getCollectionCount(value) {
+  if (Array.isArray(value)) return value.length;
+  if (typeof value === "number") return value;
+  if (!value || typeof value !== "object") return 0;
+
+  const nested = getCollection(value);
+  if (nested.length) return nested.length;
+
+  return toNumber(value.count ?? value.total ?? value.totalElements ?? value.length);
+}
+
+function getBranchCount(store) {
+  return getCollectionCount(store.branches) ||
+    toNumber(store.branchCount ?? store.branchesCount ?? store.totalBranches ?? store._count?.branches ?? store.estimatedBranches);
+}
+
+function getEmployeeCount(store) {
+  return getCollectionCount(store.employees) ||
+    toNumber(store.employeeCount ?? store.employeesCount ?? store.totalEmployees ?? store.userCount ?? store.usersCount ?? store._count?.employees ?? store.estimatedUsers);
+}
+
+function getStoreRevenue(store) {
+  return toNumber(
+    store.totalRevenue ??
+    store.monthlyRevenue ??
+    store.revenue ??
+    store.totalSales ??
+    store.salesAmount
+  );
+}
+
+function getOrderAmount(order) {
+  return toNumber(
+    order.totalAmount ??
+    order.total ??
+    order.amount ??
+    order.grandTotal ??
+    order.netAmount
+  );
+}
+
+function getStoreAddress(store) {
+  const directAddress =
+    store.storeAddress ??
+    store.contact?.address ??
+    store.address ??
+    store.location?.address ??
+    store.streetAddress ??
+    store.addressLine1 ??
+    store.addressLine;
+
+  if (directAddress) return directAddress;
+
+  return [
+    store.city,
+    store.district,
+    store.state,
+    store.province,
+    store.country,
+  ].filter(Boolean).join(", ");
+}
+
+function getStoreId(store) {
+  return store?._id || store?.id || store?.createdStoreId;
+}
+
+function getMetricKey(store) {
+  return String(getStoreId(store) || store?.registrationRequestId || store?.storeName || store?.brand || store?.name || "");
 }
 
 // ─── Store Card ──────────────────────────────────────────────────────────────
@@ -89,7 +189,7 @@ function StoreCard({ store, onEdit, onView, onDelete }) {
                 fontSize: "11px", fontWeight: "600"
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: colors.dot, display: "inline-block" }} />
-                {(store.status || "active").charAt(0).toUpperCase() + (store.status || "active").slice(1)}
+                {formatStatus(store.status)}
               </span>
             </div>
           </div>
@@ -212,14 +312,14 @@ function ViewDetailsModal({ store, onClose }) {
     // Fetch branches for this store
     setLoadingBranches(true);
     api.get(`/api/branches/store/${store.id}`, { headers: getAuthHeaders() })
-      .then(r => setBranches(Array.isArray(r.data) ? r.data : []))
+      .then(r => setBranches(getCollection(r.data)))
       .catch(() => setBranches([]))
       .finally(() => setLoadingBranches(false));
 
     // Fetch employees for this store
     setLoadingEmployees(true);
     api.get(`/api/employees/store/${store.id}`, { headers: getAuthHeaders() })
-      .then(r => setEmployees(Array.isArray(r.data) ? r.data : []))
+      .then(r => setEmployees(getCollection(r.data)))
       .catch(() => setEmployees([]))
       .finally(() => setLoadingEmployees(false));
   }, [store]);
@@ -264,7 +364,7 @@ function ViewDetailsModal({ store, onClose }) {
                     background: colors.bg, color: colors.text,
                     fontSize: "11px", fontWeight: "600"
                   }}>
-                    {(store.status || "active").toUpperCase()}
+                    {formatStatus(store.status).toUpperCase()}
                   </span>
                   {store.subscriptionPlan && (
                     <span style={{
@@ -378,7 +478,7 @@ function ViewDetailsModal({ store, onClose }) {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {branches.map(b => (
-                    <div key={b.id} style={{
+                    <div key={b.id || b._id} style={{
                       padding: "14px 16px", background: "#f8fafc",
                       borderRadius: "12px", border: "1px solid #e2e8f0",
                       display: "flex", alignItems: "center", gap: "12px"
@@ -420,7 +520,7 @@ function ViewDetailsModal({ store, onClose }) {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {employees.map(emp => (
-                    <div key={emp.id} style={{
+                    <div key={emp.id || emp._id} style={{
                       padding: "14px 16px", background: "#f8fafc",
                       borderRadius: "12px", border: "1px solid #e2e8f0",
                       display: "flex", alignItems: "center", gap: "12px"
@@ -737,22 +837,94 @@ export default function StoreManagement() {
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [storeMetrics, setStoreMetrics] = useState({});
 
   useEffect(() => { dispatch(getAllStores()); }, [dispatch]);
 
+  const metricStoreIds = (reduxStores || [])
+    .map(getStoreId)
+    .filter(Boolean)
+    .map(String)
+    .join("|");
+
+  useEffect(() => {
+    const rawStores = reduxStores || [];
+    const storesWithIds = rawStores.filter((store) => getStoreId(store) && !store.isRegistrationOnly);
+    if (!storesWithIds.length) {
+      setStoreMetrics({});
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadStoreMetrics() {
+      const headers = getAuthHeaders();
+      const entries = await Promise.all(
+        storesWithIds.map(async (store) => {
+          const storeId = getStoreId(store);
+          const key = getMetricKey(store);
+
+          const [branchResult, employeeResult] = await Promise.allSettled([
+            api.get(`/api/branches/store/${storeId}`, { headers }),
+            api.get(`/api/employees/store/${storeId}`, { headers }),
+          ]);
+
+          const branches = branchResult.status === "fulfilled" ? getCollection(branchResult.value.data) : [];
+          const employees = employeeResult.status === "fulfilled" ? getCollection(employeeResult.value.data) : [];
+          const orderResults = await Promise.allSettled(
+            branches
+              .map((branch) => branch._id || branch.id)
+              .filter(Boolean)
+              .map((branchId) => api.get(`/api/orders/branch/${branchId}`, { headers })),
+          );
+          const branchRevenue = branches.reduce(
+            (sum, branch) => sum + getStoreRevenue(branch),
+            0,
+          );
+          const orderRevenue = orderResults.reduce((sum, result) => {
+            if (result.status !== "fulfilled") return sum;
+            return sum + getCollection(result.value.data).reduce(
+              (orderSum, order) => orderSum + getOrderAmount(order),
+              0,
+            );
+          }, 0);
+
+          return [key, {
+            branchCount: branches.length,
+            employeeCount: employees.length,
+            totalRevenue: orderRevenue || branchRevenue,
+            firstBranchAddress: branches.find((branch) => branch.address)?.address || "",
+          }];
+        }),
+      );
+
+      if (!cancelled) {
+        setStoreMetrics(Object.fromEntries(entries));
+      }
+    }
+
+    loadStoreMetrics().catch((error) => {
+      console.warn("Could not load store branch/employee counts:", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [metricStoreIds, reduxStores]);
+
   // Normalize store data
   const stores = (reduxStores || []).map(s => ({
-    id: s._id || s.id,
+    id: getStoreId(s),
     name: s.brand || s.name || s.storeName || "Unnamed Store",
-    address: s.storeAddress || s.contact?.address || s.address || "",
+    address: getStoreAddress(s) || storeMetrics[getMetricKey(s)]?.firstBranchAddress || "",
     phone: s.contact?.phone || s.phone || "",
     email: s.contact?.email || s.email || "",
     status: (s.status || "active").toLowerCase(),
-    branchCount: s.branches?.length ?? s.branchCount ?? s.estimatedBranches ?? 0,
-    employeeCount: s.employees?.length ?? s.employeeCount ?? s.estimatedUsers ?? 0,
-    totalRevenue: s.totalRevenue || 0,
-    managerName: s.storeAdmin?.fullName || s.managerName || "",
-    managerEmail: s.storeAdmin?.email || s.managerEmail || "",
+    branchCount: storeMetrics[getMetricKey(s)]?.branchCount ?? getBranchCount(s),
+    employeeCount: storeMetrics[getMetricKey(s)]?.employeeCount ?? getEmployeeCount(s),
+    totalRevenue: storeMetrics[getMetricKey(s)]?.totalRevenue || getStoreRevenue(s),
+    managerName: s.storeAdmin?.fullName || s.managerName || s.ownerName || s.fullName || "",
+    managerEmail: s.storeAdmin?.email || s.managerEmail || s.email || "",
     subscriptionPlan: s.subscriptionPlan || "",
     description: s.description || "",
     type: s.storeType || s.type || "",
@@ -833,6 +1005,7 @@ export default function StoreManagement() {
           { label: "Active", value: stores.filter(s => s.status === "active").length, color: "#22c55e", icon: CheckCircle },
           { label: "Inactive", value: stores.filter(s => s.status === "inactive").length, color: "#f59e0b", icon: AlertCircle },
           { label: "Suspended", value: stores.filter(s => s.status === "suspended").length, color: "#ef4444", icon: AlertCircle },
+          { label: "Pending", value: stores.filter(s => s.status === "pending" || s.status === "payment_pending").length, color: "#0ea5e9", icon: Clock },
         ].map(({ label, value, color, icon: Icon }) => (
           <div key={label} style={{
             background: "white", border: "1px solid #e2e8f0", borderRadius: "14px",
@@ -885,6 +1058,8 @@ export default function StoreManagement() {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="suspended">Suspended</option>
+            <option value="pending">Pending</option>
+            <option value="payment_pending">Payment Pending</option>
           </select>
         </div>
         <span style={{

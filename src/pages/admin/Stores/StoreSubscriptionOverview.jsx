@@ -18,9 +18,9 @@ const SUBSCRIPTION_STATUS = {
 };
 
 const SUBSCRIPTION_PLANS = {
-  BASIC: { name: "Basic", price: 2999, color: "#059669" },
-  PROFESSIONAL: { name: "Professional", price: 5999, color: "#3b82f6" },
-  ENTERPRISE: { name: "Enterprise", price: 12999, color: "#7c3aed" }
+  BASIC: { name: "Basic", price: 3500, color: "#059669" },
+  PROFESSIONAL: { name: "Professional", price: 7000, color: "#3b82f6" },
+  ENTERPRISE: { name: "Enterprise", price: 10000, color: "#7c3aed" }
 };
 
 function StoreSubscriptionCard({ store, onViewDetails, onManageSubscription }) {

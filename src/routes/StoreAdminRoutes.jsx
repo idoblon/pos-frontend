@@ -8,6 +8,7 @@ import CategoryManagement from "@/pages/storeAdmin/Categories/CategoryManagement
 import StoreReports from "@/pages/storeAdmin/Reports/StoreReports";
 import InventoryManagement from "@/pages/storeAdmin/Inventory/InventoryManagement";
 import RestockManagement from "@/pages/storeAdmin/Restock/RestockManagement";
+import SubscriptionRequest from "@/pages/storeAdmin/Subscription/SubscriptionRequest";
 
 const StoreAdminRoutes = () => {
   return (
@@ -18,6 +19,7 @@ const StoreAdminRoutes = () => {
         <Route path="products"   element={<ProductManagement />} />
         <Route path="inventory"  element={<InventoryManagement />} />
         <Route path="restock-requests" element={<RestockManagement />} />
+        <Route path="subscription" element={<SubscriptionRequest />} />
         <Route path="employees"  element={<EmployeeManagement />} />
         <Route path="categories" element={<CategoryManagement />} />
         <Route path="reports"    element={<StoreReports />} />

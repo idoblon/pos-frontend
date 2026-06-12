@@ -1,36 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Calendar, CheckCircle, Eye, Store } from 'lucide-react';
 import paymentNotificationService from '@/services/paymentNotificationService';
+import {
+  getAdminSystemSettings,
+  secondsToMilliseconds,
+  subscribeAdminSystemSettings,
+} from '@/util/adminSystemSettings';
 
 export default function PaymentNotifications() {
   const [notifications, setNotifications] = useState([]);
   const [stats, setStats] = useState({ total: 0, totalRevenue: 0, unread: 0 });
   const [loading, setLoading] = useState(true);
+  const [adminSettings, setAdminSettings] = useState(getAdminSystemSettings);
+
+  useEffect(() => subscribeAdminSystemSettings(setAdminSettings), []);
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 10000);
+    const interval = setInterval(
+      loadNotifications,
+      secondsToMilliseconds(adminSettings.paymentPollingSeconds, 10, 5),
+    );
     return () => clearInterval(interval);
-  }, []);
+  }, [adminSettings.paymentPollingSeconds]);
 
   const loadNotifications = async () => {
     try {
       const raw = await paymentNotificationService.getPaymentNotifications();
       const all = Array.isArray(raw) ? raw : [];
+      const toAmount = (value) => {
+        const amount = Number(String(value ?? 0).replace(/[^\d.-]/g, ''));
+        return Number.isFinite(amount) ? amount : 0;
+      };
+      const planPrices = { BASIC: 3500, PROFESSIONAL: 7000, ENTERPRISE: 10000 };
       const normalized = all
-        .map((n) => ({
-          id: n?.id ?? n?.paymentId ?? n?._id,
-          storeName: n?.storeName ?? n?.store?.storeName ?? n?.store?.name,
-          ownerName: n?.ownerName ?? n?.storeOwnerName ?? n?.owner?.name,
-          email: n?.email,
-          subscriptionPlan: n?.subscriptionPlan ?? n?.plan ?? n?.subscription?.plan,
-          amount: n?.amount ?? n?.subscriptionAmount ?? n?.paymentDetails?.amount ?? 0,
-          paymentMethod: n?.paymentMethod ?? n?.method ?? n?.paymentDetails?.method,
-          transactionId: n?.transactionId ?? n?.paymentDetails?.transactionId,
-          paidAt: n?.paidAt ?? n?.processedAt ?? n?.createdAt,
-          isRead: Boolean(n?.isRead),
-          status: n?.status,
-        }))
+        .map((n) => {
+          const subscriptionPlan = n?.subscriptionPlan ?? n?.plan ?? n?.subscription?.plan;
+          const normalizedPlan = String(subscriptionPlan || '').toUpperCase();
+          const rawAmount = n?.amount ?? n?.paymentAmount ?? n?.subscriptionAmount ?? n?.paymentDetails?.amount ?? 0;
+          return {
+            id: n?.id ?? n?.paymentId ?? n?._id,
+            storeName: n?.storeName ?? n?.store?.storeName ?? n?.store?.name,
+            ownerName: n?.ownerName ?? n?.storeOwnerName ?? n?.owner?.name,
+            email: n?.email ?? n?.store?.email,
+            subscriptionPlan,
+            amount: planPrices[normalizedPlan] || toAmount(rawAmount),
+            paymentMethod: n?.paymentMethod ?? n?.method ?? n?.paymentDetails?.method,
+            transactionId: n?.transactionId ?? n?.paymentReference ?? n?.paymentDetails?.transactionId,
+            paidAt: n?.paidAt ?? n?.paymentCompletedAt ?? n?.processedAt ?? n?.approvedAt ?? n?.createdAt,
+            isRead: Boolean(n?.isRead),
+            status: n?.status,
+          };
+        })
         .filter((n) => n.id != null || n.transactionId != null)
         .sort((a, b) => new Date(b.paidAt || 0).getTime() - new Date(a.paidAt || 0).getTime());
 

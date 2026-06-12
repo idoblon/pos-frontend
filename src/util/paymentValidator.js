@@ -1,3 +1,5 @@
+import { isPaymentRequiredBeforeActivation } from "@/util/adminSystemSettings";
+
 /**
  * Payment Validator - Checks if store has completed subscription payment via backend
  */
@@ -41,6 +43,13 @@ export const checkStorePaymentStatus = async (storeId, email) => {
  * Validate store access based on payment status via backend
  */
 export const validateStoreAccess = async (userData) => {
+  if (!isPaymentRequiredBeforeActivation()) {
+    return {
+      allowed: true,
+      reason: 'Payment requirement disabled by POS admin settings'
+    };
+  }
+
   if (!userData.storeId && !userData.email) {
     return {
       allowed: false,
@@ -92,6 +101,10 @@ export const validateStoreAccess = async (userData) => {
 export const enforcePaymentRequirement = (userRole, storeData) => {
   // Admin users can always access
   if (userRole === 'ROLE_ADMIN') {
+    return { allowed: true };
+  }
+
+  if (!isPaymentRequiredBeforeActivation()) {
     return { allowed: true };
   }
 

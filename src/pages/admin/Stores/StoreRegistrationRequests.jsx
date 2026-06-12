@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Check, X, Clock, Mail, Phone, MapPin, Building2, Calendar, Eye } from "lucide-react";
 import { toast } from "sonner";
 import SubscriptionValidation from "@/components/admin/SubscriptionValidation";
-import ApprovalEmailPreview from "@/components/admin/ApprovalEmailPreview";
 import emailService from "@/services/emailService";
 import api from "@/util/api";
+import { isPaymentRequiredBeforeActivation } from "@/util/adminSystemSettings";
 
 export default function StoreRegistrationRequests() {
   const [requests, setRequests] = useState([]);
@@ -12,7 +12,6 @@ export default function StoreRegistrationRequests() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [filter, setFilter] = useState("ALL_PENDING");
   const [subscriptionValidations, setSubscriptionValidations] = useState({});
-  const [showEmailPreview, setShowEmailPreview] = useState(null);
 
   const handleSubscriptionValidation = (requestId, isValid) => {
     setSubscriptionValidations(prev => ({ ...prev, [requestId]: isValid }));
@@ -58,7 +57,7 @@ export default function StoreRegistrationRequests() {
     }
 
     try {
-      if (request.status === "PAYMENT_PENDING") {
+      if (request.status === "PAYMENT_PENDING" || !isPaymentRequiredBeforeActivation()) {
         await api.post(`/api/admin/registration-requests/${requestId}/approve-final`, {}, { timeout: 30000 });
         setRequests(prev => prev.filter(req => req.id !== requestId));
         toast.success(`Store approved! Login credentials sent to ${request.email}.`);
@@ -77,7 +76,7 @@ export default function StoreRegistrationRequests() {
     }
   };
 
-  const simulateApprovalProcess = (request) => {
+  const _simulateApprovalProcess = (request) => {
     // Simulate sending approval email with payment link
     console.log("📧 Approval Email Sent:");
     console.log("─────────────────────────────────────");
@@ -127,7 +126,7 @@ export default function StoreRegistrationRequests() {
       
       const request = requests.find(r => r.id === requestId);
       // Send rejection email through email service
-      const emailResult = await emailService.sendRejectionEmail(request, reason);
+      await emailService.sendRejectionEmail(request, reason);
       
       // Update the request status locally
       setRequests(prev => 
@@ -143,7 +142,7 @@ export default function StoreRegistrationRequests() {
     }
   };
 
-  const simulateRejectionProcess = (request, reason) => {
+  const _simulateRejectionProcess = (request, reason) => {
     // Simulate sending rejection email
     console.log("❌ Rejection Email Sent:");
     console.log("─────────────────────────────────────");

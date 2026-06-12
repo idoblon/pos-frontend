@@ -12,6 +12,7 @@ import {
   Bell,
   Warehouse,
   Truck,
+  CreditCard,
   ChevronDown,
   Clock,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
 import secureStorage from "@/util/secureStorage";
 import posLogo from "@/logo/pos.png";
 import ChangePasswordDialog from "@/pages/cashier/Settings/ChangePasswordDialog";
+import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
 
 const navItems = [
   { path: "/store-admin", label: "Dashboard", icon: LayoutDashboard },
@@ -30,6 +32,7 @@ const navItems = [
   { path: "/store-admin/products", label: "Products", icon: Package },
   { path: "/store-admin/inventory", label: "Inventory", icon: Warehouse },
   { path: "/store-admin/restock-requests", label: "Restock Requests", icon: Truck },
+  { path: "/store-admin/subscription", label: "Subscription", icon: CreditCard },
   { path: "/store-admin/employees", label: "Employees", icon: Users },
   { path: "/store-admin/categories", label: "Categories", icon: Tag },
   { path: "/store-admin/reports", label: "Reports", icon: BarChart2 },
@@ -119,13 +122,12 @@ export default function StoreAdminLayout() {
     dispatch(getStoreByAdmin());
   }, [dispatch, jwt, userProfile, storeId]);
 
-  // Auto-open change password on first login (temp password)
+  // Auto-open change password for employees logging in with the default password.
   useEffect(() => {
     const userData = secureStorage.getUserData();
     const userId = userData?.userId;
     if (!userId) return;
-    const key = `pwd_changed_${userId}`;
-    if (!sessionStorage.getItem(key)) {
+    if (isPasswordChangeRequired(userId)) {
       setShowChangePassword(true);
     }
   }, []);
@@ -528,9 +530,11 @@ export default function StoreAdminLayout() {
 
         <ChangePasswordDialog
           open={showChangePassword}
-          onClose={() => {
+          onSuccess={() => {
             const ud = secureStorage.getUserData();
-            if (ud?.userId) sessionStorage.setItem(`pwd_changed_${ud.userId}`, "1");
+            markPasswordChanged(ud?.userId);
+          }}
+          onClose={() => {
             setShowChangePassword(false);
           }}
         />

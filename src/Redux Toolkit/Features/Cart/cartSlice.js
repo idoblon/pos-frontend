@@ -1,4 +1,5 @@
 import { createSlice} from "@reduxjs/toolkit"
+import { getAdminTaxRate } from "@/util/adminSystemSettings";
 
 const initialState = {
   items: [],
@@ -108,7 +109,7 @@ export const selectSubtotal = (state) => {
 
 export const selectTax = (state) => {
   const subtotal = selectSubtotal(state);
-  return subtotal * 0.13; // 13% VAT
+  return subtotal * (getAdminTaxRate() / 100);
 };
 
 export const selectDiscountAmount = (state) => {

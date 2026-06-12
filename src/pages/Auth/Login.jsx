@@ -12,6 +12,7 @@ import { mapToBackendRole } from "@/util/roleMapper";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { enforcePaymentRequirement } from "@/util/paymentValidator";
+import { syncFirstLoginPasswordState } from "@/util/firstLoginPassword";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -67,6 +68,13 @@ const Login = () => {
     if (login.fulfilled.match(result)) {
       const profileResult = await dispatch(getUserProfile());
       const role = mapToBackendRole(result.payload?.role);
+      const userId = profileResult.payload?.id || result.payload?.userId;
+
+      syncFirstLoginPasswordState({
+        role,
+        userId,
+        password: formData.password,
+      });
       
       // Check payment requirement for store-related roles
       const paymentCheck = enforcePaymentRequirement(role, {

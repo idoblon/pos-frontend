@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import StoreManagement from "@/pages/admin/Stores/StoreManagement";
@@ -21,7 +21,8 @@ export default function AdminRoutes() {
         <Route path="users" element={<UserManagement />} />
         <Route path="reports" element={<SystemReports />} />
         <Route path="settings" element={<SystemSettings />} />
-        <Route path="payment-notifications" element={<PaymentNotifications />} />
+        <Route path="payments" element={<PaymentNotifications />} />
+        <Route path="payment-notifications" element={<Navigate to="/admin/payments" replace />} />
       </Routes>
     </AdminLayout>
   );

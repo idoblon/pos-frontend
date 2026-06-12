@@ -4,11 +4,16 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import {
   LayoutDashboard, Store, Users, BarChart3, Settings,
-  Menu, X, LogOut, ChevronDown, Bell, FileText, CreditCard, Clock
+  LogOut, ChevronDown, Bell, FileText, CreditCard, Clock
 } from "lucide-react";
 import posLogo from "@/logo/pos.png";
 import api from "@/util/api";
 import paymentNotificationService from "@/services/paymentNotificationService";
+import {
+  getAdminSystemSettings,
+  secondsToMilliseconds,
+  subscribeAdminSystemSettings,
+} from "@/util/adminSystemSettings";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin", exact: true },
@@ -17,21 +22,23 @@ const sidebarItems = [
   { icon: CreditCard, label: "Subscriptions", path: "/admin/subscriptions" },
   { icon: Users, label: "User Management", path: "/admin/users" },
   { icon: BarChart3, label: "System Reports", path: "/admin/reports" },
-  { icon: () => <span style={{ fontSize: 15, fontWeight: 700, color: "inherit" }}>रु</span>, label: "Payments", path: "/admin/payment-notifications", paymentBadge: true },
+  { icon: () => <span style={{ fontSize: 15, fontWeight: 700, color: "inherit" }}>रु</span>, label: "Payments", path: "/admin/payments", paymentBadge: true },
   { icon: Settings, label: "System Settings", path: "/admin/settings" },
 ];
 
 export default function AdminLayout({ children }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadPayments, setUnreadPayments] = useState(0);
+  const [adminSettings, setAdminSettings] = useState(getAdminSystemSettings);
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((s) => s.auth);
+
+  useEffect(() => subscribeAdminSystemSettings(setAdminSettings), []);
 
   // Fetch pending requests count
   useEffect(() => {
@@ -52,9 +59,12 @@ export default function AdminLayout({ children }) {
     };
 
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 30000);
+    const interval = setInterval(
+      fetchPendingCount,
+      secondsToMilliseconds(adminSettings.registrationRefreshSeconds, 30, 10),
+    );
     return () => clearInterval(interval);
-  }, []);
+  }, [adminSettings.registrationRefreshSeconds]);
 
   // Poll unread payment notifications (local only)
   useEffect(() => {
@@ -65,12 +75,15 @@ export default function AdminLayout({ children }) {
       setUnreadPayments(stats?.unreadCount || 0);
     };
     loadPaymentBadge();
-    const interval = setInterval(loadPaymentBadge, 10000);
+    const interval = setInterval(
+      loadPaymentBadge,
+      secondsToMilliseconds(adminSettings.paymentPollingSeconds, 10, 5),
+    );
     return () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [adminSettings.paymentPollingSeconds]);
 
   const handleLogout = () => {
     dispatch(logout());

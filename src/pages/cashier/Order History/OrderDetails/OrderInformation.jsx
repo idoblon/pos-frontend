@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { getAdminTaxRate } from "@/util/adminSystemSettings";
 import React from "react";
 
 const getStatusVariant = (status) => {
@@ -25,6 +26,7 @@ const OrderInformation = ({ selectedOrder }) => {
   const subtotal = (selectedOrder.totalAmount || 0) - (selectedOrder.taxAmount || 0);
   const discountAmount = selectedOrder.discount || 0;
   const discountType = selectedOrder.discountType || "percentage";
+  const taxRate = getAdminTaxRate();
   
   // Calculate discount display value
   let calculatedDiscount = 0;
@@ -62,7 +64,7 @@ const OrderInformation = ({ selectedOrder }) => {
             <span className="font-medium text-xs text-gray-900">रु {subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center py-1">
-            <span className="text-xs text-gray-600">Tax (13%)</span>
+            <span className="text-xs text-gray-600">Tax ({taxRate}%)</span>
             <span className="font-medium text-xs text-gray-900">रु {selectedOrder.taxAmount?.toFixed(2) || '0.00'}</span>
           </div>
           {calculatedDiscount > 0 && (

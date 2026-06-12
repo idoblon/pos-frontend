@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import secureStorage from "@/util/secureStorage";
+import { getLowStockThreshold } from "@/util/adminSystemSettings";
 
 const s = {
   page:        { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
@@ -35,6 +36,7 @@ export default function BranchInventory() {
   const [selected, setSelected] = useState(null);
   const [restockForm, setRestockForm] = useState({ quantity: 50, notes: "" });
   const [submitting, setSubmitting] = useState(false);
+  const lowStockThreshold = getLowStockThreshold();
 
   useEffect(() => {
     if (branchId && branchId !== "null") dispatch(getInventoryByBranch({ branchId }));
@@ -45,12 +47,12 @@ export default function BranchInventory() {
     (item.productSku ?? item.sku ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const lowStockCount  = filtered?.filter(item => item.quantity > 0 && item.quantity <= 10).length || 0;
+  const lowStockCount  = filtered?.filter(item => item.quantity > 0 && item.quantity <= lowStockThreshold).length || 0;
   const outOfStockCount = filtered?.filter(item => item.quantity === 0).length || 0;
 
   const getStockStyle = (qty) => {
     if (qty <= 0)  return { background: "#fef2f2", color: "#e53e3e" };
-    if (qty <= 10) return { background: "#fffbeb", color: "#d97706" };
+    if (qty <= lowStockThreshold) return { background: "#fffbeb", color: "#d97706" };
     return { background: "#f0f0f0", color: "#1a1d23" };
   };
 

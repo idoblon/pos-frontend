@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Check, Clock } from "lucide-react";
 import { toast } from "sonner";
 import posLogo from "@/logo/pos.png";
-import axios from "axios";
+import api from "@/util/api";
+import paymentNotificationService from "@/services/paymentNotificationService";
 
 const PLANS = {
   BASIC: 3500,
@@ -12,7 +13,6 @@ const PLANS = {
 
 export default function StorePaymentPage() {
   const [step, setStep] = useState("form");
-  const [txnId] = useState(`TXN${Date.now().toString().slice(-8)}`);
   const [formData, setFormData] = useState({
     email: "",
     storeName: "",
@@ -55,13 +55,30 @@ export default function StorePaymentPage() {
     setStep("processing");
     try {
       const txnRef = formData.paymentMethod === "esewa" ? esewaRef : khaltiToken;
-      await axios.post("http://localhost:8080/api/public/complete-payment", {
+      const amount = PLANS[formData.plan] || 0;
+      const response = await api.post("/api/public/complete-payment", {
         email: formData.email,
         storeName: formData.storeName,
         plan: formData.plan,
         paymentMethod: formData.paymentMethod.toUpperCase(),
         transactionId: txnRef,
       }, { timeout: 30000 });
+
+      paymentNotificationService.cachePaymentNotification({
+        id: response.data?.paymentId || response.data?.id || `payment_${Date.now()}`,
+        storeId: response.data?.storeId,
+        storeName: response.data?.storeName || formData.storeName,
+        ownerName: response.data?.ownerName || response.data?.storeOwnerName || "",
+        email: response.data?.email || formData.email,
+        subscriptionPlan: response.data?.subscriptionPlan || response.data?.plan || formData.plan,
+        amount: response.data?.amount || response.data?.paymentDetails?.amount || amount,
+        paymentMethod: response.data?.paymentMethod || formData.paymentMethod.toUpperCase(),
+        transactionId: response.data?.transactionId || response.data?.paymentDetails?.transactionId || txnRef,
+        status: response.data?.status || "COMPLETED",
+        paidAt: response.data?.paidAt || response.data?.createdAt || new Date().toISOString(),
+        isRead: false,
+      });
+
       setStep("success");
     } catch (err) {
       setStep("form");
@@ -122,7 +139,9 @@ export default function StorePaymentPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontSize: "13px", color: "#6b7280" }}>Transaction ID</span>
-              <span style={{ fontSize: "12px", fontWeight: "600", color: "#1a1d23", fontFamily: "monospace" }}>{txnId}</span>
+              <span style={{ fontSize: "12px", fontWeight: "600", color: "#1a1d23", fontFamily: "monospace" }}>
+                {formData.paymentMethod === "esewa" ? esewaRef : khaltiToken}
+              </span>
             </div>
           </div>
           <p style={{ fontSize: "12px", color: "#9ca3af" }}>Check your email for login credentials</p>

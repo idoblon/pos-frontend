@@ -8,8 +8,29 @@ const normalizePlan = (plan) => {
 const getStoreName = (store) =>
   store?.brand || store?.storeName || store?.name || "";
 
+const getId = (item) => item?.id ?? item?._id;
+
+const getRegistrationStoreId = (request) =>
+  request.createdStoreId ||
+  getId(request) ||
+  request.email ||
+  request.storeName;
+
+const getList = (value) => {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+  return [
+    value.data,
+    value.items,
+    value.results,
+    value.content,
+    value.stores,
+    value.requests,
+  ].find(Array.isArray) || [];
+};
+
 const findMatchingRegistration = (store, registrations) => {
-  const storeId = store?.id ?? store?._id;
+  const storeId = getId(store);
   const storeName = getStoreName(store).toLowerCase();
 
   const byStoreId = registrations.find(
@@ -35,15 +56,13 @@ const findMatchingRegistration = (store, registrations) => {
 };
 
 const mergeRegistrationDataWithStores = async (stores, headers) => {
-  if (!Array.isArray(stores) || stores.length === 0) {
-    return stores;
-  }
+  const storeList = getList(stores);
 
   try {
     const regRes = await api.get("/api/admin/registration-requests", { headers });
-    const registrations = Array.isArray(regRes.data) ? regRes.data : [];
+    const registrations = getList(regRes.data);
 
-    return stores.map((store) => {
+    const mergedStores = storeList.map((store) => {
       const matchingRequest = findMatchingRegistration(store, registrations);
       if (!matchingRequest) {
         return store;
@@ -67,9 +86,67 @@ const mergeRegistrationDataWithStores = async (stores, headers) => {
           store.registrationRequestId ?? matchingRequest.id,
       };
     });
+
+    const existingStoreIds = new Set(
+      mergedStores
+        .map((store) => getId(store))
+        .filter((id) => id != null)
+        .map(String),
+    );
+    const existingRequestIds = new Set(
+      mergedStores
+        .map((store) => store.registrationRequestId)
+        .filter((id) => id != null)
+        .map(String),
+    );
+    const existingNames = new Set(
+      mergedStores
+        .map((store) => getStoreName(store).trim().toLowerCase())
+        .filter(Boolean),
+    );
+
+    const registrationStores = registrations
+      .filter((request) => {
+        const status = String(request.status || "").toUpperCase();
+        if (status === "REJECTED") return false;
+
+        const requestId = getId(request);
+        const createdStoreId = request.createdStoreId;
+        const storeName = String(request.storeName || "").trim().toLowerCase();
+
+        return !(
+          (createdStoreId != null && existingStoreIds.has(String(createdStoreId))) ||
+          (requestId != null && existingRequestIds.has(String(requestId))) ||
+          (storeName && existingNames.has(storeName))
+        );
+      })
+      .map((request) => ({
+        id: request.createdStoreId || `registration-${getRegistrationStoreId(request)}`,
+        _id: request.createdStoreId || `registration-${getRegistrationStoreId(request)}`,
+        brand: request.storeName,
+        storeName: request.storeName,
+        storeType: request.storeType,
+        status: request.status || "PENDING",
+        subscriptionPlan: normalizePlan(request.subscriptionPlan),
+        estimatedBranches: request.estimatedBranches ?? 1,
+        estimatedUsers: request.estimatedUsers ?? 1,
+        fullName: request.ownerName,
+        ownerName: request.ownerName,
+        storeAddress: request.storeAddress,
+        email: request.email,
+        phone: request.phone,
+        description: request.storeDescription,
+        registrationRequestId: getId(request),
+        paymentStatus: request.paymentStatus,
+        createdAt: request.createdAt,
+        updatedAt: request.updatedAt,
+        isRegistrationOnly: !request.createdStoreId,
+      }));
+
+    return [...mergedStores, ...registrationStores];
   } catch (error) {
     console.warn("Could not merge registration data:", error);
-    return stores;
+    return storeList;
   }
 };
 
