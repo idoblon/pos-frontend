@@ -184,6 +184,13 @@ export default function BranchDashboard() {
             (o.paymentType ?? o.paymentMethod ?? "").toUpperCase() === "ESEWA",
         )
         .reduce((s, o) => s + (o.totalAmount ?? 0), 0) ?? 0,
+    khalti:
+      todayOrders
+        ?.filter(
+          (o) =>
+            (o.paymentType ?? o.paymentMethod ?? "").toUpperCase() === "KHALTI",
+        )
+        .reduce((s, o) => s + (o.totalAmount ?? 0), 0) ?? 0,
   };
 
   const trendData = useMemo(() => {
@@ -427,9 +434,16 @@ export default function BranchDashboard() {
               bg: "#eff6ff",
             },
             {
-              label: "Digital (eSewa)",
+              label: "eSewa",
               amount: paymentBreakdown.esewa,
               percentage: todayRevenue > 0 ? (paymentBreakdown.esewa / todayRevenue * 100).toFixed(1) : 0,
+              color: "#16a34a",
+              bg: "#f0fdf4",
+            },
+            {
+              label: "Khalti",
+              amount: paymentBreakdown.khalti,
+              percentage: todayRevenue > 0 ? (paymentBreakdown.khalti / todayRevenue * 100).toFixed(1) : 0,
               color: "#7c3aed",
               bg: "#f5f3ff",
             },
@@ -438,7 +452,7 @@ export default function BranchDashboard() {
               amount: estimatedProfit,
               percentage: "30%",
               color: "#059669",
-              bg: "#f0fdf4",
+              bg: "#ecfdf5",
             },
             {
               label: "Refunds",

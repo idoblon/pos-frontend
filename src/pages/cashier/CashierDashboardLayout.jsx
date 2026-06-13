@@ -89,6 +89,11 @@ const initials = fullName
   ? fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
   : "U";
 
+  const handlePasswordChangeSuccess = () => {
+    const userId = secureStorage.getUserData()?.userId;
+    markPasswordChanged(userId);
+  };
+
   const handleLogout = () => {
     dispatch(logout());
     navigate("/login");
@@ -303,9 +308,10 @@ const initials = fullName
       
       <ChangePasswordDialog 
         open={passwordDialogOpen} 
-        onSuccess={() => markPasswordChanged(secureStorage.getUserData()?.userId)}
+        onSuccess={handlePasswordChangeSuccess}
         onClose={() => setPasswordDialogOpen(false)} 
       />
     </div>
   );
 }
+

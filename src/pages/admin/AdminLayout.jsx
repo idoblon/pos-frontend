@@ -96,16 +96,21 @@ export default function AdminLayout({ children }) {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f5f5f5", overflow: "hidden" }}>
       {/* Sidebar */}
       <div style={{
+        position: "fixed",
+        top: 0,
+        bottom: 0,
+        left: 0,
         width: "240px",
         background: "white",
         borderRight: "1px solid #e5e7eb",
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
-        boxShadow: "2px 0 12px rgba(0,0,0,0.06)"
+        boxShadow: "2px 0 12px rgba(0,0,0,0.06)",
+        zIndex: 10
       }}>
         {/* Logo */}
         <div style={{
@@ -161,7 +166,7 @@ export default function AdminLayout({ children }) {
                   borderRadius: "8px",
                   textDecoration: "none",
                   fontSize: "13px",
-                  background: active ? "linear-gradient(135deg,#1a1d23,#4a4d55)" : "transparent",
+                  background: active ? "#1a1d23" : "transparent",
                   color: active ? "white" : "#4b5563",
                   fontWeight: active ? 600 : 500,
                   transition: "all 0.2s ease",
@@ -246,10 +251,12 @@ export default function AdminLayout({ children }) {
 
       {/* Main Content */}
       <div style={{
+        marginLeft: "240px",
         flex: 1,
         display: "flex",
         flexDirection: "column",
         minWidth: 0,
+        height: "100vh",
         overflow: "hidden"
       }}>
         {/* Header */}
@@ -287,7 +294,7 @@ export default function AdminLayout({ children }) {
                   width: 36,
                   height: 36,
                   border: "none",
-                  background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
+                  background: "#1a1d23",
                   borderRadius: 8,
                   display: "flex",
                   alignItems: "center",
@@ -404,35 +411,20 @@ export default function AdminLayout({ children }) {
               )}
             </div>
 
-            {/* User Profile Button */}
-            <div style={{ position: "relative" }}>
-            <button
-              onClick={() => setProfileDropdown(!profileDropdown)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "8px 12px",
-                background: "none",
-                border: "1px solid #e2e8f0",
-                borderRadius: "8px",
-                cursor: "pointer",
-                transition: "all 0.2s ease"
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = "#f8fafc";
-                e.target.style.borderColor = "#cbd5e0";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "none";
-                e.target.style.borderColor = "#e2e8f0";
-              }}
-            >
+            {/* User Profile */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "8px 12px",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px"
+            }}>
               <div style={{
                 width: "32px",
                 height: "32px",
                 borderRadius: "50%",
-                background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
+                background: "#1a1d23",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -459,46 +451,6 @@ export default function AdminLayout({ children }) {
                   Super Admin
                 </p>
               </div>
-              <ChevronDown size={16} color="#a0aec0" />
-            </button>
-
-            {profileDropdown && (
-              <div style={{
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                marginTop: "8px",
-                background: "white",
-                border: "1px solid #e2e8f0",
-                borderRadius: "8px",
-                boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-                minWidth: "200px",
-                zIndex: 50
-              }}>
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    background: "none",
-                    border: "none",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    fontSize: "14px",
-                    color: "#e53e3e",
-                    transition: "background 0.2s ease"
-                  }}
-                  onMouseEnter={(e) => e.target.style.background = "#fef2f2"}
-                  onMouseLeave={(e) => e.target.style.background = "none"}
-                >
-                  <LogOut size={16} />
-                  Sign Out
-                </button>
-              </div>
-            )}
             </div>
           </div>
         </header>
@@ -524,3 +476,4 @@ export default function AdminLayout({ children }) {
     </div>
   );
 }
+

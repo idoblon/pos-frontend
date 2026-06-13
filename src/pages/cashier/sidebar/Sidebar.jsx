@@ -69,7 +69,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             onClick={() => { if (onClose) onClose(); }}
             className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
               location.pathname === item.path
-                ? "bg-gradient-to-r from-gray-800 to-gray-600 text-white font-semibold shadow-md"
+                ? "bg-gray-900 text-white font-semibold"
                 : "text-slate-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
             key={item.path}

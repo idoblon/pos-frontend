@@ -47,7 +47,7 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
           {/* Customer Info */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+              <div className="w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                 {customer.fullName?.[0]?.toUpperCase() || '?'}
               </div>
               <div>
@@ -76,19 +76,19 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg text-center">
-              <ShoppingBag className="mx-auto mb-2 text-blue-600" size={24} />
-              <p className="text-2xl font-bold">{orders.length}</p>
+            <div className="bg-white border border-gray-200 p-4 rounded-lg text-center">
+              <ShoppingBag className="mx-auto mb-2 text-gray-800" size={24} />
+              <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
               <p className="text-sm text-gray-600">Total Orders</p>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <div className="bg-gray-900 p-4 rounded-lg text-center">
               <span className="text-3xl mb-2 block">💰</span>
-              <p className="text-2xl font-bold">रु{totalSpent.toFixed(2)}</p>
-              <p className="text-sm text-gray-600">Total Spent</p>
+              <p className="text-2xl font-bold text-white">रु{totalSpent.toFixed(2)}</p>
+              <p className="text-sm text-gray-300">Total Spent</p>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg text-center">
-              <Calendar className="mx-auto mb-2 text-purple-600" size={24} />
-              <p className="text-2xl font-bold">
+            <div className="bg-white border border-gray-200 p-4 rounded-lg text-center">
+              <Calendar className="mx-auto mb-2 text-gray-800" size={24} />
+              <p className="text-2xl font-bold text-gray-900">
                 रु{orders.length > 0 ? (totalSpent / orders.length).toFixed(2) : '0.00'}
               </p>
               <p className="text-sm text-gray-600">Avg Order</p>

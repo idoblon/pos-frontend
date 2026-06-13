@@ -66,7 +66,7 @@ function NavLinks({ onClose, pendingCount }) {
           fontSize: 13,
           background:
             location.pathname === path
-              ? "linear-gradient(135deg,#1a1d23,#4a4d55)"
+              ? "#1a1d23"
               : "transparent",
           color: location.pathname === path ? "white" : "#4b5563",
           fontWeight: location.pathname === path ? 600 : 500,
@@ -162,6 +162,11 @@ export default function StoreAdminLayout() {
     localStorage.setItem('readStoreNotifications', JSON.stringify(allPendingIds));
     setRefreshKey(prev => prev + 1); // Force re-render
     setNotificationOpen(false);
+  };
+
+  const handlePasswordChangeSuccess = () => {
+    const ud = secureStorage.getUserData();
+    markPasswordChanged(ud?.userId);
   };
 
   const handleLogout = () => {
@@ -371,7 +376,7 @@ export default function StoreAdminLayout() {
                   width: 36,
                   height: 36,
                   border: "none",
-                  background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
+                  background: "#1a1d23",
                   borderRadius: 8,
                   display: "flex",
                   alignItems: "center",
@@ -513,7 +518,7 @@ export default function StoreAdminLayout() {
               onClick={() => setShowChangePassword(true)}
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px", cursor: "pointer" }}
             >
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#1a1d23,#4a4d55)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1a1d23", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                 {initials}
               </div>
               <div style={{ textAlign: "left" }}>
@@ -530,13 +535,10 @@ export default function StoreAdminLayout() {
 
         <ChangePasswordDialog
           open={showChangePassword}
-          onSuccess={() => {
-            const ud = secureStorage.getUserData();
-            markPasswordChanged(ud?.userId);
-          }}
-          onClose={() => {
-            setShowChangePassword(false);
-          }}
+          onSuccess={handlePasswordChangeSuccess}
+          onClose={() => setShowChangePassword(false)}
+          isFirstTimeChange={true}
+          onSignOut={handleLogout}
         />
       </div>
 

@@ -152,16 +152,31 @@ const mergeRegistrationDataWithStores = async (stores, headers) => {
 
 export const resolveSubscriptionPlan = (store) => {
   const directPlan = normalizePlan(store?.subscriptionPlan);
+  console.log("[PLAN RESOLVER] Store:", store?.brand || store?._id, 
+    "| subscriptionPlan field:", store?.subscriptionPlan, 
+    "| normalized:", directPlan,
+    "| branches:", store?.estimatedBranches ?? store?.branches?.length,
+    "| users:", store?.estimatedUsers ?? store?.employees?.length);
+  
   if (directPlan) {
+    console.log("[PLAN RESOLVER] Using direct plan:", directPlan);
     return directPlan;
   }
 
   const branches = store?.estimatedBranches ?? store?.branches?.length ?? 1;
   const users = store?.estimatedUsers ?? store?.employees?.length ?? 1;
 
-  if (branches > 10 || users > 50) return "ENTERPRISE";
-  if (branches > 3 || users > 15) return "PROFESSIONAL";
-  return "BASIC";
+  let resolvedPlan;
+  if (branches > 10 || users > 50) {
+    resolvedPlan = "ENTERPRISE";
+  } else if (branches > 3 || users > 15) {
+    resolvedPlan = "PROFESSIONAL";
+  } else {
+    resolvedPlan = "BASIC";
+  }
+  
+  console.log("[PLAN RESOLVER] Using heuristic, resolved to:", resolvedPlan);
+  return resolvedPlan;
 };
 
 export { mergeRegistrationDataWithStores, normalizePlan, getStoreName };

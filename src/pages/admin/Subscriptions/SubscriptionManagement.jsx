@@ -25,21 +25,21 @@ const SUBSCRIPTION_PLANS = {
     price: "NPR 3,500/year",
     priceValue: 3500,
     color: "#1a1d23",
-    features: ["1 Store", "3 Branches", "10 Users", "Basic Support"],
+    features: ["1 Store", "3 Branches", "10 Users", "5GB Storage", "Email Support"],
   },
   PROFESSIONAL: {
     name: "Professional",
     price: "NPR 7,000/year",
     priceValue: 7000,
     color: "#1a1d23",
-    features: ["1 Store", "10 Branches", "50 Users", "Priority Support", "Advanced Reports"],
+    features: ["1 Store", "10 Branches", "50 Users", "25GB Storage", "Priority Support", "API Access"],
   },
   ENTERPRISE: {
     name: "Enterprise",
     price: "NPR 10,000/year",
     priceValue: 10000,
     color: "#1a1d23",
-    features: ["Unlimited Stores", "Unlimited Branches", "Unlimited Users", "24/7 Support", "Custom Features"],
+    features: ["Unlimited Stores", "25 Branches", "200 Users", "100GB Storage", "24/7 Dedicated Support", "Custom Integrations"],
   },
 };
 
@@ -268,6 +268,42 @@ function StoreSubscriptionCard({ store, onMarkPaid, onApprove }) {
           No plan change request
         </div>
       )}
+      
+      {/* Debug: Manual subscription update button */}
+      {process.env.NODE_ENV === 'development' && (
+        <button
+          onClick={async () => {
+            try {
+              const headers = getAuthHeaders();
+              console.log('[DEBUG] Manually updating store subscription to ENTERPRISE');
+              const res = await api.put(`/api/admin/stores/${store.id}/subscription`, 
+                { subscriptionPlan: 'ENTERPRISE' },
+                { headers }
+              );
+              console.log('[DEBUG] Update response:', res.data);
+              toast.success('Manually updated to Enterprise');
+              onApprove({ id: 'manual', storeId: store.id, requestedPlan: 'ENTERPRISE', status: 'APPROVED' });
+            } catch (error) {
+              console.error('[DEBUG] Manual update failed:', error.response?.data || error.message);
+              toast.error('Manual update failed: ' + (error.response?.data?.message || error.message));
+            }
+          }}
+          style={{
+            width: '100%',
+            marginTop: 14,
+            padding: 8,
+            border: '1px solid #f59e0b',
+            borderRadius: 6,
+            background: '#fffbeb',
+            color: '#92400e',
+            cursor: 'pointer',
+            fontSize: 11,
+            fontWeight: 700,
+          }}
+        >
+          🔧 DEBUG: Force Update to Enterprise
+        </button>
+      )}
     </div>
   );
 }
@@ -389,19 +425,51 @@ export default function SubscriptionManagement() {
 
     try {
       const headers = getAuthHeaders();
+      console.log("[UPGRADE] Starting approval for store:", request.storeId, "to plan:", request.requestedPlan);
+      
+      // Approve the request
+      console.log("[UPGRADE] Step 1: Approving request...");
       const res = await api.post(`/api/admin/subscription-upgrade-requests/${request.id}/approve`, {}, { headers });
+      console.log("[UPGRADE] Step 1: Request approved", res.data);
+      
+      // Update the store's subscription plan
+      console.log("[UPGRADE] Step 2: Updating store subscription plan in database...");
+      const storeUpdateRes = await api.put(`/api/admin/stores/${request.storeId}/subscription`, 
+        { subscriptionPlan: request.requestedPlan },
+        { headers }
+      );
+      console.log("[UPGRADE] Step 2: Store subscription updated", storeUpdateRes.data);
+      
       replaceRequest(res.data || updated);
-      toast.success("Subscription upgraded");
-    } catch {
+      toast.success("Subscription upgraded successfully");
+      
+      // Update local override
+      console.log("[UPGRADE] Step 3: Updating localStorage override...");
+      setPlanOverrides((current) => {
+        const next = { ...current, [String(request.storeId)]: request.requestedPlan };
+        saveJson(STORAGE_KEYS.overrides, next);
+        console.log("[UPGRADE] localStorage updated:", next);
+        return next;
+      });
+      
+      // Refresh stores to show updated plan
+      console.log("[UPGRADE] Step 4: Refreshing stores list...");
+      await dispatch(getAllStores());
+      console.log("[UPGRADE] All steps completed successfully!");
+    } catch (error) {
+      console.error("[UPGRADE] Failed to approve upgrade:", error);
+      console.error("[UPGRADE] Error details:", error.response?.data || error.message);
       replaceRequest(updated);
-      toast.success("Subscription upgraded locally");
+      
+      // Still update local override as fallback
+      setPlanOverrides((current) => {
+        const next = { ...current, [String(request.storeId)]: request.requestedPlan };
+        saveJson(STORAGE_KEYS.overrides, next);
+        return next;
+      });
+      
+      toast.error("Failed to update subscription plan: " + (error.response?.data?.message || error.message));
     }
-
-    setPlanOverrides((current) => {
-      const next = { ...current, [String(request.storeId)]: request.requestedPlan };
-      saveJson(STORAGE_KEYS.overrides, next);
-      return next;
-    });
   };
 
   const refreshData = () => {

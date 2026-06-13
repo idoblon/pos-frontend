@@ -77,7 +77,7 @@
 }
 
 .sidebar-nav-item.active {
-  background: linear-gradient(135deg, #1a1d23, #4a4d55);
+  background: #1a1d23;
   color: white;
   font-weight: 600;
 }
@@ -107,7 +107,7 @@
 .menu-btn {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #1a1d23, #4a4d55);
+  background: #1a1d23;
   border: none;
   border-radius: 8px;
   display: flex;
@@ -141,7 +141,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1a1d23, #4a4d55);
+  background: #1a1d23;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -512,7 +512,7 @@
 }
 
 .disc-tab.active {
-  background: linear-gradient(135deg, #1a1d23, #4a4d55);
+  background: #1a1d23;
   color: white;
 }
 
@@ -559,7 +559,7 @@
 }
 
 .pay-btn {
-  background: linear-gradient(135deg, #1a1d23, #4a4d55);
+  background: #1a1d23;
   color: white;
   border: none;
   border-radius: 9px;

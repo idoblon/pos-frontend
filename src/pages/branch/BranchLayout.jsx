@@ -58,7 +58,7 @@ function NavLinks({ onClose, notificationCount }) {
           textDecoration: "none",
           fontSize: 13,
           background: active
-            ? "linear-gradient(135deg,#1a1d23,#4a4d55)"
+            ? "#1a1d23"
             : "transparent",
           color: active ? "white" : "#4b5563",
           fontWeight: active ? 600 : 500,
@@ -118,6 +118,11 @@ export default function BranchLayout() {
       setShowChangePassword(true);
     }
   }, []);
+
+  const handlePasswordChangeSuccess = () => {
+    const userId = secureStorage.getUserData()?.userId;
+    markPasswordChanged(userId);
+  };
 
   // Auto-refresh restock requests every 30 seconds
   useEffect(() => {
@@ -385,7 +390,7 @@ export default function BranchLayout() {
                   width: 36,
                   height: 36,
                   border: "none",
-                  background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
+                  background: "#1a1d23",
                   borderRadius: 8,
                   display: "flex",
                   alignItems: "center",
@@ -568,7 +573,7 @@ export default function BranchLayout() {
                   width: 32,
                   height: 32,
                   borderRadius: "50%",
-                  background: "linear-gradient(135deg,#1a1d23,#4a4d55)",
+                  background: "#1a1d23",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -613,8 +618,10 @@ export default function BranchLayout() {
 
         <ChangePasswordDialog
           open={showChangePassword}
-          onSuccess={() => markPasswordChanged(secureStorage.getUserData()?.userId)}
+          onSuccess={handlePasswordChangeSuccess}
           onClose={() => setShowChangePassword(false)}
+          isFirstTimeChange={true}
+          onSignOut={handleLogout}
         />
       </div>
 
@@ -629,3 +636,4 @@ export default function BranchLayout() {
     </div>
   );
 }
+

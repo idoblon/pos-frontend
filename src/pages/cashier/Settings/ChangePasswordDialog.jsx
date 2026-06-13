@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import api from "@/util/api";
 import { toast } from "sonner";
 
-const ChangePasswordDialog = ({ open, onClose, onSuccess }) => {
+const ChangePasswordDialog = ({ open, onClose, onSuccess, isFirstTimeChange = false, onSignOut }) => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -48,7 +48,14 @@ const ChangePasswordDialog = ({ open, onClose, onSuccess }) => {
       
       toast.success("Password updated successfully!");
       onSuccess?.();
-      handleClose();
+      
+      if (isFirstTimeChange && onSignOut) {
+        setTimeout(() => {
+          onSignOut();
+        }, 1000);
+      } else {
+        handleClose();
+      }
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.response?.data || "Failed to update password";
       setError(errorMsg);

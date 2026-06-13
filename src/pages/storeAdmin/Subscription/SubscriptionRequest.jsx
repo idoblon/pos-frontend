@@ -15,17 +15,17 @@ const SUBSCRIPTION_PLANS = {
   BASIC: {
     name: "Basic",
     price: 3500,
-    features: ["3 branches", "10 users", "Basic support"],
+    features: ["3 branches", "10 users", "5GB storage", "Email support"],
   },
   PROFESSIONAL: {
     name: "Professional",
     price: 7000,
-    features: ["10 branches", "50 users", "Priority support", "Advanced reports"],
+    features: ["10 branches", "50 users", "25GB storage", "Priority support", "API access"],
   },
   ENTERPRISE: {
     name: "Enterprise",
     price: 10000,
-    features: ["Unlimited branches", "Unlimited users", "24/7 support", "Custom features"],
+    features: ["25 branches", "200 users", "100GB storage", "24/7 dedicated support", "Custom integrations"],
   },
 };
 
@@ -43,17 +43,26 @@ const saveRequests = (requests) => {
 
 const normalizeRequest = (request) => ({
   ...request,
-  id: request.id || request._id || request.requestId || `UPG_${Date.now()}`,
+  id: request.id || request._id || request.requestId || `CHG_${Date.now()}`,
   storeId: String(request.storeId ?? request.store?.id ?? request.store?._id ?? ""),
   currentPlan: String(request.currentPlan || request.fromPlan || "BASIC").toUpperCase(),
   requestedPlan: String(request.requestedPlan || request.toPlan || request.subscriptionPlan || "BASIC").toUpperCase(),
   status: String(request.status || "PAID").toUpperCase(),
 });
 
-const getUpgradeAmount = (currentPlan, requestedPlan) => {
+const getPlanChangeAmount = (currentPlan, requestedPlan) => {
   const current = SUBSCRIPTION_PLANS[currentPlan]?.price || 0;
   const requested = SUBSCRIPTION_PLANS[requestedPlan]?.price || current;
-  return Math.max(requested - current, requested);
+  return Math.abs(requested - current);
+};
+
+const getPlanChangeType = (currentPlan, requestedPlan) => {
+  const currentIndex = PLAN_ORDER.indexOf(currentPlan);
+  const requestedIndex = PLAN_ORDER.indexOf(requestedPlan);
+  
+  if (requestedIndex > currentIndex) return "UPGRADE";
+  if (requestedIndex < currentIndex) return "DOWNGRADE";
+  return "SAME";
 };
 
 const statusStyle = {
@@ -111,6 +120,7 @@ export default function SubscriptionRequest() {
   const [paymentReference, setPaymentReference] = useState("");
   const [requests, setRequests] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   useEffect(() => {
     dispatch(getStoreByAdmin());
@@ -118,7 +128,7 @@ export default function SubscriptionRequest() {
   }, [dispatch]);
 
   const availablePlans = useMemo(
-    () => PLAN_ORDER.filter((plan) => PLAN_ORDER.indexOf(plan) > PLAN_ORDER.indexOf(currentPlan)),
+    () => PLAN_ORDER.filter((plan) => plan !== currentPlan),
     [currentPlan],
   );
 
@@ -131,7 +141,8 @@ export default function SubscriptionRequest() {
   );
 
   const latestRequest = activeRequest || requests.find((request) => request.storeId === storeId);
-  const amount = requestedPlan ? getUpgradeAmount(currentPlan, requestedPlan) : 0;
+  const changeType = requestedPlan ? getPlanChangeType(currentPlan, requestedPlan) : "SAME";
+  const amount = requestedPlan ? getPlanChangeAmount(currentPlan, requestedPlan) : 0;
   const storeName = getStoreName(store) || userData?.storeName || "Your Store";
 
   const upsertRequest = (request) => {
@@ -149,7 +160,12 @@ export default function SubscriptionRequest() {
     event.preventDefault();
 
     if (!requestedPlan) {
-      toast.error("This store is already on the highest plan");
+      toast.error("Please select a plan");
+      return;
+    }
+
+    if (requestedPlan === currentPlan) {
+      toast.error("You are already on this plan");
       return;
     }
 
@@ -167,6 +183,7 @@ export default function SubscriptionRequest() {
       phone: store?.phone || store?.contact?.phone || "",
       currentPlan,
       requestedPlan,
+      changeType: getPlanChangeType(currentPlan, requestedPlan),
       amount,
       paymentMethod,
       paymentReference: paymentReference.trim(),
@@ -179,23 +196,32 @@ export default function SubscriptionRequest() {
       const res = await api.post("/api/subscription-upgrade-requests", payload, { headers });
       upsertRequest(res.data || payload);
       toast.success("Subscription change request sent to POS admin");
+      setShowPaymentForm(false);
     } catch {
       upsertRequest({
         ...payload,
-        id: `UPG_${storeId}_${Date.now()}`,
+        id: `CHG_${storeId}_${Date.now()}`,
         createdAt: new Date().toISOString(),
       });
       toast.success("Subscription change request saved locally");
+      setShowPaymentForm(false);
     } finally {
       setSubmitting(false);
       setPaymentReference("");
     }
   };
 
-  const refresh = () => {
-    dispatch(getStoreByAdmin());
-    setRequests(readRequests().map(normalizeRequest));
+  const refresh = async () => {
+    await dispatch(getStoreByAdmin());
+    const updatedRequests = readRequests().map(normalizeRequest);
+    setRequests(updatedRequests);
     toast.success("Subscription status refreshed");
+    const activeReq = updatedRequests.find(
+      (request) => request.storeId === storeId && !["APPROVED", "REJECTED"].includes(request.status),
+    );
+    if (!activeReq) {
+      setShowPaymentForm(false);
+    }
   };
 
   return (
@@ -227,7 +253,7 @@ export default function SubscriptionRequest() {
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 0.9fr) minmax(320px, 1.1fr)", gap: 18 }}>
+      <div style={{ maxWidth: 500, margin: "0 auto" }}>
         <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 18 }}>
           <p style={{ margin: "0 0 4px", fontSize: 12, color: "#6b7280", fontWeight: 700 }}>Current Store</p>
           <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 800 }}>{storeName}</h2>
@@ -240,110 +266,202 @@ export default function SubscriptionRequest() {
               NPR {(SUBSCRIPTION_PLANS[currentPlan]?.price || 0).toLocaleString("en-IN")}/year
             </p>
           </div>
+          
+          {!activeRequest && (
+            <button
+              onClick={() => setShowPaymentForm(true)}
+              style={{
+                width: "100%",
+                marginTop: 14,
+                padding: 10,
+                border: "none",
+                borderRadius: 8,
+                background: "#1a1d23",
+                color: "white",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              Change Plan
+            </button>
+          )}
+          
           <RequestStatus request={latestRequest} />
         </section>
+      </div>
 
-        <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 18 }}>
-          <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 8, background: "#fffbeb", border: "1px solid #fde68a", marginBottom: 16 }}>
-            <AlertTriangle size={16} color="#92400e" style={{ marginTop: 1 }} />
-            <p style={{ margin: 0, fontSize: 12, color: "#78350f" }}>
-              POS admin will only activate the new plan after reviewing this paid request.
-            </p>
-          </div>
+      {showPaymentForm && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+          onClick={() => setShowPaymentForm(false)}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: 12,
+              maxWidth: 500,
+              width: "100%",
+              maxHeight: "90vh",
+              overflow: "auto",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Change Subscription Plan</h2>
+                <button
+                  onClick={() => setShowPaymentForm(false)}
+                  style={{
+                    padding: 8,
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    fontSize: 20,
+                    color: "#6b7280",
+                    lineHeight: 1,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
 
-          {availablePlans.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 34, color: "#6b7280" }}>
-              <CheckCircle size={36} color="#166534" style={{ marginBottom: 12 }} />
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>You are already on the highest plan.</p>
-            </div>
-          ) : activeRequest ? (
-            <div style={{ textAlign: "center", padding: 34, color: "#6b7280" }}>
-              <Clock size={36} color="#1d4ed8" style={{ marginBottom: 12 }} />
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>A subscription request is already waiting for POS admin.</p>
-            </div>
-          ) : (
-            <form onSubmit={submitRequest}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Requested Plan</label>
-              <select
-                value={requestedPlan}
-                onChange={(event) => setRequestedPlan(event.target.value)}
-                style={{ width: "100%", padding: 10, border: "1px solid #e5e7eb", borderRadius: 7, marginBottom: 14 }}
-              >
-                {availablePlans.map((plan) => (
-                  <option key={plan} value={plan}>
-                    {SUBSCRIPTION_PLANS[plan].name} - NPR {SUBSCRIPTION_PLANS[plan].price.toLocaleString("en-IN")}/year
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 8, background: "#fffbeb", border: "1px solid #fde68a", marginBottom: 16 }}>
+                <AlertTriangle size={16} color="#92400e" style={{ marginTop: 1, flexShrink: 0 }} />
+                <p style={{ margin: 0, fontSize: 12, color: "#78350f" }}>
+                  POS admin will activate the new plan after reviewing your paid request.
+                </p>
+              </div>
 
-              <div style={{ padding: 14, borderRadius: 8, background: "#f8fafc", border: "1px solid #e5e7eb", marginBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 800 }}>Amount to pay</span>
-                  <span style={{ fontSize: 20, fontWeight: 900 }}>NPR {amount.toLocaleString("en-IN")}</span>
+              <form onSubmit={submitRequest}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Select New Plan</label>
+                <select
+                  value={requestedPlan}
+                  onChange={(event) => setRequestedPlan(event.target.value)}
+                  style={{ width: "100%", padding: 10, border: "1px solid #e5e7eb", borderRadius: 7, marginBottom: 14 }}
+                >
+                  {availablePlans.map((plan) => (
+                    <option key={plan} value={plan}>
+                      {SUBSCRIPTION_PLANS[plan].name} - NPR {SUBSCRIPTION_PLANS[plan].price.toLocaleString("en-IN")}/year
+                    </option>
+                  ))}
+                </select>
+
+                <div style={{ padding: 14, borderRadius: 8, background: "#f8fafc", border: "1px solid #e5e7eb", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 800 }}>
+                      {changeType === "UPGRADE" ? "Upgrade Cost" : changeType === "DOWNGRADE" ? "Price Difference" : "Amount"}
+                    </span>
+                    <span style={{ fontSize: 20, fontWeight: 900 }}>
+                      NPR {amount.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  {changeType === "UPGRADE" && (
+                    <p style={{ margin: "0 0 8px", fontSize: 11, color: "#166534", fontWeight: 700 }}>
+                      ⬆️ Upgrading from {SUBSCRIPTION_PLANS[currentPlan]?.name} to {SUBSCRIPTION_PLANS[requestedPlan]?.name}
+                    </p>
+                  )}
+                  {changeType === "DOWNGRADE" && (
+                    <p style={{ margin: "0 0 8px", fontSize: 11, color: "#dc2626", fontWeight: 700 }}>
+                      ⬇️ Downgrading from {SUBSCRIPTION_PLANS[currentPlan]?.name} to {SUBSCRIPTION_PLANS[requestedPlan]?.name}
+                    </p>
+                  )}
+                  <div style={{ display: "grid", gap: 4, marginTop: 10 }}>
+                    {SUBSCRIPTION_PLANS[requestedPlan]?.features.map((feature) => (
+                      <span key={feature} style={{ fontSize: 12, color: "#6b7280" }}>• {feature}</span>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: "grid", gap: 4, marginTop: 10 }}>
-                  {SUBSCRIPTION_PLANS[requestedPlan]?.features.map((feature) => (
-                    <span key={feature} style={{ fontSize: 12, color: "#6b7280" }}>• {feature}</span>
+
+                <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Payment Method</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                  {["ESEWA", "KHALTI"].map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setPaymentMethod(method)}
+                      style={{
+                        padding: 10,
+                        borderRadius: 7,
+                        border: `1px solid ${paymentMethod === method ? "#1a1d23" : "#e5e7eb"}`,
+                        background: paymentMethod === method ? "#1a1d23" : "white",
+                        color: paymentMethod === method ? "white" : "#4b5563",
+                        cursor: "pointer",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {method}
+                    </button>
                   ))}
                 </div>
-              </div>
 
-              <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Payment Method</label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
-                {["ESEWA", "KHALTI"].map((method) => (
+                <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Payment Reference</label>
+                <input
+                  value={paymentReference}
+                  onChange={(event) => setPaymentReference(event.target.value)}
+                  placeholder="Enter transaction reference"
+                  style={{ width: "100%", boxSizing: "border-box", padding: 10, border: "1px solid #e5e7eb", borderRadius: 7, marginBottom: 14 }}
+                />
+
+                <div style={{ display: "flex", gap: 8 }}>
                   <button
-                    key={method}
                     type="button"
-                    onClick={() => setPaymentMethod(method)}
+                    onClick={() => setShowPaymentForm(false)}
                     style={{
-                      padding: 10,
-                      borderRadius: 7,
-                      border: `1px solid ${paymentMethod === method ? "#1a1d23" : "#e5e7eb"}`,
-                      background: paymentMethod === method ? "#1a1d23" : "white",
-                      color: paymentMethod === method ? "white" : "#4b5563",
+                      flex: 1,
+                      padding: 12,
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 8,
+                      background: "white",
+                      color: "#1a1d23",
                       cursor: "pointer",
-                      fontWeight: 800,
+                      fontSize: 13,
+                      fontWeight: 700,
                     }}
                   >
-                    {method}
+                    Cancel
                   </button>
-                ))}
-              </div>
-
-              <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Payment Reference</label>
-              <input
-                value={paymentReference}
-                onChange={(event) => setPaymentReference(event.target.value)}
-                placeholder="Enter transaction reference"
-                style={{ width: "100%", boxSizing: "border-box", padding: 10, border: "1px solid #e5e7eb", borderRadius: 7, marginBottom: 14 }}
-              />
-
-              <button
-                type="submit"
-                disabled={submitting || loading}
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  border: "none",
-                  borderRadius: 8,
-                  background: submitting ? "#6b7280" : "#1a1d23",
-                  color: "white",
-                  cursor: submitting ? "not-allowed" : "pointer",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: 13,
-                  fontWeight: 900,
-                }}
-              >
-                <CreditCard size={15} />
-                {submitting ? "Sending request..." : "Send Paid Request to POS Admin"}
-              </button>
-            </form>
-          )}
-        </section>
-      </div>
+                  <button
+                    type="submit"
+                    disabled={submitting || loading}
+                    style={{
+                      flex: 2,
+                      padding: 12,
+                      border: "none",
+                      borderRadius: 8,
+                      background: submitting ? "#6b7280" : "#1a1d23",
+                      color: "white",
+                      cursor: submitting ? "not-allowed" : "pointer",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 13,
+                      fontWeight: 900,
+                    }}
+                  >
+                    <CreditCard size={15} />
+                    {submitting ? "Sending..." : `Send ${changeType === "UPGRADE" ? "Upgrade" : changeType === "DOWNGRADE" ? "Downgrade" : "Change"} Request`}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
