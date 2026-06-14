@@ -33,11 +33,15 @@ export const getInventoryByStore = createAsyncThunk(
   "inventory/getInventoryByStore",
   async ({ storeId }, { rejectWithValue }) => {
     try {
+      console.log("📡 INVENTORY API: Starting getInventoryByStore for storeId:", storeId);
       const sanitizedParams = sanitizePathParams({ storeId });
       const headers = getAuthHeaders();
+      console.log("📡 INVENTORY API: Making request to /api/inventories/store/" + sanitizedParams.storeId);
       const res = await api.get(`/api/inventories/store/${sanitizedParams.storeId}`, { headers });
+      console.log("✅ INVENTORY API SUCCESS:", res.data);
       return res.data;
     } catch (error) {
+      console.error("❌ INVENTORY API ERROR:", error.response?.status, error.response?.data);
       return rejectWithValue(error.response?.data?.message || "Failed to fetch store inventory");
     }
   }
@@ -62,12 +66,12 @@ export const getLowStockItems = createAsyncThunk(
 
 export const addInventoryItem = createAsyncThunk(
   "inventory/addInventoryItem",
-  async ({ branchId, productId, quantity, unitPrice }, { rejectWithValue }) => {
+  async ({ branchId, productId, quantity, unitPrice, storeId }, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
       const res = await api.post(
         `/api/inventories`,
-        { branchId, productId, quantity, unitPrice },
+        { branchId: branchId || null, storeId: storeId || null, productId, quantity, unitPrice },
         { headers }
       );
       return res.data;

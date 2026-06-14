@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { AlertTriangle, CheckCircle, Clock, CreditCard, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, CreditCard, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getAuthHeaders } from "@/util/getAuthHeader";
@@ -59,49 +59,35 @@ const getPlanChangeAmount = (currentPlan, requestedPlan) => {
 const getPlanChangeType = (currentPlan, requestedPlan) => {
   const currentIndex = PLAN_ORDER.indexOf(currentPlan);
   const requestedIndex = PLAN_ORDER.indexOf(requestedPlan);
-  
+
   if (requestedIndex > currentIndex) return "UPGRADE";
   if (requestedIndex < currentIndex) return "DOWNGRADE";
   return "SAME";
 };
 
-const statusStyle = {
-  PAID: { label: "Waiting for POS admin approval", bg: "#dbeafe", color: "#1d4ed8" },
-  APPROVED: { label: "Approved", bg: "#dcfce7", color: "#166534" },
-  REJECTED: { label: "Rejected", bg: "#fee2e2", color: "#991b1b" },
-  PAYMENT_PENDING: { label: "Payment Pending", bg: "#fef3c7", color: "#92400e" },
-};
-
 function RequestStatus({ request }) {
   if (!request) return null;
-  const style = statusStyle[request.status] || statusStyle.PAID;
+
+  const statusConfig = {
+    PAID: { label: "Waiting for POS admin approval", icon: Clock, bgColor: "#f5f5f5", textColor: "#6b7280" },
+    APPROVED: { label: "Approved", icon: CheckCircle, bgColor: "#f5f5f5", textColor: "#1a1d23" },
+    REJECTED: { label: "Rejected", icon: AlertTriangle, bgColor: "#f5f5f5", textColor: "#1a1d23" },
+    PAYMENT_PENDING: { label: "Payment Pending", icon: Clock, bgColor: "#f5f5f5", textColor: "#6b7280" },
+  };
+
+  const config = statusConfig[request.status] || statusConfig.PAID;
+  const IconComponent = config.icon;
 
   return (
-    <div
-      style={{
-        marginTop: 18,
-        padding: 14,
-        borderRadius: 8,
-        background: style.bg,
-        border: "1px solid #e5e7eb",
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 10,
-      }}
-    >
-      {request.status === "APPROVED" ? (
-        <CheckCircle size={18} color={style.color} />
-      ) : (
-        <Clock size={18} color={style.color} />
-      )}
+    <div style={{ marginTop: 20, padding: 16, borderRadius: 8, background: config.bgColor, border: "1px solid #e2e5e9", display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <IconComponent size={18} color={config.textColor} style={{ flexShrink: 0, marginTop: 2 }} />
       <div>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: style.color }}>
-          {style.label}
+        <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: config.textColor }}>
+          {config.label}
         </p>
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#4b5563" }}>
-          {SUBSCRIPTION_PLANS[request.currentPlan]?.name || request.currentPlan} to{" "}
-          {SUBSCRIPTION_PLANS[request.requestedPlan]?.name || request.requestedPlan}
-          {request.paymentReference ? ` • Ref: ${request.paymentReference}` : ""}
+        <p style={{ margin: "0", fontSize: 12, color: "#8a909c" }}>
+          {SUBSCRIPTION_PLANS[request.currentPlan]?.name} to {SUBSCRIPTION_PLANS[request.requestedPlan]?.name}
+          {request.paymentReference ? ` • ${request.paymentReference}` : ""}
         </p>
       </div>
     </div>
@@ -120,17 +106,14 @@ export default function SubscriptionRequest() {
   const [paymentReference, setPaymentReference] = useState("");
   const [requests, setRequests] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     dispatch(getStoreByAdmin());
     setRequests(readRequests().map(normalizeRequest));
   }, [dispatch]);
 
-  const availablePlans = useMemo(
-    () => PLAN_ORDER.filter((plan) => plan !== currentPlan),
-    [currentPlan],
-  );
+  const availablePlans = useMemo(() => PLAN_ORDER.filter((plan) => plan !== currentPlan), [currentPlan]);
 
   useEffect(() => {
     setRequestedPlan((current) => current || availablePlans[0] || "");
@@ -196,7 +179,7 @@ export default function SubscriptionRequest() {
       const res = await api.post("/api/subscription-upgrade-requests", payload, { headers });
       upsertRequest(res.data || payload);
       toast.success("Subscription change request sent to POS admin");
-      setShowPaymentForm(false);
+      setShowModal(false);
     } catch {
       upsertRequest({
         ...payload,
@@ -204,7 +187,7 @@ export default function SubscriptionRequest() {
         createdAt: new Date().toISOString(),
       });
       toast.success("Subscription change request saved locally");
-      setShowPaymentForm(false);
+      setShowModal(false);
     } finally {
       setSubmitting(false);
       setPaymentReference("");
@@ -220,60 +203,79 @@ export default function SubscriptionRequest() {
       (request) => request.storeId === storeId && !["APPROVED", "REJECTED"].includes(request.status),
     );
     if (!activeReq) {
-      setShowPaymentForm(false);
+      setShowModal(false);
     }
   };
 
   return (
-    <div style={{ padding: 24, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 22 }}>
-        <div>
-          <h1 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 800 }}>Subscription</h1>
-          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
-            Request a plan change after completing payment
-          </p>
-        </div>
-        <button
-          onClick={refresh}
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #e5e7eb",
-            background: "white",
-            borderRadius: 7,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 12,
-            fontWeight: 700,
-          }}
-        >
-          <RefreshCw size={13} />
-          Refresh
-        </button>
-      </div>
-
-      <div style={{ maxWidth: 500, margin: "0 auto" }}>
-        <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 18 }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "#6b7280", fontWeight: 700 }}>Current Store</p>
-          <h2 style={{ margin: "0 0 14px", fontSize: 18, fontWeight: 800 }}>{storeName}</h2>
-          <div style={{ padding: 14, borderRadius: 8, background: "#f8fafc", border: "1px solid #e5e7eb" }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, color: "#6b7280", fontWeight: 800, textTransform: "uppercase" }}>
-              Active Plan
-            </p>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 900 }}>{SUBSCRIPTION_PLANS[currentPlan]?.name || currentPlan}</p>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
-              NPR {(SUBSCRIPTION_PLANS[currentPlan]?.price || 0).toLocaleString("en-IN")}/year
-            </p>
+    <div style={{ padding: "24px", fontFamily: "'DM Sans','Inter',sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
+      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div>
+            <h1 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>Subscription</h1>
+            <p style={{ margin: "0", fontSize: 12, color: "#8a909c" }}>Manage your plan and request changes</p>
           </div>
-          
+          <button
+            onClick={refresh}
+            style={{
+              padding: "8px 12px",
+              border: "1px solid #e2e5e9",
+              background: "white",
+              borderRadius: 8,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#1a1d23",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => (e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)")}
+            onMouseLeave={(e) => (e.target.style.boxShadow = "none")}
+          >
+            <RefreshCw size={13} />
+            Refresh
+          </button>
+        </div>
+
+        {/* Current Plan Card */}
+        <div style={{ background: "white", border: "1px solid #e2e5e9", borderRadius: 10, padding: "20px" }}>
+          <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, color: "#8a909c", textTransform: "uppercase" }}>Current Store</p>
+          <h2 style={{ margin: "0 0 18px", fontSize: 18, fontWeight: 800, color: "#1a1d23" }}>{storeName}</h2>
+
+          {/* Plan Display */}
+          <div style={{ padding: 16, backgroundColor: "#f5f5f5", borderRadius: 8, border: "1px solid #e2e5e9", marginBottom: 18 }}>
+            <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "#8a909c", textTransform: "uppercase" }}>Active Plan</p>
+            <p style={{ margin: "0 0 8px", fontSize: 24, fontWeight: 900, color: "#1a1d23" }}>{SUBSCRIPTION_PLANS[currentPlan]?.name || currentPlan}</p>
+            <p style={{ margin: "0", fontSize: 13, color: "#8a909c" }}>NPR {(SUBSCRIPTION_PLANS[currentPlan]?.price || 0).toLocaleString("en-IN")}/year</p>
+          </div>
+
+          {/* Plan Features */}
+          <div style={{ marginBottom: 18 }}>
+            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#1a1d23" }}>Includes:</p>
+            <div style={{ display: "grid", gap: 8 }}>
+              {SUBSCRIPTION_PLANS[currentPlan]?.features.map((feature) => (
+                <div key={feature} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#1a1d23" }} />
+                  <p style={{ margin: "0", fontSize: 12, color: "#1a1d23" }}>{feature}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Request Status */}
+          {latestRequest && <RequestStatus request={latestRequest} />}
+
+          {/* Change Plan Button */}
           {!activeRequest && (
             <button
-              onClick={() => setShowPaymentForm(true)}
+              onClick={() => setShowModal(true)}
               style={{
                 width: "100%",
-                marginTop: 14,
-                padding: 10,
+                marginTop: 18,
+                padding: 12,
                 border: "none",
                 borderRadius: 8,
                 background: "#1a1d23",
@@ -281,17 +283,19 @@ export default function SubscriptionRequest() {
                 cursor: "pointer",
                 fontSize: 13,
                 fontWeight: 700,
+                transition: "all 0.15s",
               }}
+              onMouseEnter={(e) => (e.target.style.opacity = "0.85")}
+              onMouseLeave={(e) => (e.target.style.opacity = "1")}
             >
               Change Plan
             </button>
           )}
-          
-          <RequestStatus request={latestRequest} />
-        </section>
+        </div>
       </div>
 
-      {showPaymentForm && (
+      {/* Modal */}
+      {showModal && (
         <div
           style={{
             position: "fixed",
@@ -299,138 +303,168 @@ export default function SubscriptionRequest() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.5)",
+            background: "rgba(0, 0, 0, 0.4)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
             padding: 20,
           }}
-          onClick={() => setShowPaymentForm(false)}
+          onClick={() => setShowModal(false)}
         >
           <div
             style={{
               background: "white",
-              borderRadius: 12,
+              borderRadius: 10,
               maxWidth: 500,
               width: "100%",
               maxHeight: "90vh",
               overflow: "auto",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: 24 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Change Subscription Plan</h2>
-                <button
-                  onClick={() => setShowPaymentForm(false)}
-                  style={{
-                    padding: 8,
-                    border: "none",
-                    background: "transparent",
-                    cursor: "pointer",
-                    fontSize: 20,
-                    color: "#6b7280",
-                    lineHeight: 1,
-                  }}
-                >
-                  ×
-                </button>
-              </div>
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px", borderBottom: "1px solid #e2e5e9" }}>
+              <h2 style={{ margin: "0", fontSize: 16, fontWeight: 800, color: "#1a1d23" }}>Change Subscription Plan</h2>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: "0",
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#8a909c",
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-              <div style={{ display: "flex", gap: 10, padding: 12, borderRadius: 8, background: "#fffbeb", border: "1px solid #fde68a", marginBottom: 16 }}>
-                <AlertTriangle size={16} color="#92400e" style={{ marginTop: 1, flexShrink: 0 }} />
-                <p style={{ margin: 0, fontSize: 12, color: "#78350f" }}>
+            {/* Modal Content */}
+            <div style={{ padding: 20 }}>
+              {/* Warning Alert */}
+              <div style={{ display: "flex", gap: 12, padding: 12, backgroundColor: "#f5f5f5", border: "1px solid #e2e5e9", borderRadius: 8, marginBottom: 18 }}>
+                <AlertTriangle size={16} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                <p style={{ margin: "0", fontSize: 12, color: "#6b7280" }}>
                   POS admin will activate the new plan after reviewing your paid request.
                 </p>
               </div>
 
-              <form onSubmit={submitRequest}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Select New Plan</label>
-                <select
-                  value={requestedPlan}
-                  onChange={(event) => setRequestedPlan(event.target.value)}
-                  style={{ width: "100%", padding: 10, border: "1px solid #e5e7eb", borderRadius: 7, marginBottom: 14 }}
-                >
-                  {availablePlans.map((plan) => (
-                    <option key={plan} value={plan}>
-                      {SUBSCRIPTION_PLANS[plan].name} - NPR {SUBSCRIPTION_PLANS[plan].price.toLocaleString("en-IN")}/year
-                    </option>
-                  ))}
-                </select>
+              <form onSubmit={submitRequest} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {/* Select Plan */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 8, color: "#1a1d23" }}>Select New Plan</label>
+                  <select
+                    value={requestedPlan}
+                    onChange={(e) => setRequestedPlan(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      border: "1px solid #e2e5e9",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: "#1a1d23",
+                      background: "white",
+                    }}
+                  >
+                    {availablePlans.map((plan) => (
+                      <option key={plan} value={plan}>
+                        {SUBSCRIPTION_PLANS[plan].name} - NPR {SUBSCRIPTION_PLANS[plan].price.toLocaleString("en-IN")}/year
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                <div style={{ padding: 14, borderRadius: 8, background: "#f8fafc", border: "1px solid #e5e7eb", marginBottom: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 800 }}>
+                {/* Plan Preview */}
+                <div style={{ padding: 14, backgroundColor: "#f5f5f5", borderRadius: 8, border: "1px solid #e2e5e9" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#8a909c" }}>
                       {changeType === "UPGRADE" ? "Upgrade Cost" : changeType === "DOWNGRADE" ? "Price Difference" : "Amount"}
                     </span>
-                    <span style={{ fontSize: 20, fontWeight: 900 }}>
-                      NPR {amount.toLocaleString("en-IN")}
-                    </span>
+                    <span style={{ fontSize: 20, fontWeight: 900, color: "#1a1d23" }}>NPR {amount.toLocaleString("en-IN")}</span>
                   </div>
-                  {changeType === "UPGRADE" && (
-                    <p style={{ margin: "0 0 8px", fontSize: 11, color: "#166534", fontWeight: 700 }}>
-                      ⬆️ Upgrading from {SUBSCRIPTION_PLANS[currentPlan]?.name} to {SUBSCRIPTION_PLANS[requestedPlan]?.name}
-                    </p>
-                  )}
-                  {changeType === "DOWNGRADE" && (
-                    <p style={{ margin: "0 0 8px", fontSize: 11, color: "#dc2626", fontWeight: 700 }}>
-                      ⬇️ Downgrading from {SUBSCRIPTION_PLANS[currentPlan]?.name} to {SUBSCRIPTION_PLANS[requestedPlan]?.name}
-                    </p>
-                  )}
-                  <div style={{ display: "grid", gap: 4, marginTop: 10 }}>
+
+                  <div style={{ display: "grid", gap: 6, marginTop: 12 }}>
                     {SUBSCRIPTION_PLANS[requestedPlan]?.features.map((feature) => (
-                      <span key={feature} style={{ fontSize: 12, color: "#6b7280" }}>• {feature}</span>
+                      <div key={feature} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#1a1d23" }} />
+                        <span style={{ fontSize: 12, color: "#6b7280" }}>{feature}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Payment Method</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
-                  {["ESEWA", "KHALTI"].map((method) => (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setPaymentMethod(method)}
-                      style={{
-                        padding: 10,
-                        borderRadius: 7,
-                        border: `1px solid ${paymentMethod === method ? "#1a1d23" : "#e5e7eb"}`,
-                        background: paymentMethod === method ? "#1a1d23" : "white",
-                        color: paymentMethod === method ? "white" : "#4b5563",
-                        cursor: "pointer",
-                        fontWeight: 800,
-                      }}
-                    >
-                      {method}
-                    </button>
-                  ))}
+                {/* Payment Method */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 8, color: "#1a1d23" }}>Payment Method</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {["ESEWA", "KHALTI"].map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPaymentMethod(method)}
+                        style={{
+                          padding: 10,
+                          borderRadius: 8,
+                          border: `1px solid ${paymentMethod === method ? "#1a1d23" : "#e2e5e9"}`,
+                          background: paymentMethod === method ? "#1a1d23" : "white",
+                          color: paymentMethod === method ? "white" : "#1a1d23",
+                          cursor: "pointer",
+                          fontWeight: 700,
+                          fontSize: 12,
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Payment Reference</label>
-                <input
-                  value={paymentReference}
-                  onChange={(event) => setPaymentReference(event.target.value)}
-                  placeholder="Enter transaction reference"
-                  style={{ width: "100%", boxSizing: "border-box", padding: 10, border: "1px solid #e5e7eb", borderRadius: 7, marginBottom: 14 }}
-                />
+                {/* Payment Reference */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 8, color: "#1a1d23" }}>Payment Reference</label>
+                  <input
+                    type="text"
+                    value={paymentReference}
+                    onChange={(e) => setPaymentReference(e.target.value)}
+                    placeholder="Enter transaction ID"
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: 10,
+                      border: "1px solid #e2e5e9",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: "#1a1d23",
+                      background: "white",
+                    }}
+                  />
+                </div>
 
-                <div style={{ display: "flex", gap: 8 }}>
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                   <button
                     type="button"
-                    onClick={() => setShowPaymentForm(false)}
+                    onClick={() => setShowModal(false)}
                     style={{
                       flex: 1,
                       padding: 12,
-                      border: "1px solid #e5e7eb",
+                      border: "1px solid #e2e5e9",
                       borderRadius: 8,
                       background: "white",
                       color: "#1a1d23",
                       cursor: "pointer",
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: 700,
+                      transition: "all 0.15s",
                     }}
+                    onMouseEnter={(e) => (e.target.background = "#f5f5f5")}
+                    onMouseLeave={(e) => (e.target.background = "white")}
                   >
                     Cancel
                   </button>
@@ -442,19 +476,20 @@ export default function SubscriptionRequest() {
                       padding: 12,
                       border: "none",
                       borderRadius: 8,
-                      background: submitting ? "#6b7280" : "#1a1d23",
+                      background: submitting || loading ? "#8a909c" : "#1a1d23",
                       color: "white",
-                      cursor: submitting ? "not-allowed" : "pointer",
+                      cursor: submitting || loading ? "not-allowed" : "pointer",
                       display: "flex",
                       justifyContent: "center",
                       alignItems: "center",
                       gap: 8,
-                      fontSize: 13,
-                      fontWeight: 900,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      transition: "all 0.15s",
                     }}
                   >
-                    <CreditCard size={15} />
-                    {submitting ? "Sending..." : `Send ${changeType === "UPGRADE" ? "Upgrade" : changeType === "DOWNGRADE" ? "Downgrade" : "Change"} Request`}
+                    <CreditCard size={14} />
+                    {submitting ? "Sending..." : "Send Request"}
                   </button>
                 </div>
               </form>

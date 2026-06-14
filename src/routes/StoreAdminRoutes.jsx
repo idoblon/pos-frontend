@@ -6,7 +6,7 @@ import ProductManagement from "@/pages/storeAdmin/Products/ProductManagement";
 import EmployeeManagement from "@/pages/storeAdmin/Employees/EmployeeManagement";
 import CategoryManagement from "@/pages/storeAdmin/Categories/CategoryManagement";
 import StoreReports from "@/pages/storeAdmin/Reports/StoreReports";
-import InventoryManagement from "@/pages/storeAdmin/Inventory/InventoryManagement";
+import StoreWarehouseInventory from "@/pages/storeAdmin/Inventory/StoreWarehouseInventory";
 import RestockManagement from "@/pages/storeAdmin/Restock/RestockManagement";
 import SubscriptionRequest from "@/pages/storeAdmin/Subscription/SubscriptionRequest";
 
@@ -17,7 +17,7 @@ const StoreAdminRoutes = () => {
         <Route index element={<StoreDashboard />} />
         <Route path="branches"   element={<BranchManagement />} />
         <Route path="products"   element={<ProductManagement />} />
-        <Route path="inventory"  element={<InventoryManagement />} />
+        <Route path="inventory"  element={<StoreWarehouseInventory />} />
         <Route path="restock-requests" element={<RestockManagement />} />
         <Route path="subscription" element={<SubscriptionRequest />} />
         <Route path="employees"  element={<EmployeeManagement />} />

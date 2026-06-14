@@ -7,6 +7,7 @@ import {
   updateProduct,
   deleteProduct,
 } from "@/Redux Toolkit/Features/product/productThunk";
+import { addInventoryItem } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
 import { getCategoriesByStore } from "@/Redux Toolkit/Features/category/categoryThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import {
@@ -30,6 +31,7 @@ const EMPTY_FORM = {
   categoryId: "",
   description: "",
   image: "",
+  initialStock: "",
 };
 
 const s = {
@@ -173,6 +175,7 @@ export default function ProductManagement() {
       categoryId: p.categoryId ?? "",
       description: p.description || p.desciption || "",
       image: p.image || p.imageUrl || "",
+      initialStock: "",
     });
     setImageFile(null);
     setImagePreview(p.image || p.imageUrl || null);
@@ -191,7 +194,6 @@ export default function ProductManagement() {
         return;
       }
 
-      // Compress image before storing
       const reader = new FileReader();
       reader.onloadend = () => {
         const img = new Image();
@@ -219,10 +221,9 @@ export default function ProductManagement() {
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Compress to JPEG with 0.7 quality
           const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
           setImagePreview(compressedDataUrl);
-          setImageFile(compressedDataUrl); // Store compressed base64 directly
+          setImageFile(compressedDataUrl);
         };
         img.src = reader.result;
       };
@@ -244,12 +245,26 @@ export default function ProductManagement() {
       return;
     }
 
+    // Validate selling price and MRP
+    const sellingPrice = Number(form.sellingPrice);
+    const mrp = Number(form.mrp);
+
+    if (!form.sellingPrice || sellingPrice <= 0) {
+      toast.error("Please enter a valid selling price");
+      return;
+    }
+
+    if (!form.mrp || mrp <= 0) {
+      toast.error("Please enter a valid MRP");
+      return;
+    }
+
     console.log("📝 Form data before submit:", form);
 
     const dto = {
       ...form,
-      sellingPrice: Number(form.sellingPrice),
-      mrp: Number(form.mrp),
+      sellingPrice: sellingPrice,
+      mrp: mrp,
       categoryId: form.categoryId ? parseInt(form.categoryId) : null,
       storeId: parseInt(storeId),
       store: { id: parseInt(storeId) },
@@ -258,16 +273,11 @@ export default function ProductManagement() {
     console.log("📦 DTO before image:", dto);
 
     if (imageFile) {
-      // imageFile is already compressed base64 string
       if (typeof imageFile === "string") {
         dto.image = imageFile;
-        console.log(
-          "📦 DTO with compressed image (length):",
-          dto.image?.length,
-        );
+        console.log("📦 DTO with compressed image (length):", dto.image?.length);
         submitProduct(dto);
       } else {
-        // Fallback for old flow
         const reader = new FileReader();
         reader.onloadend = () => {
           dto.image = reader.result;
@@ -283,6 +293,8 @@ export default function ProductManagement() {
 
   const submitProduct = (dto) => {
     console.log("🚀 Submitting product:", editing ? "UPDATE" : "CREATE", dto);
+
+    const initialStock = form.initialStock ? Number(form.initialStock) : 0;
 
     if (editing) {
       const productId = editing.id || editing._id;
@@ -309,7 +321,28 @@ export default function ProductManagement() {
       dispatch(createProduct(dto)).then((result) => {
         console.log("✅ Create result:", result);
         if (result.type.includes("fulfilled")) {
-          toast.success("Product created successfully");
+          const createdProduct = result.payload;
+          const productId = createdProduct?.id || createdProduct?._id;
+
+          if (initialStock > 0 && productId) {
+            dispatch(addInventoryItem({
+              branchId: null,
+              storeId: parseInt(storeId),
+              productId: productId,
+              quantity: initialStock,
+              unitPrice: dto.sellingPrice,
+            }))
+              .unwrap()
+              .then(() => {
+                toast.success(`Product created with ${initialStock} units added to warehouse!`);
+              })
+              .catch((err) => {
+                toast.warning(`Product created but failed to add stock: ${err}`);
+              });
+          } else {
+            toast.success("Product created successfully");
+          }
+
           dispatch(getProductsByStore(storeId));
           setDialogOpen(false);
         } else {
@@ -343,22 +376,9 @@ export default function ProductManagement() {
 
   return (
     <div style={s.page}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 20,
-              fontWeight: 700,
-              letterSpacing: "-0.3px",
-            }}
-          >
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px" }}>
             Product Management
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>
@@ -547,7 +567,7 @@ export default function ProductManagement() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
             <div className="space-y-1.5">
-              <Label>Product Name</Label>
+              <Label>Product Name <span className="text-red-500">*</span></Label>
               <Input
                 value={form.name}
                 onChange={(e) =>
@@ -559,7 +579,7 @@ export default function ProductManagement() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>SKU</Label>
+                <Label>SKU <span className="text-red-500">*</span></Label>
                 <Input
                   value={form.sku}
                   onChange={(e) =>
@@ -590,7 +610,7 @@ export default function ProductManagement() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Selling Price (रु)</Label>
+                <Label>Selling Price (रु) <span className="text-red-500">*</span></Label>
                 <Input
                   type="number"
                   min={0}
@@ -599,11 +619,11 @@ export default function ProductManagement() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, sellingPrice: e.target.value }))
                   }
-                  required
+                  placeholder="Enter selling price"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>MRP (रु)</Label>
+                <Label>MRP (रु) <span className="text-red-500">*</span></Label>
                 <Input
                   type="number"
                   min={0}
@@ -612,7 +632,7 @@ export default function ProductManagement() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, mrp: e.target.value }))
                   }
-                  required
+                  placeholder="Enter MRP"
                 />
               </div>
             </div>
@@ -626,6 +646,22 @@ export default function ProductManagement() {
                 }
               />
             </div>
+
+            {!editing && (
+              <div className="space-y-1.5">
+                <Label>Initial Warehouse Stock (Optional)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.initialStock}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, initialStock: e.target.value }))
+                  }
+                  placeholder="Enter quantity to add to warehouse"
+                />
+                <p className="text-xs text-gray-500">💡 Add stock to your warehouse when creating the product (you can add more later)</p>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label>Product Image</Label>
