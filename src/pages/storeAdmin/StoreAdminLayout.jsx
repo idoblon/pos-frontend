@@ -15,6 +15,7 @@ import {
   CreditCard,
   ChevronDown,
   Clock,
+  Settings,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
@@ -36,6 +37,7 @@ const navItems = [
   { path: "/store-admin/employees", label: "Employees", icon: Users },
   { path: "/store-admin/categories", label: "Categories", icon: Tag },
   { path: "/store-admin/reports", label: "Reports", icon: BarChart2 },
+  { path: "/store-admin/payment-settings", label: "Payment Settings", icon: Settings },
 ];
 
 function formatDate() {

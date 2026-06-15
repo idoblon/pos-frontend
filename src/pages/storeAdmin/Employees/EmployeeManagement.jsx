@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import secureStorage from "@/util/secureStorage";
+import api from "@/util/api";
 
 const EMPTY_FORM = { fullName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER", branchId: "" };
 const ROLES = ["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER"];
@@ -137,13 +138,26 @@ export default function EmployeeManagement() {
       // Generate a default password for new employees
       const employeeData = {
         ...cleanedForm,
-        password: "Employee@123" // Default password - employee should change on first login
+        password: "Employee@123"
       };
       
       dispatch(createStoreEmpoyee({ employee: employeeData, storeId }))
         .then((result) => {
           if (result.type.includes('fulfilled')) {
-            toast.success("Employee created successfully with default password: Employee@123");
+            const branchName = branches?.find(b => String(b.id || b._id) === String(cleanedForm.branchId))?.name || "";
+            api.post("/api/email/store-credentials", {
+              to: cleanedForm.email,
+              fullName: cleanedForm.fullName,
+              email: cleanedForm.email,
+              tempPassword: "Employee@123",
+              role: cleanedForm.role?.replace("ROLE_", "").replace(/_/g, " "),
+              branchName,
+              status: "ACTIVE",
+            }).then(() => {
+              toast.success(`Employee created! Login credentials sent to ${cleanedForm.email}`);
+            }).catch(() => {
+              toast.success(`Employee created! (Email delivery failed — password: Employee@123)`);
+            });
             dispatch(findStoreEmployee({ storeId }));
           } else {
             toast.error(result.payload || "Failed to create employee");

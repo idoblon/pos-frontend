@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +52,7 @@ const KhaltiPaymentPopup = ({ open, onClose, amount, onConfirm, loading }) => {
             </span>
             Payment
           </DialogTitle>
+          <DialogDescription className="sr-only">Enter your Khalti mobile number and transaction token to confirm payment.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -124,6 +125,22 @@ const KhaltiPaymentPopup = ({ open, onClose, amount, onConfirm, loading }) => {
               onChange={(e) => { setToken(e.target.value); setError(""); }}
               style={{ marginTop: 4 }}
             />
+            <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+              🧪 Test — Mobile:{" "}
+              <strong
+                style={{ fontFamily: "monospace", color: "#5C2D91", cursor: "pointer" }}
+                onClick={() => setMobile("9800000001")}
+              >
+                9800000001
+              </strong>
+              {" "}&nbsp; Token:{" "}
+              <strong
+                style={{ fontFamily: "monospace", color: "#5C2D91", cursor: "pointer" }}
+                onClick={() => setToken("123456")}
+              >
+                123456
+              </strong>
+            </p>
             {error && (
               <p style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>{error}</p>
             )}

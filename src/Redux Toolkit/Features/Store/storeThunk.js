@@ -154,6 +154,20 @@ export const getStoreByEmployee = createAsyncThunk(
   },
 );
 
+export const getEnabledPaymentMethods = createAsyncThunk(
+  "/store/getEnabledPaymentMethods",
+  async (_, { rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.get(`/api/payment-config/store/enabled`, { headers });
+      return res.data;
+    } catch (error) {
+      // If no config exists yet, return all methods as enabled
+      return [];
+    }
+  },
+);
+
 export const moderateStore = createAsyncThunk(
   "/store/moderateStore",
   async ({ storeId, action }, { rejectWithValue }) => {

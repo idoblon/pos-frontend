@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,6 @@ const EsewaPaymentPopup = ({ open, onClose, amount, onConfirm, loading }) => {
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {/* eSewa brand color: green */}
             <span
               style={{
                 background: "#60BB46",
@@ -46,6 +45,7 @@ const EsewaPaymentPopup = ({ open, onClose, amount, onConfirm, loading }) => {
             </span>
             Payment
           </DialogTitle>
+          <DialogDescription className="sr-only">Enter your eSewa transaction reference to confirm payment.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -103,6 +103,15 @@ const EsewaPaymentPopup = ({ open, onClose, amount, onConfirm, loading }) => {
               style={{ marginTop: 4 }}
               autoFocus
             />
+            <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+              🧪 Test reference:{" "}
+              <strong
+                style={{ fontFamily: "monospace", color: "#15803d", cursor: "pointer" }}
+                onClick={() => setRef("ESW2024TEST")}
+              >
+                ESW2024TEST
+              </strong>
+            </p>
             {error && (
               <p style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>{error}</p>
             )}

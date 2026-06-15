@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Package, Clock, CheckCircle, XCircle, AlertCircle, Truck } from "lucide-react";
-import { getRestockRequestsByBranch, fulfillRestockRequest } from "@/Redux Toolkit/Features/restock/restockThunk";
+import { Package, Clock, CheckCircle, XCircle, AlertCircle, Truck, Plus } from "lucide-react";
+import { getRestockRequestsByBranch, fulfillRestockRequest, createRestockRequest } from "@/Redux Toolkit/Features/restock/restockThunk";
+import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
+import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import secureStorage from "@/util/secureStorage";
@@ -29,80 +32,53 @@ const s = {
 export default function BranchRestockRequests() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const userData = secureStorage.getUserData();
-  const branchId = userData?.branchId;
   const { requests: restockRequests, loading } = useSelector((s) => s.restock);
+  const { products } = useSelector((s) => s.product);
+  const { userProfile } = useSelector((s) => s.user);
+  const { user } = useSelector((s) => s.auth);
+  const userData = secureStorage.getUserData();
+  const branchId = userData?.branchId || userProfile?.branchId || user?.branchId;
+  const storeId = userData?.storeId || userProfile?.storeId || user?.storeId;
 
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [fulfillDialogOpen, setFulfillDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [receivedQuantity, setReceivedQuantity] = useState("");
+  const [restockDialogOpen, setRestockDialogOpen] = useState(false);
+  const [restockForm, setRestockForm] = useState({ productId: "", quantity: 50, notes: "" });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Check JWT token first
     const token = secureStorage.getToken();
-    console.log('🔍 AUTH DEBUG - JWT Token exists:', !!token);
-    
     if (!token) {
-      console.log('❌ AUTH DEBUG - No JWT token found, redirecting to login');
       toast.error('Session expired. Please log in again.');
       navigate('/login');
       return;
     }
-    
-    if (branchId) {
-      dispatch(getRestockRequestsByBranch({ branchId }));
-    }
+    if (!userProfile) dispatch(getUserProfile());
+    if (branchId) dispatch(getRestockRequestsByBranch({ branchId }));
   }, [dispatch, branchId, navigate]);
 
-  // Use only API data
-  const allRequests = restockRequests || [];
-  
-  const filtered = allRequests?.filter((req) => {
-    const matchStatus = statusFilter === "ALL" || req.status === statusFilter;
-    return matchStatus;
-  });
-
-  const statusCounts = {
-    PENDING: allRequests?.filter(r => r.status === "PENDING").length || 0,
-    APPROVED: allRequests?.filter(r => r.status === "APPROVED").length || 0,
-    FULFILLED: allRequests?.filter(r => r.status === "FULFILLED").length || 0,
-    REJECTED: allRequests?.filter(r => r.status === "REJECTED").length || 0,
-  };
+  useEffect(() => {
+    if (storeId) dispatch(getProductsByStore(storeId));
+  }, [dispatch, storeId]);
 
   const handleMarkReceived = async () => {
-    console.log("🔍 UI DEBUG - handleMarkReceived called");
-    console.log("🔍 UI DEBUG - receivedQuantity:", receivedQuantity);
-    console.log("🔍 UI DEBUG - selectedRequest:", selectedRequest);
     
     if (!receivedQuantity || receivedQuantity <= 0) {
-      console.log("❌ UI DEBUG - Invalid received quantity:", receivedQuantity);
       toast.error("Please enter the quantity received");
       return;
     }
-    
     try {
-      console.log("🔍 UI DEBUG - Dispatching fulfillRestockRequest with:", {
-        requestId: selectedRequest.id,
-        receivedQuantity: parseInt(receivedQuantity)
-      });
-      
-      const result = await dispatch(fulfillRestockRequest({ 
+      await dispatch(fulfillRestockRequest({ 
         requestId: selectedRequest.id,
         receivedQuantity: parseInt(receivedQuantity)
       })).unwrap();
-      
-      console.log("✅ UI DEBUG - fulfillRestockRequest successful:", result);
       toast.success("Products marked as received - Inventory updated");
       setFulfillDialogOpen(false);
       setReceivedQuantity("");
-      
-      if (branchId) {
-        console.log("🔍 UI DEBUG - Refreshing restock requests for branchId:", branchId);
-        dispatch(getRestockRequestsByBranch({ branchId }));
-      }
+      if (branchId) dispatch(getRestockRequestsByBranch({ branchId }));
     } catch (error) {
-      console.error("❌ UI DEBUG - fulfillRestockRequest failed:", error);
       toast.error(error || "Failed to mark as received");
     }
   };
@@ -113,13 +89,56 @@ export default function BranchRestockRequests() {
     setFulfillDialogOpen(true);
   };
 
+  const productList = Array.isArray(products) ? products : (products?.content || []);
 
+  const handleRestockRequest = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+    if (!branchId) { toast.error("Branch ID not found"); return; }
+    if (!restockForm.quantity || Number(restockForm.quantity) <= 0) { toast.error("Please enter a valid quantity"); return; }
+    if (!restockForm.notes || restockForm.notes.trim().length < 5) { toast.error("Please provide a justification (min 5 characters)"); return; }
+    if (!restockForm.productId) { toast.error("Please select a product"); return; }
+    setSubmitting(true);
+    try {
+      await dispatch(createRestockRequest({
+        branchId: Number(branchId),
+        productId: Number(restockForm.productId),
+        requestedQuantity: Number(restockForm.quantity),
+        notes: restockForm.notes.trim(),
+        currentStock: 0,
+      })).unwrap();
+      toast.success("Restock request submitted to Store Admin");
+      setRestockDialogOpen(false);
+      setRestockForm({ productId: "", quantity: 50, notes: "" });
+      if (branchId) dispatch(getRestockRequestsByBranch({ branchId }));
+    } catch (error) {
+      toast.error(error || "Failed to submit restock request");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
+  const allRequests = restockRequests || [];
+  const filtered = allRequests.filter((req) => statusFilter === "ALL" || req.status === statusFilter);
+  const statusCounts = {
+    PENDING: allRequests.filter(r => r.status === "PENDING").length,
+    APPROVED: allRequests.filter(r => r.status === "APPROVED").length,
+    FULFILLED: allRequests.filter(r => r.status === "FULFILLED").length,
+    REJECTED: allRequests.filter(r => r.status === "REJECTED").length,
+  };
   return (
     <div style={s.page}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Restock Requests</h1>
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>Track your inventory restock requests to Store Admin</p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Restock Requests</h1>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>Track your inventory restock requests to Store Admin</p>
+        </div>
+        <button
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          onClick={() => { setRestockForm({ productId: "", quantity: 50, notes: "" }); setRestockDialogOpen(true); }}
+        >
+          <Plus size={14} /> Request Restock
+        </button>
       </div>
 
       {/* Status Summary */}
@@ -238,6 +257,53 @@ export default function BranchRestockRequests() {
           </div>
         )}
       </div>
+
+      {/* Request Restock Dialog */}
+      <Dialog open={restockDialogOpen} onOpenChange={setRestockDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Restock</DialogTitle>
+            <DialogDescription>Request a product from Store Admin</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRestockRequest} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Product <span className="text-red-500">*</span></Label>
+              <select
+                style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#f5f5f5", outline: "none" }}
+                value={restockForm.productId}
+                onChange={(e) => setRestockForm(f => ({ ...f, productId: e.target.value }))}
+                required
+              >
+                <option value="">Select a product</option>
+                {productList.map((p) => (
+                  <option key={p.id || p._id} value={p.id || p._id}>
+                    {p.name} {p.sku ? `(${p.sku})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Requested Quantity <span className="text-red-500">*</span></Label>
+              <Input type="number" min="1" value={restockForm.quantity} onChange={(e) => setRestockForm(f => ({ ...f, quantity: e.target.value }))} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Notes / Justification <span className="text-red-500">*</span></Label>
+              <Textarea
+                value={restockForm.notes}
+                onChange={(e) => setRestockForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Explain why this restock is needed..."
+                required rows={3} className="resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setRestockDialogOpen(false)} disabled={submitting}>Cancel</Button>
+              <Button type="submit" disabled={submitting} style={{ background: submitting ? "#9ca3af" : "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>
+                {submitting ? "Submitting..." : "Submit Request"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Mark as Received Dialog */}
       <Dialog open={fulfillDialogOpen} onOpenChange={setFulfillDialogOpen}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { GitBranch, Package, Users, Tag } from "lucide-react";
 import {
@@ -15,7 +15,7 @@ import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThun
 import { findStoreEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getCategoriesByStore } from "@/Redux Toolkit/Features/category/categoryThunk";
 import { getAllRefund } from "@/Redux Toolkit/Features/refund/refundThunk";
-import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
+import api from "@/util/api";
 import secureStorage from "@/util/secureStorage";
 
 const card = {
@@ -63,19 +63,18 @@ export default function StoreDashboard() {
   const { products } = useSelector((s) => s.product);
   const { employees } = useSelector((s) => s.employee);
   const { categories } = useSelector((s) => s.category);
-  const { refunds } = useSelector((s) => s.refund);
-  const { orders } = useSelector((s) => s.order);
 
-  // Fetch all orders from all branches
+  const [allOrders, setAllOrders] = useState([]);
+
+  // Fetch all orders from all branches into local state (avoids Redux overwrite)
   useEffect(() => {
-    if (branches?.length > 0) {
-      branches.forEach(branch => {
-        if (branch._id || branch.id) {
-          dispatch(getOrdersByBranch({ branchId: branch._id || branch.id }));
-        }
-      });
-    }
-  }, [dispatch, branches]);
+    if (!branches?.length) return;
+    Promise.all(
+      branches.map(b => api.get(`/api/orders/branch/${b.id || b._id}`))
+    ).then(results => {
+      setAllOrders(results.flatMap(r => r.data || []));
+    }).catch(() => {});
+  }, [branches]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -83,37 +82,44 @@ export default function StoreDashboard() {
     dispatch(getProductsByStore(storeId));
     dispatch(findStoreEmployee({ storeId }));
     dispatch(getCategoriesByStore({ storeId }));
-    dispatch(getAllRefund());
   }, [dispatch, storeId]);
 
   // Calculate metrics
   const activeBranches = branches?.filter(b => b.status === 'active')?.length ?? 0;
   
-  // Generate mock data for charts (replace with real data when available)
   const trendData = useMemo(() => {
-    const last7Days = [];
+    const days = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      last7Days.push({
-        label: date.toLocaleDateString('en-US', { weekday: 'short' }),
-        revenue: Math.floor(Math.random() * 50000) + 30000,
-        orders: Math.floor(Math.random() * 50) + 20
+      const label = date.toLocaleDateString('en-US', { weekday: 'short' });
+      const dateStr = date.toISOString().slice(0, 10);
+      const dayOrders = allOrders.filter(o => {
+        const d = o.createdAt || o.orderDate || o.date || "";
+        return d.slice(0, 10) === dateStr;
+      });
+      days.push({
+        label,
+        revenue: dayOrders.reduce((sum, o) => sum + (o.totalAmount || o.total || 0), 0),
+        orders: dayOrders.length,
       });
     }
-    return last7Days;
-  }, []);
+    return days;
+  }, [allOrders]);
 
-  // Calculate branch sales (mock data - replace with real calculations)
   const branchSales = useMemo(() => {
     if (!branches?.length) return [];
-    return branches.map(branch => ({
-      name: branch.name || `Branch ${branch.id}`,
-      address: branch.address || 'No address',
-      revenue: Math.floor(Math.random() * 100000) + 50000,
-      orders: Math.floor(Math.random() * 100) + 20
-    })).sort((a, b) => b.revenue - a.revenue).slice(0, 4);
-  }, [branches]);
+    return branches.map(branch => {
+      const id = branch.id || branch._id;
+      const branchOrders = allOrders.filter(o => String(o.branchId) === String(id));
+      return {
+        name: branch.name || `Branch ${id}`,
+        address: branch.address || branch.location || 'No address',
+        revenue: branchOrders.reduce((sum, o) => sum + (o.totalAmount || o.total || 0), 0),
+        orders: branchOrders.length,
+      };
+    }).sort((a, b) => b.revenue - a.revenue).slice(0, 4);
+  }, [branches, allOrders]);
 
   const maxRevenue = Math.max(...branchSales.map(b => b.revenue), 1);
 
@@ -127,7 +133,7 @@ export default function StoreDashboard() {
     },
     {
       label: "Total Products",
-      value: products?.totalElements ?? products?.content?.length ?? 0,
+      value: Array.isArray(products) ? products.length : (products?.content?.length ?? products?.totalElements ?? 0),
       sub: `${categories?.length ?? 0} categories`,
       icon: Package,
       iconColor: "#4a4d55",

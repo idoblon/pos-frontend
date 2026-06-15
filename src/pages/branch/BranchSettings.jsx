@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateUserProfile, changePassword, getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { toast } from "sonner";
+import PaymentSettings from "./PaymentSettings";
 
 export default function BranchSettings() {
   const dispatch = useDispatch();
@@ -151,6 +152,11 @@ export default function BranchSettings() {
             </Button>
           </div>
         </form>
+      </div>
+
+      {/* Payment Settings */}
+      <div style={sectionCard}>
+        <PaymentSettings />
       </div>
     </div>
   );

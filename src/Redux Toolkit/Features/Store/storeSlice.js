@@ -6,11 +6,13 @@ import {
   updateStore,
   moderateStore,
   getStoreByAdmin,
+  getEnabledPaymentMethods,
 } from "./storeThunk";
 const initialState = {
   store: null,
   stores: [],
   employees: [],
+  paymentMethods: [],
   loading: false,
   error: null,
 };
@@ -101,6 +103,20 @@ const storeSlice = createSlice({
       .addCase(getStoreByAdmin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // get enabled payment methods
+      .addCase(getEnabledPaymentMethods.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getEnabledPaymentMethods.fulfilled, (state, action) => {
+        state.loading = false;
+        state.paymentMethods = action.payload || [];
+      })
+      .addCase(getEnabledPaymentMethods.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.paymentMethods = [];
       });
   },
 });

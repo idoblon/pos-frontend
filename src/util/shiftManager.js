@@ -1,4 +1,4 @@
-import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
+import { startShift, getCurrentShiftProgress, endShift } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import secureStorage from "./secureStorage";
 
 /**

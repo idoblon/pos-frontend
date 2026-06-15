@@ -39,6 +39,7 @@ export default function CashierDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
