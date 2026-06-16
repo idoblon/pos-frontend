@@ -66,19 +66,19 @@ export default function BranchInventory() {
         </div>
         <div style={{ ...s.card, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <AlertTriangle size={20} color="#d97706" />
+            <AlertTriangle size={20} color="#6b7280" />
             <div>
               <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>Low Stock</p>
-              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700, color: "#d97706" }}>{lowStockCount}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>{lowStockCount}</p>
             </div>
           </div>
         </div>
         <div style={{ ...s.card, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <AlertTriangle size={20} color="#e53e3e" />
+            <AlertTriangle size={20} color="#6b7280" />
             <div>
               <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>Out of Stock</p>
-              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700, color: "#e53e3e" }}>{outOfStockCount}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>{outOfStockCount}</p>
             </div>
           </div>
         </div>

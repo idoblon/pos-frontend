@@ -18,20 +18,12 @@ import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk"
 import { findBranchEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import secureStorage from "@/util/secureStorage";
 
-function CustomTooltip({ active, payload, label, primaryColor }) {
+function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div
-      style={{
-        background: "white",
-        border: `1px solid ${primaryColor}30`,
-        borderRadius: 8,
-        padding: "10px 14px",
-        fontSize: 12,
-      }}
-    >
+    <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", fontSize: 12 }}>
       <p style={{ margin: "0 0 4px", fontWeight: 600 }}>{label}</p>
-      <p style={{ margin: 0, color: primaryColor, fontWeight: 700 }}>
+      <p style={{ margin: 0, color: "#1a1d23", fontWeight: 700 }}>
         रु {payload[0].value?.toLocaleString("en-IN")}
       </p>
     </div>
@@ -50,22 +42,14 @@ export default function BranchReports() {
   const { branch } = useSelector((s) => s.branch);
   const { employees } = useSelector((s) => s.employee);
 
-  // Get colors from branch settings or use defaults
-  const primaryColor = branch?.settings?.primaryColor || "#059669";
-  const secondaryColor = branch?.settings?.secondaryColor || "#0d9488";
-  const dangerColor = branch?.settings?.dangerColor || "#e53e3e";
-  const backgroundColor = branch?.settings?.backgroundColor || "#f5f5f5";
-  const textColor = branch?.settings?.textColor || "#1a1d23";
-  const fontFamily =
-    branch?.settings?.fontFamily || "'DM Sans','Inter',sans-serif";
-  const tableHeaderBg = branch?.settings?.tableHeaderBg || `${primaryColor}10`;
-  const tableHoverBg = branch?.settings?.tableHoverBg || `${primaryColor}10`;
-  const cardBorderColor =
-    branch?.settings?.cardBorderColor || `${primaryColor}20`;
+  // Fixed black/grey/white color scheme
+  const primaryColor = "#1a1d23";
+  const textColor = "#1a1d23";
+  const fontFamily = "'DM Sans','Inter',sans-serif";
 
   const card = {
     background: "white",
-    border: `1px solid ${cardBorderColor}`,
+    border: "1px solid #e5e7eb",
     borderRadius: 10,
     padding: "20px",
   };
@@ -156,20 +140,12 @@ export default function BranchReports() {
 
   // Helper function to get shift status with overtime check
   const getShiftStatus = (shift) => {
-    if (shift.endTime) return { status: "Closed", color: primaryColor, bg: `${primaryColor}15` };
-    
+    if (shift.endTime) return { status: "Closed", color: "#6b7280", bg: "#f5f5f5" };
     const startTimeValue = shift.startTime || shift.createdAt || shift.loginTime || shift.shiftStart;
-    if (!startTimeValue) return { status: "Unknown", color: "#6b7280", bg: "#f3f4f6" };
-    
-    const start = new Date(startTimeValue);
-    const now = new Date();
-    const hours = Math.floor((now - start) / (1000 * 60 * 60));
-    
-    if (hours >= 10) {
-      return { status: "Overtime", color: "#dc2626", bg: "#fef2f2" };
-    }
-    
-    return { status: "Active", color: "#16a34a", bg: "#dcfce7" };
+    if (!startTimeValue) return { status: "Unknown", color: "#6b7280", bg: "#f5f5f5" };
+    const hours = Math.floor((new Date() - new Date(startTimeValue)) / (1000 * 60 * 60));
+    if (hours >= 10) return { status: "Overtime", color: "#6b7280", bg: "#efefef" };
+    return { status: "Active", color: "#1a1d23", bg: "#efefef" };
   };
 
   // Payment breakdown
@@ -191,7 +167,7 @@ export default function BranchReports() {
         display: "flex",
         flexDirection: "column",
         gap: 24,
-        background: backgroundColor,
+        background: "#f5f5f5",
         minHeight: "100%",
         fontFamily: fontFamily,
         color: textColor,
@@ -216,7 +192,7 @@ export default function BranchReports() {
           value={range}
           onChange={(e) => setRange(e.target.value)}
           style={{
-            border: `1px solid ${primaryColor}30`,
+            border: "1px solid #e5e7eb",
             borderRadius: 8,
             padding: "7px 12px",
             fontSize: 13,
@@ -246,28 +222,28 @@ export default function BranchReports() {
             value: `रु ${totalRevenue.toLocaleString("en-IN")}`,
             sub: `Avg: रु ${Math.round(totalRevenue / Math.max(days, 1)).toLocaleString("en-IN")}/day`,
             icon: TrendingUp,
-            color: primaryColor,
+            color: "#1a1d23",
           },
           {
             label: "Total Orders",
             value: totalOrders,
             sub: `Avg: ${Math.round(totalOrders / Math.max(days, 1))} orders/day`,
             icon: ShoppingBag,
-            color: secondaryColor,
+            color: "#1a1d23",
           },
           {
             label: "Refund Rate",
             value: `${totalOrders > 0 ? (((refunds?.length ?? 0) / totalOrders) * 100).toFixed(1) : 0}%`,
             sub: `रु ${totalRefunds.toLocaleString("en-IN")} refunded`,
             icon: RotateCcw,
-            color: dangerColor,
+            color: "#6b7280",
           },
           {
             label: "Active Shifts",
             value: totalShifts,
             sub: `${Math.round((totalShifts / Math.max(days, 1)) * 7)} shifts/week`,
             icon: BarChart2,
-            color: primaryColor,
+            color: "#6b7280",
           },
         ].map(({ label, value, sub, icon: Icon, color }) => (
           <div key={label} style={{ ...card, padding: "16px 20px" }}>
@@ -287,7 +263,7 @@ export default function BranchReports() {
                     margin: "6px 0 2px",
                     fontSize: 22,
                     fontWeight: 800,
-                    color,
+                    color: "#1a1d23",
                     letterSpacing: "-0.5px",
                   }}
                 >
@@ -297,7 +273,7 @@ export default function BranchReports() {
                   {sub}
                 </p>
               </div>
-              <Icon size={18} color={color} />
+                  <Icon size={18} color={color} />
             </div>
           </div>
         ))}
@@ -322,12 +298,8 @@ export default function BranchReports() {
             >
               <defs>
                 <linearGradient id="reportGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="5%"
-                    stopColor={primaryColor}
-                    stopOpacity={0.15}
-                  />
-                  <stop offset="95%" stopColor={primaryColor} stopOpacity={0} />
+                  <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -346,17 +318,15 @@ export default function BranchReports() {
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip
-                content={<CustomTooltip primaryColor={primaryColor} />}
-              />
+              <Tooltip content={<CustomTooltip primaryColor="#1a1d23" />} />
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke={primaryColor}
+                stroke="#1a1d23"
                 strokeWidth={2}
                 fill="url(#reportGrad)"
                 dot={false}
-                activeDot={{ r: 4, fill: primaryColor }}
+                activeDot={{ r: 4, fill: "#1a1d23" }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -391,10 +361,8 @@ export default function BranchReports() {
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip
-                content={<CustomTooltip primaryColor={primaryColor} />}
-              />
-              <Bar dataKey="total" fill={primaryColor} radius={[4, 4, 0, 0]} />
+              <Tooltip content={<CustomTooltip primaryColor="#1a1d23" />} />
+              <Bar dataKey="total" fill="#1a1d23" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -412,7 +380,7 @@ export default function BranchReports() {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <User size={16} color={primaryColor} />
+            <User size={16} color="#6b7280" />
             <span style={{ fontSize: 12, color: "#8a909c" }}>
               {employees?.length || 0} Active Cashiers
             </span>
@@ -464,9 +432,9 @@ export default function BranchReports() {
                         fontSize: 12,
                         fontWeight: 600,
                         color: "#6b7280",
-                        background: tableHeaderBg,
+                        background: "#f5f5f5",
                         textAlign: i === 4 ? "right" : "left",
-                        borderBottom: `1px solid ${primaryColor}30`,
+                        borderBottom: "1px solid #e5e7eb",
                       }}
                     >
                       {h}
@@ -479,18 +447,14 @@ export default function BranchReports() {
                   <tr
                     key={shift.id ?? i}
                     style={{ background: "white" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = tableHoverBg)
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "white")
-                    }
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
                   >
                     <td
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
-                        borderBottom: `1px solid ${primaryColor}30`,
+                        borderBottom: "1px solid #e5e7eb",
                         fontWeight: 600,
                       }}
                     >
@@ -500,7 +464,7 @@ export default function BranchReports() {
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
-                        borderBottom: `1px solid ${primaryColor}30`,
+                        borderBottom: "1px solid #e5e7eb",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -508,13 +472,13 @@ export default function BranchReports() {
                           width: 32,
                           height: 32,
                           borderRadius: "50%",
-                          background: `${primaryColor}15`,
+                          background: "#f5f5f5",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           fontSize: 12,
                           fontWeight: 600,
-                          color: primaryColor
+                          color: "#1a1d23"
                         }}>
                           {getCashierName(shift).charAt(0).toUpperCase()}
                         </div>
@@ -532,12 +496,12 @@ export default function BranchReports() {
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
-                        borderBottom: `1px solid ${primaryColor}30`,
+                        borderBottom: "1px solid #e5e7eb",
                       }}
                     >
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
-                          <Clock size={12} color={primaryColor} />
+                          <Clock size={12} color="#6b7280" />
                           <span style={{ fontSize: 12, fontWeight: 600, color: textColor }}>
                             {(() => {
                               console.log('🔍 DEBUG - Shift data:', shift);
@@ -582,7 +546,7 @@ export default function BranchReports() {
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
-                        borderBottom: `1px solid ${primaryColor}30`,
+                        borderBottom: "1px solid #e5e7eb",
                       }}
                     >
                       <div>
@@ -610,10 +574,10 @@ export default function BranchReports() {
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
-                        borderBottom: `1px solid ${primaryColor}30`,
+                        borderBottom: "1px solid #e5e7eb",
                         textAlign: "right",
                         fontWeight: 700,
-                        color: primaryColor,
+                        color: "#1a1d23",
                       }}
                     >
                       रु{" "}
@@ -627,7 +591,7 @@ export default function BranchReports() {
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
-                        borderBottom: `1px solid ${primaryColor}30`,
+                        borderBottom: "1px solid #e5e7eb",
                       }}
                     >
                       <span

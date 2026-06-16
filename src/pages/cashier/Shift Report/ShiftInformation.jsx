@@ -5,6 +5,24 @@ import { Clock } from "lucide-react";
 
 const STANDARD_SHIFT_HOURS = 9;
 
+const parseShiftTime = (raw) => {
+  if (!raw) return null;
+  // Backend sends local time strings without timezone — parse as-is (local)
+  return new Date(raw);
+};
+
+const formatTime = (date) =>
+  date
+    ? date.toLocaleString(undefined, {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "N/A";
+
 const ShiftInformation = () => {
   const shiftData = useSelector((state) => state.shiftReport?.currentShift);
   const [shiftMetrics, setShiftMetrics] = useState({
@@ -16,34 +34,15 @@ const ShiftInformation = () => {
 
   const calculateMetrics = () => {
     if (shiftData?.shiftStart) {
-      // Fix: append 'Z' only if no timezone info present
-      const rawStart = shiftData.shiftStart;
-      const fixedStart =
-        rawStart.includes("Z") || rawStart.includes("+")
-          ? rawStart
-          : rawStart + "Z";
+      const startTime = parseShiftTime(shiftData.shiftStart);
+      const endTime = shiftData.shiftEnd ? parseShiftTime(shiftData.shiftEnd) : new Date();
 
-      const startTime = new Date(fixedStart);
-      const endTime = shiftData.shiftEnd
-        ? new Date(
-            shiftData.shiftEnd.includes("Z") || shiftData.shiftEnd.includes("+")
-              ? shiftData.shiftEnd
-              : shiftData.shiftEnd + "Z",
-          )
-        : new Date();
-
-      const totalMillis = endTime - startTime;
-      const totalHours = totalMillis / (1000 * 60 * 60);
-
-      const expectedEnd = new Date(startTime);
-      expectedEnd.setHours(expectedEnd.getHours() + STANDARD_SHIFT_HOURS);
-
-      const regularHours = Math.min(totalHours, STANDARD_SHIFT_HOURS);
-      const overtimeHours = Math.max(0, totalHours - STANDARD_SHIFT_HOURS);
+      const totalHours = (endTime - startTime) / (1000 * 60 * 60);
+      const expectedEnd = new Date(startTime.getTime() + STANDARD_SHIFT_HOURS * 60 * 60 * 1000);
 
       setShiftMetrics({
-        regularHours: Math.round(regularHours * 10) / 10,
-        overtimeHours: Math.round(overtimeHours * 10) / 10,
+        regularHours: Math.round(Math.min(totalHours, STANDARD_SHIFT_HOURS) * 10) / 10,
+        overtimeHours: Math.round(Math.max(0, totalHours - STANDARD_SHIFT_HOURS) * 10) / 10,
         totalHours: Math.round(totalHours * 10) / 10,
         expectedEndTime: expectedEnd,
       });
@@ -81,23 +80,14 @@ const ShiftInformation = () => {
             <div className="flex justify-between items-center py-1.5 border-b">
               <span className="text-sm text-gray-600">Shift Start</span>
               <span className="font-medium text-gray-900 text-sm">
-                {shiftData?.shiftStart
-                  ? new Date(
-                      shiftData.shiftStart.includes("Z") ||
-                        shiftData.shiftStart.includes("+")
-                        ? shiftData.shiftStart
-                        : shiftData.shiftStart + "Z",
-                    ).toLocaleString()
-                  : "N/A"}
+                {formatTime(parseShiftTime(shiftData?.shiftStart))}
               </span>
             </div>
 
             <div className="flex justify-between items-center py-1.5 border-b">
               <span className="text-sm text-gray-600">Expected Shift End</span>
               <span className="font-medium text-gray-900 text-sm">
-                {shiftMetrics.expectedEndTime
-                  ? shiftMetrics.expectedEndTime.toLocaleString()
-                  : "N/A"}
+                {formatTime(shiftMetrics.expectedEndTime)}
                 <span className="ml-2 text-xs text-gray-500">(9 hrs)</span>
               </span>
             </div>

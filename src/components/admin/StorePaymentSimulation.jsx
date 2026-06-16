@@ -205,7 +205,7 @@ export default function StorePaymentSimulation() {
                   style={{
                     flex: 1,
                     padding: '10px 16px',
-                    background: 'linear-gradient(135deg, #059669, #047857)',
+                    background: 'linear-gradient(135deg, #1a1d23, #4a4d55)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -345,7 +345,7 @@ export default function StorePaymentSimulation() {
                 style={{
                   flex: 2,
                   padding: '12px',
-                  background: processing ? '#6b7280' : 'linear-gradient(135deg, #059669, #047857)',
+                  background: processing ? '#6b7280' : 'linear-gradient(135deg, #1a1d23, #4a4d55)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',

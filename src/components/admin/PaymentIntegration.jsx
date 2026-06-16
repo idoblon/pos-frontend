@@ -295,7 +295,7 @@ export default function PaymentIntegration({ subscription, onPaymentSuccess, onC
                     </div>
                   </div>
                   {selectedMethod === method.id && (
-                    <CheckCircle size={16} color="#059669" />
+                    <CheckCircle size={16} color="#1a1d23" />
                   )}
                 </div>
               );

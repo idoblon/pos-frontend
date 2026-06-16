@@ -185,7 +185,7 @@ export default function EmailPaymentTest() {
           style={{
             flex: 1,
             padding: '12px',
-            background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
+            background: 'linear-gradient(135deg, #1a1d23, #4a4d55)',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
@@ -209,7 +209,7 @@ export default function EmailPaymentTest() {
           style={{
             flex: 1,
             padding: '12px',
-            background: 'linear-gradient(135deg, #059669, #047857)',
+            background: 'linear-gradient(135deg, #1a1d23, #4a4d55)',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
@@ -237,7 +237,7 @@ export default function EmailPaymentTest() {
             padding: '16px',
             background: testStage === 'running' 
               ? '#6b7280' 
-              : 'linear-gradient(135deg, #7c3aed, #5b21b6)',
+              : 'linear-gradient(135deg, #1a1d23, #4a4d55)',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
@@ -299,7 +299,7 @@ export default function EmailPaymentTest() {
                 {result.success === null ? (
                   <AlertCircle size={16} color="#f59e0b" />
                 ) : result.success ? (
-                  <CheckCircle size={16} color="#059669" />
+                  <CheckCircle size={16} color="#1a1d23" />
                 ) : (
                   <AlertCircle size={16} color="#e53e3e" />
                 )}
@@ -307,7 +307,7 @@ export default function EmailPaymentTest() {
                 <div style={{ flex: 1 }}>
                   <div style={{
                     fontWeight: '600',
-                    color: result.success === null ? '#f59e0b' : result.success ? '#059669' : '#e53e3e'
+                    color: result.success === null ? '#f59e0b' : result.success ? '#1a1d23' : '#e53e3e'
                   }}>
                     {result.step}
                   </div>

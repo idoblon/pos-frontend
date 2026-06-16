@@ -99,8 +99,8 @@ export default function PaymentNotifications() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '18px', fontWeight: '700', color: '#166534', lineHeight: 1 }}>रु</span>
+          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(26, 29, 35, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '18px', fontWeight: '700', color: '#1a1d23', lineHeight: 1 }}>रु</span>
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Total Revenue</p>
@@ -108,8 +108,8 @@ export default function PaymentNotifications() {
           </div>
         </div>
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Store size={20} color='#1d4ed8' />
+          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(26, 29, 35, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Store size={20} color='#1a1d23' />
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Payments Received</p>
@@ -117,8 +117,8 @@ export default function PaymentNotifications() {
           </div>
         </div>
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Bell size={18} color='#c2410c' />
+          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(26, 29, 35, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Bell size={18} color='#1a1d23' />
           </div>
           <div>
             <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Unread</p>
@@ -142,7 +142,7 @@ export default function PaymentNotifications() {
               <button
                 onClick={markAllAsRead}
                 style={{
-                  background: '#111827',
+                  background: '#1a1d23',
                   color: 'white',
                   border: 'none',
                   borderRadius: '10px',
@@ -164,8 +164,8 @@ export default function PaymentNotifications() {
             <div key={n.id ?? n.transactionId} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: '18px', fontWeight: '700', color: '#166534', lineHeight: 1 }}>रु</span>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'rgba(26, 29, 35, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: '18px', fontWeight: '700', color: '#1a1d23', lineHeight: 1 }}>रु</span>
                   </div>
                   <div>
                     <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: '700', color: '#1a1d23' }}>
@@ -191,7 +191,7 @@ export default function PaymentNotifications() {
                         gap: '6px',
                         fontSize: '12px',
                         fontWeight: '700',
-                        color: '#111827',
+                        color: '#1a1d23',
                       }}
                       title="Mark as read"
                     >
@@ -199,7 +199,7 @@ export default function PaymentNotifications() {
                       Read
                     </button>
                   )}
-                  <span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', background: '#f0fdf4', color: '#166534' }}>
+                  <span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', background: 'rgba(26, 29, 35, 0.1)', color: '#1a1d23' }}>
                     {formatAmount(n.amount)}
                   </span>
                 </div>

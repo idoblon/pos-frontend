@@ -144,10 +144,10 @@ export default function BranchRestockRequests() {
       {/* Status Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
         {[
-          { label: "Pending Review", count: statusCounts.PENDING, color: "#d97706", bg: "#fffbeb" },
-          { label: "Products Coming", count: statusCounts.APPROVED, color: "#059669", bg: "#f0fdf4" },
-          { label: "Received", count: statusCounts.FULFILLED, color: "#1a1d23", bg: "#f0f0f0" },
-          { label: "Rejected", count: statusCounts.REJECTED, color: "#e53e3e", bg: "#fef2f2" },
+          { label: "Pending Review", count: statusCounts.PENDING, color: "#1a1d23", bg: "#f5f5f5" },
+          { label: "Products Coming", count: statusCounts.APPROVED, color: "#1a1d23", bg: "#f5f5f5" },
+          { label: "Received", count: statusCounts.FULFILLED, color: "#1a1d23", bg: "#f5f5f5" },
+          { label: "Rejected", count: statusCounts.REJECTED, color: "#6b7280", bg: "#f5f5f5" },
         ].map(({ label, count, color, bg }) => (
           <div key={label} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

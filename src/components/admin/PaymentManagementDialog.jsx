@@ -329,7 +329,16 @@ const PaymentManagementDialog = ({ request, onClose, onUpdate }) => {
                 <Button 
                   onClick={approveRegularly}
                   disabled={loading}
-                  className="bg-green-600 hover:bg-green-700"
+                  style={{
+                  backgroundColor: "#1a1d23",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "10px 16px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
                 >
                   {loading ? 'Processing...' : 'Approve Store'}
                 </Button>

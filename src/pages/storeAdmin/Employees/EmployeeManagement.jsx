@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Plus, Search, Users, Pencil, Trash2, UserCircle } from "lucide-react";
+import { Plus, Search, Users, Pencil, Trash2, UserCircle, Clock } from "lucide-react";
 import { findStoreEmployee, createStoreEmpoyee, updateEmpoyee, deleteEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import { getShiftsByBranch } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,8 @@ export default function EmployeeManagement() {
   const [editing, setEditing] = useState(null);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [allShifts, setAllShifts] = useState([]);
+  const [staffSearch, setStaffSearch] = useState("");
 
   useEffect(() => {
     if (!storeId) {
@@ -65,6 +68,57 @@ export default function EmployeeManagement() {
     dispatch(findStoreEmployee({ storeId }));
     dispatch(getBranchesByStore(storeId));
   }, [dispatch, storeId]);
+
+  useEffect(() => {
+    if (branches?.length > 0) {
+      Promise.all(branches.map((b) => dispatch(getShiftsByBranch(b._id || b.id)).unwrap().catch(() => [])))
+        .then((results) => setAllShifts(results.flat()));
+    }
+  }, [branches, dispatch]);
+
+  const getLastSixMonths = () => {
+    const months = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      months.push({ value: d.toISOString().slice(0, 7), label: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }) });
+    }
+    return months;
+  };
+
+  const getMonthlyWorkHours = (employeeId, monthYear) => {
+    const [year, month] = monthYear.split("-");
+    const targetMonth = parseInt(month) - 1;
+    const targetYear = parseInt(year);
+    const empShifts = allShifts.filter((shift) => {
+      const matches = shift.cashierId === employeeId || shift.userId === employeeId || shift.employeeId === employeeId;
+      if (!matches || !shift.startTime) return false;
+      const d = new Date(shift.startTime);
+      return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+    });
+    let totalHours = 0;
+    const dailyHours = {};
+    empShifts.forEach((shift) => {
+      const start = new Date(shift.startTime);
+      const end = shift.endTime ? new Date(shift.endTime) : new Date();
+      const h = Math.max(0, (end - start) / (1000 * 60 * 60));
+      totalHours += h;
+      dailyHours[start.toDateString()] = (dailyHours[start.toDateString()] || 0) + h;
+    });
+    const daysWorked = Object.keys(dailyHours).length;
+    return {
+      totalHours: Math.round(totalHours * 10) / 10,
+      overtimeHours: Math.round(Math.max(0, totalHours - 160) * 10) / 10,
+      shifts: empShifts.length,
+      daysWorked,
+    };
+  };
+
+  const searchedEmployees = employees?.filter((emp) => {
+    if (!staffSearch.trim()) return false;
+    return (emp.fullName || "").toLowerCase().includes(staffSearch.toLowerCase()) ||
+      (emp.email || "").toLowerCase().includes(staffSearch.toLowerCase());
+  }) || [];
 
   const filtered = employees?.filter(
     (e) => {
@@ -194,6 +248,70 @@ export default function EmployeeManagement() {
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>Manage your store staff and roles</p>
         </div>
         <button style={s.addBtn} onClick={openAdd}><Plus size={14} /> Add Employee</button>
+      </div>
+
+      {/* Total Working Hours (TWH) Section */}
+      <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{ padding: 8, background: "#f0fdf4", borderRadius: 8 }}>
+            <Clock size={18} color="#059669" />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#1a1d23" }}>Total Working Hours (TWH)</h3>
+            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Search and view employee monthly working hours</p>
+          </div>
+        </div>
+        <div style={{ position: "relative", maxWidth: 350, marginBottom: 12 }}>
+          <Search size={14} color="#8a909c" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+          <input
+            style={{ ...s.searchInput, paddingLeft: 34 }}
+            placeholder="Search staff by name to view monthly hours..."
+            value={staffSearch}
+            onChange={(e) => setStaffSearch(e.target.value)}
+          />
+        </div>
+        {staffSearch && searchedEmployees.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {searchedEmployees.map((emp) => (
+              <div key={emp._id || emp.id} style={{ padding: 16, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <div style={{ padding: 6, background: "#eef1f5", borderRadius: "50%" }}>
+                    <UserCircle size={16} color="#6b7280" />
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{emp.fullName || "No Name"}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{emp.email}</p>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
+                  {getLastSixMonths().map(({ value, label }) => {
+                    const h = getMonthlyWorkHours(emp._id || emp.id, value);
+                    return (
+                      <div key={value} style={{ padding: 8, background: "white", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                        <p style={{ margin: 0, fontSize: 10, color: "#6b7280", fontWeight: 500 }}>{label.split(" ")[0]}</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 14, fontWeight: 600, color: h.overtimeHours > 0 ? "#e53e3e" : "#1a1d23" }}>{h.totalHours}h</p>
+                        {h.overtimeHours > 0 && <p style={{ margin: 0, fontSize: 9, color: "#e53e3e" }}>+{h.overtimeHours}h OT</p>}
+                        <p style={{ margin: 0, fontSize: 9, color: "#8a909c" }}>{h.shifts} shifts</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {staffSearch && searchedEmployees.length === 0 && (
+          <div style={{ padding: 20, textAlign: "center", color: "#6b7280", fontSize: 13, background: "#f9fafb", borderRadius: 6, border: "1px dashed #d1d5db" }}>
+            <Users size={24} color="#d1d5db" style={{ margin: "0 auto 8px", display: "block" }} />
+            <p style={{ margin: 0, fontWeight: 500 }}>No employee found matching "{staffSearch}"</p>
+          </div>
+        )}
+        {!staffSearch && (
+          <div style={{ padding: 20, textAlign: "center", color: "#6b7280", fontSize: 13, background: "#f9fafb", borderRadius: 6 }}>
+            <Search size={24} color="#d1d5db" style={{ margin: "0 auto 8px", display: "block" }} />
+            <p style={{ margin: 0 }}>Start typing an employee name to view their monthly working hours</p>
+          </div>
+        )}
       </div>
 
       <div style={s.card}>

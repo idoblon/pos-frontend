@@ -209,7 +209,7 @@ export default function SubscriptionRequest() {
 
   return (
     <div style={{ padding: "24px", fontFamily: "'DM Sans','Inter',sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
-      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <div style={{ maxWidth: 600 }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div>

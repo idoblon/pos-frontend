@@ -93,10 +93,10 @@ export default function BranchRefunds() {
       {/* Refund Statistics */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
         {[
-          { label: "Total Refunds", value: totalRefunds, icon: TrendingDown, color: "#e53e3e", bg: "#fef2f2" },
-          { label: "Total Amount", value: `रु ${totalAmount.toLocaleString("en-IN")}`, icon: DollarSign, color: "#dc2626", bg: "#fef2f2" },
-          { label: "Today's Refunds", value: todayRefunds, icon: Calendar, color: "#f59e0b", bg: "#fffbeb" },
-          { label: "Avg. Refund", value: `रु ${Math.round(avgRefundAmount).toLocaleString("en-IN")}`, icon: Users, color: "#6b7280", bg: "#f9fafb" },
+          { label: "Total Refunds", value: totalRefunds, icon: TrendingDown, color: "#1a1d23", bg: "#f5f5f5" },
+          { label: "Total Amount", value: `रु ${totalAmount.toLocaleString("en-IN")}`, icon: DollarSign, color: "#1a1d23", bg: "#f5f5f5" },
+          { label: "Today's Refunds", value: todayRefunds, icon: Calendar, color: "#6b7280", bg: "#f5f5f5" },
+          { label: "Avg. Refund", value: `रु ${Math.round(avgRefundAmount).toLocaleString("en-IN")}`, icon: Users, color: "#6b7280", bg: "#f5f5f5" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -105,7 +105,7 @@ export default function BranchRefunds() {
               </div>
               <div>
                 <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>{label}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 700, color }}>{value}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 700, color: "#1a1d23" }}>{value}</p>
               </div>
             </div>
           </div>
@@ -231,7 +231,7 @@ export default function BranchRefunds() {
                         ...s.td,
                         textAlign: "right",
                         fontWeight: 700,
-                        color: "#e53e3e",
+                        color: "#1a1d23",
                       }}
                     >
                       रु {(r.amount ?? 0).toLocaleString("en-IN")}

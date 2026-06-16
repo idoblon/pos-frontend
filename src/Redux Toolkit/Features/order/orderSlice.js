@@ -100,26 +100,35 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // order by branch
+      // order by branch — accumulate across all branches (merge by id)
       .addCase(getOrdersByBranch.pending, (state) => {
         state.loading = true;
       })
       .addCase(getOrdersByBranch.fulfilled, (state, action) => {
         state.loading = false;
-        // Preserve locally updated statuses (like REFUNDED) when backend data comes in
-        const existing = state.orders;
-        state.orders = action.payload.map(backendOrder => {
-          const localOrder = existing.find(o => o.id === backendOrder.id);
-          if (localOrder && (localOrder.status === "REFUNDED" || state.refundedOrderIds.includes(backendOrder.id))) {
-            return {
+        const incoming = action.payload;
+        const existingIds = new Set(state.orders.map(o => o.id));
+        const merged = [...state.orders];
+        incoming.forEach(backendOrder => {
+          const localIdx = merged.findIndex(o => o.id === backendOrder.id);
+          if (localIdx !== -1) {
+            const local = merged[localIdx];
+            merged[localIdx] = {
               ...backendOrder,
-              status: "REFUNDED",
-              refundedAmount: localOrder.refundedAmount || backendOrder.totalAmount,
-              lastRefundDate: localOrder.lastRefundDate || new Date().toISOString()
+              status: (local.status === "REFUNDED" || state.refundedOrderIds.includes(backendOrder.id))
+                ? "REFUNDED" : backendOrder.status,
+              refundedAmount: local.refundedAmount || backendOrder.refundedAmount,
+              lastRefundDate: local.lastRefundDate || backendOrder.lastRefundDate,
             };
+          } else {
+            merged.push(
+              state.refundedOrderIds.includes(backendOrder.id)
+                ? { ...backendOrder, status: "REFUNDED", refundedAmount: backendOrder.totalAmount, lastRefundDate: new Date().toISOString() }
+                : backendOrder
+            );
           }
-          return backendOrder;
         });
+        state.orders = merged;
       })
       .addCase(getOrdersByBranch.rejected, (state, action) => {
         state.loading = false;

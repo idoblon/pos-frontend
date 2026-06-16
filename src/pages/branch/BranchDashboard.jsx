@@ -223,7 +223,7 @@ export default function BranchDashboard() {
         value: `रु ${todayRevenue.toLocaleString("en-IN")}`,
         sub: `${todayOrders?.length ?? 0} orders • Est. profit: रु ${estimatedProfit.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
         icon: TrendingUp,
-        color: "#059669",
+        color: "#1a1d23",
         realTime: true,
       },
       {
@@ -239,7 +239,7 @@ export default function BranchDashboard() {
         value: `रु ${avgOrderValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
         sub: `${totalOrders} total orders`,
         icon: Users,
-        color: "#3b82f6",
+        color: "#6b7280",
         realTime: false,
       },
       {
@@ -247,7 +247,7 @@ export default function BranchDashboard() {
         value: `${refundRate.toFixed(1)}%`,
         sub: `रु ${totalRefundAmount.toLocaleString("en-IN")} total refunds`,
         icon: RotateCcw,
-        color: refundRate > 5 ? "#e53e3e" : "#f59e0b",
+        color: "#6b7280",
         realTime: true,
       },
     ];
@@ -304,8 +304,8 @@ export default function BranchDashboard() {
               fontWeight: 600, 
               padding: "2px 6px", 
               borderRadius: 4,
-              background: "#fef3c7",
-              color: "#92400e"
+              background: "#f5f5f5",
+              color: "#6b7280"
             }}>
               {displayRole}
             </span>
@@ -350,45 +350,25 @@ export default function BranchDashboard() {
         }}
       >
         {stats.map(({ label, value, sub, icon: Icon, color, realTime }) => (
-          <div key={label} style={{
-            ...card,
-            position: "relative",
-            border: realTime ? "1px solid #059669" : "1px solid #e2e5e9"
-          }}>
+          <div key={label} style={{ ...card, position: "relative" }}>
             {realTime && (
               <div style={{
                 position: "absolute",
                 top: 8,
                 right: 8,
-                width: 8,
-                height: 8,
+                width: 7,
+                height: 7,
                 borderRadius: "50%",
-                background: "#059669",
+                background: "#1a1d23",
                 animation: "pulse 2s infinite"
               }} />
             )}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <p style={{ margin: 0, fontSize: 12, color: "#8a909c" }}>
-                    {label}
-                  </p>
+                  <p style={{ margin: 0, fontSize: 12, color: "#8a909c" }}>{label}</p>
                   {realTime && (
-                    <span style={{ 
-                      fontSize: 9, 
-                      color: "#059669", 
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px"
-                    }}>
-                      LIVE
-                    </span>
+                    <span style={{ fontSize: 9, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>LIVE</span>
                   )}
                 </div>
                 <p
@@ -430,36 +410,36 @@ export default function BranchDashboard() {
               label: "Card Sales",
               amount: paymentBreakdown.card,
               percentage: todayRevenue > 0 ? (paymentBreakdown.card / todayRevenue * 100).toFixed(1) : 0,
-              color: "#3b82f6",
-              bg: "#eff6ff",
+              color: "#1a1d23",
+              bg: "#f5f5f5",
             },
             {
               label: "eSewa",
               amount: paymentBreakdown.esewa,
               percentage: todayRevenue > 0 ? (paymentBreakdown.esewa / todayRevenue * 100).toFixed(1) : 0,
-              color: "#16a34a",
-              bg: "#f0fdf4",
+              color: "#1a1d23",
+              bg: "#f5f5f5",
             },
             {
               label: "Khalti",
               amount: paymentBreakdown.khalti,
               percentage: todayRevenue > 0 ? (paymentBreakdown.khalti / todayRevenue * 100).toFixed(1) : 0,
-              color: "#7c3aed",
-              bg: "#f5f3ff",
+              color: "#1a1d23",
+              bg: "#f5f5f5",
             },
             {
               label: "Est. Profit",
               amount: estimatedProfit,
               percentage: "30%",
-              color: "#059669",
-              bg: "#ecfdf5",
+              color: "#1a1d23",
+              bg: "#efefef",
             },
             {
               label: "Refunds",
               amount: todayRefundAmount,
               percentage: todayRevenue > 0 ? (todayRefundAmount / todayRevenue * 100).toFixed(1) : 0,
-              color: "#e53e3e",
-              bg: "#fef2f2",
+              color: "#6b7280",
+              bg: "#f5f5f5",
             },
           ].map(({ label, amount, percentage, color, bg }) => (
             <div key={label} style={{ padding: "12px 16px", borderRadius: 8, background: bg, textAlign: "center" }}>
@@ -495,8 +475,8 @@ export default function BranchDashboard() {
             >
               <defs>
                 <linearGradient id="branchGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#059669" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -519,11 +499,11 @@ export default function BranchDashboard() {
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="#059669"
+                stroke="#1a1d23"
                 strokeWidth={2}
                 fill="url(#branchGrad)"
                 dot={false}
-                activeDot={{ r: 4, fill: "#059669" }}
+                activeDot={{ r: 4, fill: "#1a1d23" }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -531,7 +511,7 @@ export default function BranchDashboard() {
             style={{
               marginTop: 12,
               padding: "8px 12px",
-              background: "#f0fdf4",
+              background: "#f5f5f5",
               borderRadius: 6,
               fontSize: 12,
               color: "#1a1d23",

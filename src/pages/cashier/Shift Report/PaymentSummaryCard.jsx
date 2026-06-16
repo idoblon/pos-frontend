@@ -14,8 +14,8 @@ const PaymentSummaryCard = () => {
               { shiftData?.paymentSummaries?.length > 0 ? shiftData.paymentSummaries.map((payment) => (
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg" key={payment.type}>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <CreditCard className="h-4 w-4 text-blue-600"/>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1a1d23", opacity: 0.1 }}>
+                      <CreditCard className="h-4 w-4" style={{ color: "#1a1d23" }}/>
                     </div>
                     <div>
                       <div className="font-medium text-gray-900 text-sm">{payment.type}</div>

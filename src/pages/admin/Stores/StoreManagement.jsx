@@ -282,14 +282,14 @@ function StoreCard({ store, onEdit, onView, onDelete }) {
 
         <div style={{
           textAlign: "center", padding: "10px 6px",
-          background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+          background: "#f5f5f5",
           borderRadius: "10px"
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 3 }}>
-            <TrendingUp size={12} color="#16a34a" />
-            <span style={{ fontSize: "11px", color: "#4ade80", fontWeight: 500 }}>Revenue</span>
+            <TrendingUp size={12} color="#1a1d23" />
+            <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 500 }}>Revenue</span>
           </div>
-          <p style={{ margin: 0, fontSize: "14px", fontWeight: "800", color: "#16a34a" }}>
+          <p style={{ margin: 0, fontSize: "14px", fontWeight: "800", color: "#1a1d23" }}>
             {formatCurrency(store.totalRevenue)}
           </p>
         </div>
@@ -411,9 +411,9 @@ function ViewDetailsModal({ store, onClose }) {
               {/* Stats row */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "12px" }}>
                 {[
-                  { label: "Total Branches", value: store.branchCount ?? branches.length ?? 0, icon: GitBranch, color: "#6366f1" },
-                  { label: "Employees", value: store.employeeCount ?? employees.length ?? 0, icon: Users, color: "#0ea5e9" },
-                  { label: "Total Revenue", value: formatCurrency(store.totalRevenue), icon: TrendingUp, color: "#22c55e", small: true },
+                  { label: "Total Branches", value: store.branchCount ?? branches.length ?? 0, icon: GitBranch, color: "#1a1d23" },
+                  { label: "Employees", value: store.employeeCount ?? employees.length ?? 0, icon: Users, color: "#6b7280" },
+                  { label: "Total Revenue", value: formatCurrency(store.totalRevenue), icon: TrendingUp, color: "#1a1d23", small: true },
                 ].map(({ label, value, icon: Icon, color, small }) => (
                   <div key={label} style={{
                     padding: "16px", background: "#f8fafc", borderRadius: "14px",
@@ -421,7 +421,7 @@ function ViewDetailsModal({ store, onClose }) {
                   }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: "10px",
-                      background: color + "20", display: "flex",
+                      background: "#f5f5f5", display: "flex",
                       alignItems: "center", justifyContent: "center", margin: "0 auto 8px"
                     }}>
                       <Icon size={18} color={color} />
@@ -485,10 +485,10 @@ function ViewDetailsModal({ store, onClose }) {
                     }}>
                       <div style={{
                         width: 36, height: 36, borderRadius: "10px",
-                        background: "#6366f120", display: "flex",
+                        background: "#f5f5f5", display: "flex",
                         alignItems: "center", justifyContent: "center", flexShrink: 0
                       }}>
-                        <GitBranch size={16} color="#6366f1" />
+                        <GitBranch size={16} color="#1a1d23" />
                       </div>
                       <div style={{ flex: 1 }}>
                         <p style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "#1e293b" }}>
@@ -527,7 +527,7 @@ function ViewDetailsModal({ store, onClose }) {
                     }}>
                       <div style={{
                         width: 38, height: 38, borderRadius: "50%",
-                        background: "linear-gradient(135deg, #667eea, #764ba2)",
+                        background: "linear-gradient(135deg, #1a1d23, #4a4d55)",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         color: "white", fontWeight: "700", fontSize: "14px", flexShrink: 0
                       }}>
@@ -611,7 +611,7 @@ function EditStoreModal({ store, onClose, onSave, saving }) {
           transition: "border-color 0.2s", boxSizing: "border-box",
           fontFamily: "inherit"
         }}
-        onFocus={e => e.target.style.borderColor = "#667eea"}
+        onFocus={e => e.target.style.borderColor = "#1a1d23"}
         onBlur={e => e.target.style.borderColor = errors[key] ? "#ef4444" : "#e2e8f0"}
       />
       {errors[key] && <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#ef4444" }}>{errors[key]}</p>}
@@ -638,7 +638,7 @@ function EditStoreModal({ store, onClose, onSave, saving }) {
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{
               width: 40, height: 40, borderRadius: "10px",
-              background: "linear-gradient(135deg, #667eea, #764ba2)",
+              background: "linear-gradient(135deg, #1a1d23, #4a4d55)",
               display: "flex", alignItems: "center", justifyContent: "center"
             }}>
               <Edit2 size={18} color="white" />
@@ -675,7 +675,7 @@ function EditStoreModal({ store, onClose, onSave, saving }) {
                   fontSize: "14px", outline: "none", resize: "vertical",
                   boxSizing: "border-box", fontFamily: "inherit"
                 }}
-                onFocus={e => e.target.style.borderColor = "#667eea"}
+                onFocus={e => e.target.style.borderColor = "#1a1d23"}
                 onBlur={e => e.target.style.borderColor = "#e2e8f0"}
               />
             </div>
@@ -696,7 +696,7 @@ function EditStoreModal({ store, onClose, onSave, saving }) {
                   placeholder="e.g. Retail, Pharmacy"
                   onChange={e => set("type", e.target.value)}
                   style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #e2e8f0", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
-                  onFocus={e => e.target.style.borderColor = "#667eea"}
+                  onFocus={e => e.target.style.borderColor = "#1a1d23"}
                   onBlur={e => e.target.style.borderColor = "#e2e8f0"}
                 />
               </div>
@@ -726,7 +726,7 @@ function EditStoreModal({ store, onClose, onSave, saving }) {
                 rows={2}
                 placeholder="Optional store description..."
                 style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #e2e8f0", borderRadius: "8px", fontSize: "14px", outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }}
-                onFocus={e => e.target.style.borderColor = "#667eea"}
+                onFocus={e => e.target.style.borderColor = "#1a1d23"}
                 onBlur={e => e.target.style.borderColor = "#e2e8f0"}
               />
             </div>
@@ -743,7 +743,7 @@ function EditStoreModal({ store, onClose, onSave, saving }) {
             <button type="submit" disabled={saving} style={{
               display: "flex", alignItems: "center", gap: "8px",
               padding: "10px 22px", border: "none", borderRadius: "8px",
-              background: saving ? "#a0aec0" : "linear-gradient(135deg, #667eea, #764ba2)",
+              background: saving ? "#a0aec0" : "linear-gradient(135deg, #1a1d23, #4a4d55)",
               color: "white", fontSize: "14px", fontWeight: "600",
               cursor: saving ? "not-allowed" : "pointer"
             }}>
@@ -1001,11 +1001,11 @@ export default function StoreManagement() {
       {/* Summary bar */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: "14px" }}>
         {[
-          { label: "Total Stores", value: stores.length, color: "#6366f1", icon: StoreIcon },
-          { label: "Active", value: stores.filter(s => s.status === "active").length, color: "#22c55e", icon: CheckCircle },
-          { label: "Inactive", value: stores.filter(s => s.status === "inactive").length, color: "#f59e0b", icon: AlertCircle },
-          { label: "Suspended", value: stores.filter(s => s.status === "suspended").length, color: "#ef4444", icon: AlertCircle },
-          { label: "Pending", value: stores.filter(s => s.status === "pending" || s.status === "payment_pending").length, color: "#0ea5e9", icon: Clock },
+          { label: "Total Stores", value: stores.length, color: "#1a1d23", icon: StoreIcon },
+          { label: "Active", value: stores.filter(s => s.status === "active").length, color: "#1a1d23", icon: CheckCircle },
+          { label: "Inactive", value: stores.filter(s => s.status === "inactive").length, color: "#6b7280", icon: AlertCircle },
+          { label: "Suspended", value: stores.filter(s => s.status === "suspended").length, color: "#6b7280", icon: AlertCircle },
+          { label: "Pending", value: stores.filter(s => s.status === "pending" || s.status === "payment_pending").length, color: "#6b7280", icon: Clock },
         ].map(({ label, value, color, icon: Icon }) => (
           <div key={label} style={{
             background: "white", border: "1px solid #e2e8f0", borderRadius: "14px",
@@ -1014,7 +1014,7 @@ export default function StoreManagement() {
           }}>
             <div style={{
               width: 38, height: 38, borderRadius: "10px",
-              background: color + "18", display: "flex", alignItems: "center", justifyContent: "center"
+              background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center"
             }}>
               <Icon size={18} color={color} />
             </div>
@@ -1043,7 +1043,7 @@ export default function StoreManagement() {
               border: "1.5px solid #e2e8f0", borderRadius: "8px",
               fontSize: "13.5px", outline: "none", boxSizing: "border-box"
             }}
-            onFocus={e => e.target.style.borderColor = "#667eea"}
+            onFocus={e => e.target.style.borderColor = "#1a1d23"}
             onBlur={e => e.target.style.borderColor = "#e2e8f0"}
           />
         </div>

@@ -55,14 +55,17 @@ const refundSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // get refunds by branch
+      // get refunds by branch — accumulate across all branches (merge by id)
       .addCase(getRefundsByBranch.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(getRefundsByBranch.fulfilled, (state, action) => {
         state.loading = false;
-        state.refundsByBranch = action.payload;
+        const incoming = action.payload;
+        const existingIds = new Set(state.refundsByBranch.map(r => r.id));
+        const newItems = incoming.filter(r => !existingIds.has(r.id));
+        state.refundsByBranch = [...state.refundsByBranch, ...newItems];
       })
       .addCase(getRefundsByBranch.rejected, (state, action) => {
         state.loading = false;

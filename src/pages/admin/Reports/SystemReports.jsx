@@ -8,7 +8,7 @@ import {
   ShoppingCart, BarChart3, FileText
 } from "lucide-react";
 
-const COLORS = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#ffa726'];
+const COLORS = ['#1a1d23', '#667eea', '#f093fb', '#4facfe', '#43e97b'];
 
 export default function SystemReports() {
   const [dateRange, setDateRange] = useState("This Year");
@@ -33,9 +33,9 @@ export default function SystemReports() {
   ];
 
   const userActivityData = [
-    { name: 'Active Daily', value: 85, color: '#48bb78' },
-    { name: 'Active Weekly', value: 12, color: '#ed8936' },
-    { name: 'Inactive', value: 3, color: '#f56565' }
+    { name: 'Active Daily', value: 85, color: '#1a1d23' },
+    { name: 'Active Weekly', value: 12, color: '#4a4d55' },
+    { name: 'Inactive', value: 3, color: '#6b7280' }
   ];
 
   const handleExport = () => {
@@ -162,15 +162,15 @@ export default function SystemReports() {
                 <AreaChart data={systemOverviewData}>
                   <defs>
                     <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#667eea" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#667eea" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#718096" }} />
                   <YAxis tick={{ fontSize: 12, fill: "#718096" }} />
                   <Tooltip />
-                  <Area type="monotone" dataKey="revenue" stroke="#667eea" fill="url(#revenueGrad)" />
+                  <Area type="monotone" dataKey="revenue" stroke="#1a1d23" fill="url(#revenueGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -189,7 +189,7 @@ export default function SystemReports() {
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#718096" }} />
                 <YAxis tick={{ fontSize: 12, fill: "#718096" }} />
                 <Tooltip />
-                <Bar dataKey="revenue" fill="#667eea" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="revenue" fill="#1a1d23" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -232,7 +232,7 @@ export default function SystemReports() {
                   <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#718096" }} />
                   <YAxis tick={{ fontSize: 12, fill: "#718096" }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="users" stroke="#f093fb" strokeWidth={3} />
+                  <Line type="monotone" dataKey="users" stroke="#1a1d23" strokeWidth={3} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -244,10 +244,10 @@ export default function SystemReports() {
           <div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
               {[
-                { label: "Total Revenue", value: "रु 32,50,000", trend: "+15.2%", color: "#48bb78" },
-                { label: "Total Orders", value: "18,670", trend: "+12.8%", color: "#667eea" },
-                { label: "Avg Order Value", value: "रु 1,740", trend: "+8.4%", color: "#f093fb" },
-                { label: "Active Stores", value: "12", trend: "+20%", color: "#4facfe" }
+                { label: "Total Revenue", value: "रु 32,50,000", trend: "+15.2%", color: "#1a1d23" },
+                { label: "Total Orders", value: "18,670", trend: "+12.8%", color: "#1a1d23" },
+                { label: "Avg Order Value", value: "रु 1,740", trend: "+8.4%", color: "#1a1d23" },
+                { label: "Active Stores", value: "12", trend: "+20%", color: "#1a1d23" }
               ].map((metric, index) => (
                 <div key={index} style={{
                   background: "#f8fafc",
@@ -276,15 +276,15 @@ export default function SystemReports() {
               <AreaChart data={systemOverviewData}>
                 <defs>
                   <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#43e97b" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#43e97b" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#718096" }} />
                 <YAxis tick={{ fontSize: 12, fill: "#718096" }} />
                 <Tooltip />
-                <Area type="monotone" dataKey="revenue" stroke="#43e97b" fill="url(#revenueGradient)" strokeWidth={3} />
+                <Area type="monotone" dataKey="revenue" stroke="#1a1d23" fill="url(#revenueGradient)" strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

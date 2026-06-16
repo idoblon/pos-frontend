@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Plus, Search, Users, Pencil, Trash2, UserCircle, Clock } from "lucide-react";
+import { Plus, Search, Users, Pencil, Trash2, UserCircle } from "lucide-react";
 import { findBranchEmployee, createBranchEmpoyee, updateEmpoyee, deleteEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
-import { getShiftsByBranch } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -34,7 +33,6 @@ export default function BranchEmployees() {
   const userData = secureStorage.getUserData();
   const branchId = userData?.branchId;
   const { employees, loading } = useSelector((s) => s.employee);
-  const { shiftsByBranch } = useSelector((s) => s.shiftReport);
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -42,15 +40,10 @@ export default function BranchEmployees() {
   const [editing, setEditing] = useState(null);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0]);
-  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
-  const [staffSearch, setStaffSearch] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM format
 
   useEffect(() => {
     if (branchId) {
       dispatch(findBranchEmployee({ branchId }));
-      dispatch(getShiftsByBranch(branchId));
     }
   }, [dispatch, branchId]);
 
@@ -58,113 +51,8 @@ export default function BranchEmployees() {
     `${e.fullName} ${e.email}`.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Calculate work hours for date range
-  const getWorkHours = (employeeId, fromDate, toDate) => {
-    if (!shiftsByBranch) return 0;
-    
-    const from = new Date(fromDate);
-    const to = new Date(toDate);
-    to.setHours(23, 59, 59, 999); // Include full end date
-    
-    const employeeShifts = shiftsByBranch.filter(shift => {
-      const matchesEmployee = shift.cashierId === employeeId || 
-                             shift.userId === employeeId ||
-                             shift.employeeId === employeeId;
-      
-      if (!matchesEmployee || !shift.startTime) return false;
-      
-      const shiftDate = new Date(shift.startTime);
-      return shiftDate >= from && shiftDate <= to;
-    });
-    
-    let totalHours = 0;
-    employeeShifts.forEach(shift => {
-      if (shift.startTime) {
-        const start = new Date(shift.startTime);
-        const end = shift.endTime ? new Date(shift.endTime) : new Date();
-        const hours = (end - start) / (1000 * 60 * 60);
-        totalHours += Math.max(0, hours);
-      }
-    });
-    
-    return Math.round(totalHours * 10) / 10;
-  };
-
-  // Find searched staff members for TWH section
-  const searchedEmployees = employees?.filter(emp => {
-    if (!staffSearch.trim()) return false;
-    const fullName = (emp.fullName || '').toLowerCase();
-    const email = (emp.email || '').toLowerCase();
-    const searchTerm = staffSearch.toLowerCase();
-    
-    return fullName.includes(searchTerm) || email.includes(searchTerm);
-  }) || [];
-
-  // Calculate work hours for specific month
-  const getMonthlyWorkHours = (employeeId, monthYear) => {
-    if (!shiftsByBranch) return { totalHours: 0, regularHours: 0, overtimeHours: 0, daysWorked: 0, avgHours: 0 };
-    
-    const [year, month] = monthYear.split('-');
-    const targetMonth = parseInt(month) - 1; // JS months are 0-indexed
-    const targetYear = parseInt(year);
-    
-    const employeeShifts = shiftsByBranch.filter(shift => {
-      const matchesEmployee = shift.cashierId === employeeId || 
-                             shift.userId === employeeId ||
-                             shift.employeeId === employeeId;
-      
-      if (!matchesEmployee || !shift.startTime) return false;
-      
-      const shiftDate = new Date(shift.startTime);
-      return shiftDate.getMonth() === targetMonth && shiftDate.getFullYear() === targetYear;
-    });
-    
-    let totalHours = 0;
-    const dailyHours = {};
-    
-    employeeShifts.forEach(shift => {
-      if (shift.startTime) {
-        const start = new Date(shift.startTime);
-        const end = shift.endTime ? new Date(shift.endTime) : new Date();
-        const hours = Math.max(0, (end - start) / (1000 * 60 * 60));
-        totalHours += hours;
-        
-        const day = start.toDateString();
-        dailyHours[day] = (dailyHours[day] || 0) + hours;
-      }
-    });
-    
-    const daysWorked = Object.keys(dailyHours).length;
-    const regularHours = Math.min(totalHours, 160); // Assuming 160h/month regular
-    const overtimeHours = Math.max(0, totalHours - 160);
-    
-    return {
-      totalHours: Math.round(totalHours * 10) / 10,
-      regularHours: Math.round(regularHours * 10) / 10,
-      overtimeHours: Math.round(overtimeHours * 10) / 10,
-      daysWorked,
-      avgHours: daysWorked > 0 ? Math.round((totalHours / daysWorked) * 10) / 10 : 0,
-      shifts: employeeShifts.length
-    };
-  };
-
-  // Get current user's data
   const currentUser = employees?.find(emp => emp.email === userData?.email);
   const isStaff = userData?.role === 'ROLE_BRANCH_CASHIER';
-  
-  // Generate last 6 months for dropdown
-  const getLastSixMonths = () => {
-    const months = [];
-    for (let i = 0; i < 6; i++) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      months.push({
-        value: date.toISOString().slice(0, 7),
-        label: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-      });
-    }
-    return months;
-  };
   const openAdd    = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
   const openEdit   = (e) => { setEditing(e); setForm({ fullName: e.fullName ?? "", email: e.email ?? "", phone: e.phone ?? "", role: e.role ?? "ROLE_BRANCH_CASHIER" }); setDialogOpen(true); };
   const openDelete = (e) => { setSelected(e); setDeleteDialogOpen(true); };
@@ -196,93 +84,7 @@ export default function BranchEmployees() {
       </div>
 
 
-      {/* Total Working Hours (TWH) Section */}
-      <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <div style={{ padding: 8, background: "#f0fdf4", borderRadius: 8 }}>
-            <Clock size={18} color="#059669" />
-          </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#1a1d23" }}>Total Working Hours (TWH)</h3>
-            <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Search and view employee monthly working hours</p>
-          </div>
-        </div>
-        
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <div style={{ position: "relative", flex: 1, maxWidth: 350 }}>
-            <Search size={14} color="#8a909c" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
-            <input 
-              style={{ ...s.searchInput, paddingLeft: 34 }}
-              placeholder="Search staff by name to view monthly hours..."
-              value={staffSearch}
-              onChange={(e) => setStaffSearch(e.target.value)}
-            />
-          </div>
-        </div>
-        
-        {staffSearch && (
-          <div style={{ marginBottom: 12, padding: 8, background: "#f0f9ff", borderRadius: 6, fontSize: 12, color: "#0369a1" }}>
-            Searching for: "{staffSearch}" - Found {searchedEmployees.length} employee(s)
-          </div>
-        )}
-        
-        {staffSearch && searchedEmployees.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {searchedEmployees.map((emp) => {
-              const monthlyData = getLastSixMonths().map(month => ({
-                month: month.label,
-                hours: getMonthlyWorkHours(emp._id || emp.id, month.value)
-              }));
-              
-              return (
-                <div key={emp._id || emp.id} style={{ padding: 16, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                    <div style={{ padding: 6, background: "#eef1f5", borderRadius: "50%" }}>
-                      <UserCircle size={16} color="#6b7280" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
-                        {emp.fullName || 'No Name'}
-                      </p>
-                      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{emp.email}</p>
-                    </div>
-                  </div>
-                  
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
-                    {monthlyData.map(({ month, hours }) => (
-                      <div key={month} style={{ padding: 8, background: "white", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                        <p style={{ margin: 0, fontSize: 10, color: "#6b7280", fontWeight: 500 }}>{month.split(' ')[0]}</p>
-                        <p style={{ margin: "2px 0 0", fontSize: 14, fontWeight: 600, color: hours.overtimeHours > 0 ? "#e53e3e" : "#1a1d23" }}>
-                          {hours.totalHours}h
-                        </p>
-                        {hours.overtimeHours > 0 && (
-                          <p style={{ margin: 0, fontSize: 9, color: "#e53e3e" }}>+{hours.overtimeHours}h OT</p>
-                        )}
-                        <p style={{ margin: 0, fontSize: 9, color: "#8a909c" }}>{hours.shifts} shifts</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        
-        {staffSearch && searchedEmployees.length === 0 && staffSearch.trim() && (
-          <div style={{ padding: 20, textAlign: "center", color: "#6b7280", fontSize: 13, background: "#f9fafb", borderRadius: 6, border: "1px dashed #d1d5db" }}>
-            <Users size={24} color="#d1d5db" style={{ margin: "0 auto 8px", display: "block" }} />
-            <p style={{ margin: 0, fontWeight: 500 }}>No employee found matching "{staffSearch}"</p>
-          </div>
-        )}
-        
-        {!staffSearch && (
-          <div style={{ padding: 20, textAlign: "center", color: "#6b7280", fontSize: 13, background: "#f9fafb", borderRadius: 6 }}>
-            <Search size={24} color="#d1d5db" style={{ margin: "0 auto 8px", display: "block" }} />
-            <p style={{ margin: 0 }}>Start typing an employee name to view their monthly working hours</p>
-          </div>
-        )}
-      </div>
-
+      {/* Employee Table */}
       <div style={s.card}>
         <div style={s.cardHeader}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>
@@ -321,9 +123,7 @@ export default function BranchEmployees() {
                 </tr>
               </thead>
               <tbody>
-                {(isStaff ? [currentUser] : filtered).map((emp) => {
-                  const monthlyHours = getMonthlyWorkHours(emp._id || emp.id, selectedMonth);
-                  return (
+                {(isStaff ? [currentUser] : filtered).map((emp) => (
                     <tr key={emp._id} style={{ background: "white" }}
                       onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
                       onMouseLeave={e => e.currentTarget.style.background = "white"}
@@ -355,8 +155,8 @@ export default function BranchEmployees() {
                         </td>
                       )}
                     </tr>
-                  );
-                })}
+                  ))}
+                
               </tbody>
             </table>
           </div>

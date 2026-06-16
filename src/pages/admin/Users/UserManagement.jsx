@@ -25,11 +25,11 @@ const roleIcons = {
 };
 
 const roleColors = {
-  'ROLE_ADMIN': '#7c3aed', // Purple
-  'ROLE_STORE_ADMIN': '#2563eb', // Blue
-  'ROLE_BRANCH_MANAGER': '#06b6d4', // Cyan
-  'ROLE_BRANCH_CASHIER': '#10b981', // Green
-  'ROLE_USER': '#6b7280' // Gray
+  'ROLE_ADMIN': '#1a1d23',
+  'ROLE_STORE_ADMIN': '#1a1d23',
+  'ROLE_BRANCH_MANAGER': '#4a4d55',
+  'ROLE_BRANCH_CASHIER': '#6b7280',
+  'ROLE_USER': '#6b7280'
 };
 
 const roleLabels = {
@@ -49,10 +49,10 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'active': return '#10b981';
-      case 'inactive': return '#f59e0b';
-      case 'suspended': return '#ef4444';
-      default: return '#718096';
+      case 'active': return '#1a1d23';
+      case 'inactive': return '#6b7280';
+      case 'suspended': return '#6b7280';
+      default: return '#6b7280';
     }
   };
 
@@ -82,11 +82,11 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
             width: "48px",
             height: "48px",
             borderRadius: "50%",
-            background: `linear-gradient(135deg, ${roleColor}15, ${roleColor}30)`,
+            background: "#f5f5f5",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            border: `2px solid ${roleColor}20`
+            border: "1px solid #e5e7eb"
           }}>
             <span style={{
               fontSize: "18px",
@@ -213,7 +213,7 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
                   alignItems: "center",
                   gap: "8px",
                   fontSize: "13px",
-                  color: user.status === 'active' ? "#d97706" : "#059669",
+                  color: user.status === 'active' ? "#6b7280" : "#1a1d23",
                   transition: "background 0.2s"
                 }}
                 onMouseEnter={(e) => e.target.style.background = "#f9fafb"}
@@ -256,9 +256,9 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
           <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Status:</span>
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             {user.status === 'active' ? (
-              <CheckCircle size={12} color="#10b981" />
+              <CheckCircle size={12} color="#1a1d23" />
             ) : (
-              <AlertCircle size={12} color="#f59e0b" />
+              <AlertCircle size={12} color="#6b7280" />
             )}
             <span style={{
               fontSize: "12px",
@@ -375,12 +375,12 @@ function UserDetailsModal({ isOpen, onClose, user }) {
               width: "48px",
               height: "48px",
               borderRadius: "50%",
-              background: `linear-gradient(135deg, ${roleColor}20, ${roleColor}40)`,
+              background: "#f5f5f5",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: "600",
-              color: roleColor,
+              color: "#1a1d23",
               fontSize: "18px"
             }}>
               {(user.fullName || user.name)?.charAt(0).toUpperCase() || "U"}
@@ -411,7 +411,7 @@ function UserDetailsModal({ isOpen, onClose, user }) {
 
             <div style={{ fontWeight: "600", color: "#4b5563" }}>Status:</div>
             <div style={{ 
-              color: user.status === 'active' ? '#10b981' : user.status === 'suspended' ? '#ef4444' : '#f59e0b', 
+              color: "#1a1d23", 
               fontWeight: "600", 
               textTransform: "capitalize" 
             }}>
@@ -751,10 +751,11 @@ export default function UserManagement() {
               height: "40px",
               margin: "0 auto 12px",
               borderRadius: "10px",
-              background: `${roleColors[role]}15`,
+              background: "#f5f5f5",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
+              justifyContent: "center",
+              margin: "0 auto 12px"
             }}>
               {React.createElement(roleIcons[role], { size: 20, color: roleColors[role] })}
             </div>
@@ -813,7 +814,7 @@ export default function UserManagement() {
               outline: "none",
               transition: "all 0.2s"
             }}
-            onFocus={(e) => e.target.style.borderColor = "#6366f1"}
+            onFocus={(e) => e.target.style.borderColor = "#1a1d23"}
             onBlur={(e) => e.target.style.borderColor = "#d1d5db"}
           />
         </div>

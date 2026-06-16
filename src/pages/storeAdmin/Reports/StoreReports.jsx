@@ -12,7 +12,7 @@ import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk"
 import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
 import { findStoreEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getCategoriesByStore } from "@/Redux Toolkit/Features/category/categoryThunk";
-import { getAllRefund } from "@/Redux Toolkit/Features/refund/refundThunk";
+import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 import secureStorage from "@/util/secureStorage";
 
@@ -64,8 +64,10 @@ export default function StoreReports() {
   const { products } = useSelector((s) => s.product);
   const { employees } = useSelector((s) => s.employee);
   const { categories } = useSelector((s) => s.category);
-  const { refunds } = useSelector((s) => s.refund);
-  const { orders } = useSelector((s) => s.order);
+
+  // Collect all branch orders locally to avoid Redux state overwrite conflicts
+  const [allOrders, setAllOrders] = useState([]);
+  const [allRefunds, setAllRefunds] = useState([]);
 
   // Fetch data
   useEffect(() => {
@@ -74,26 +76,31 @@ export default function StoreReports() {
     dispatch(getProductsByStore(storeId));
     dispatch(findStoreEmployee({ storeId }));
     dispatch(getCategoriesByStore({ storeId }));
-    dispatch(getAllRefund());
   }, [dispatch, storeId]);
 
-  // Fetch orders from all branches
+  // Fetch orders and refunds from all branches
   useEffect(() => {
-    if (branches?.length > 0) {
-      branches.forEach(branch => {
-        if (branch._id || branch.id) {
-          dispatch(getOrdersByBranch({ branchId: branch._id || branch.id }));
-        }
-      });
-    }
+    if (!branches?.length) return;
+    setAllOrders([]);
+    setAllRefunds([]);
+    branches.forEach(branch => {
+      const branchId = branch._id || branch.id;
+      if (!branchId) return;
+      dispatch(getOrdersByBranch({ branchId })).unwrap()
+        .then(data => setAllOrders(prev => {
+          const existingIds = new Set(prev.map(o => o.id));
+          return [...prev, ...data.filter(o => !existingIds.has(o.id))];
+        })).catch(() => {});
+      dispatch(getRefundsByBranch(branchId)).unwrap()
+        .then(data => setAllRefunds(prev => {
+          const existingIds = new Set(prev.map(r => r.id));
+          return [...prev, ...data.filter(r => !existingIds.has(r.id))];
+        })).catch(() => {});
+    });
   }, [dispatch, branches]);
 
   // Process order data
-  const allOrders = useMemo(() => {
-    const orderArray = Array.isArray(orders) ? orders : (orders?.orders || []);
-    // Ensure we always return a new mutable array
-    return [...orderArray];
-  }, [orders]);
+  const orderArray = useMemo(() => [...allOrders], [allOrders]);
 
   // Filter data based on selected range
   const getDateRangeFilter = (range) => {
@@ -126,52 +133,42 @@ export default function StoreReports() {
   // Filter orders based on selected range
   const filteredOrders = useMemo(() => {
     const startDate = getDateRangeFilter(range);
-    return allOrders.filter(order => {
+    return orderArray.filter(order => {
       if (!order.createdAt) return false;
-      const orderDate = new Date(order.createdAt);
-      return orderDate >= startDate;
+      return new Date(order.createdAt) >= startDate;
     });
-  }, [allOrders, range]);
+  }, [orderArray, range]);
 
   // Calculate KPI metrics based on filtered orders
   const kpiMetrics = useMemo(() => {
+    const startDate = getDateRangeFilter(range);
     const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
     const totalOrdersCount = filteredOrders.length;
-    const totalRefundsCount = refunds?.length || 0;
+    const totalRefundsCount = allRefunds.filter(r => {
+      if (!r?.createdAt) return false;
+      return new Date(r.createdAt) >= startDate;
+    }).length;
     const avgOrder = totalOrdersCount > 0 ? Math.round(totalRevenue / totalOrdersCount) : 0;
-    
     return { totalRevenue, totalOrdersCount, totalRefundsCount, avgOrder };
-  }, [filteredOrders, refunds]);
+  }, [filteredOrders, allRefunds, range]);
 
   // Monthly sales trend data based on filtered orders
   const monthlySalesData = useMemo(() => {
     const monthsData = Array.from({ length: 12 }, (_, i) => {
       const date = new Date();
       date.setMonth(date.getMonth() - (11 - i));
-      return {
-        month: date.toLocaleDateString('en-US', { month: 'short' }),
-        revenue: 0,
-        orders: 0
-      };
+      return { month: date.toLocaleDateString('en-US', { month: 'short' }), revenue: 0, orders: 0 };
     });
-
     filteredOrders.forEach(order => {
-      if (order.createdAt) {
-        const orderDate = new Date(order.createdAt);
-        const currentDate = new Date();
-        const monthsDiff = (currentDate.getFullYear() - orderDate.getFullYear()) * 12 + 
-                          (currentDate.getMonth() - orderDate.getMonth());
-        
-        if (monthsDiff >= 0 && monthsDiff < 12) {
-          const monthIndex = 11 - monthsDiff;
-          if (monthsData[monthIndex]) {
-            monthsData[monthIndex].revenue += order.totalAmount || 0;
-            monthsData[monthIndex].orders += 1;
-          }
-        }
+      if (!order.createdAt) return;
+      const orderDate = new Date(order.createdAt);
+      const monthsDiff = (new Date().getFullYear() - orderDate.getFullYear()) * 12 +
+        (new Date().getMonth() - orderDate.getMonth());
+      if (monthsDiff >= 0 && monthsDiff < 12) {
+        monthsData[11 - monthsDiff].revenue += order.totalAmount || 0;
+        monthsData[11 - monthsDiff].orders += 1;
       }
     });
-
     return monthsData;
   }, [filteredOrders]);
 
@@ -225,58 +222,37 @@ export default function StoreReports() {
   // Branch performance data based on filtered orders
   const branchPerformanceData = useMemo(() => {
     if (!branches?.length) return [];
-    
-    try {
-      const branchRevenue = {};
-      
-      filteredOrders.forEach(order => {
-        const branchId = order.branchId;
-        if (branchId) {
-          branchRevenue[branchId] = (branchRevenue[branchId] || 0) + (order.totalAmount || 0);
-        }
-      });
-
-      return branches
-        .map(branch => {
-          const branchId = branch._id || branch.id;
-          return {
-            name: branch.name,
-            revenue: branchRevenue[branchId] || 0,
-            orders: filteredOrders.filter(o => o.branchId === branchId).length
-          };
-        })
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5);
-    } catch (error) {
-      console.error('Error processing branch performance data:', error);
-      return [];
-    }
+    return branches
+      .map(branch => {
+        const bId = String(branch._id || branch.id);
+        const branchOrders = filteredOrders.filter(o => String(o.branchId) === bId);
+        return {
+          name: branch.name,
+          revenue: branchOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+          orders: branchOrders.length,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
   }, [branches, filteredOrders]);
 
   // Recent transactions based on filtered orders
   const recentTransactions = useMemo(() => {
-    if (!filteredOrders || filteredOrders.length === 0) return [];
-    
-    try {
-      return filteredOrders
-        .filter(order => order && order.createdAt) // Filter valid orders
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 10)
-        .map(order => {
-          const branch = branches?.find(b => (b._id || b.id) === order.branchId);
-          return {
-            id: order._id || order.id,
-            amount: order.totalAmount || 0,
-            paymentMethod: order.paymentType || 'CASH',
-            branch: branch?.name || 'Unknown Branch',
-            time: order.createdAt ? new Date(order.createdAt).toLocaleString() : 'Unknown Time',
-            items: (order.orderItems && Array.isArray(order.orderItems)) ? order.orderItems.length : 0 // Enhanced null check
-          };
-        });
-    } catch (error) {
-      console.error('Error processing recent transactions:', error);
-      return [];
-    }
+    return filteredOrders
+      .filter(o => o?.createdAt)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 10)
+      .map(order => {
+        const branch = branches?.find(b => String(b._id || b.id) === String(order.branchId));
+        return {
+          id: order._id || order.id,
+          amount: order.totalAmount || 0,
+          paymentMethod: order.paymentType || 'CASH',
+          branch: branch?.name || 'Unknown Branch',
+          time: order.createdAt,
+          items: Array.isArray(order.orderItems) ? order.orderItems.length : 0,
+        };
+      });
   }, [filteredOrders, branches]);
 
   const { totalRevenue, totalOrdersCount, totalRefundsCount, avgOrder } = kpiMetrics;
@@ -299,9 +275,8 @@ export default function StoreReports() {
         summary: {
           totalRevenue: filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
           totalOrders: filteredOrders.length,
-          totalRefunds: refunds?.length || 0,
-          avgOrderValue: filteredOrders.length > 0 ? 
-            Math.round(filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) / filteredOrders.length) : 0
+          totalRefunds: kpiMetrics.totalRefundsCount,
+          avgOrderValue: kpiMetrics.avgOrder,
         },
         transactions: filteredOrders.map(order => {
           const branch = branches?.find(b => (b._id || b.id) === order.branchId);
