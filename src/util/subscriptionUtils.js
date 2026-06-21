@@ -33,9 +33,107 @@ export const SUBSCRIPTION_STATUS = {
 // Calculate subscription expiry date
 export function calculateExpiryDate(purchaseDate, plan = 'BASIC') {
   const purchase = new Date(purchaseDate);
+  if (isNaN(purchase.getTime())) return null;
   const planInfo = SUBSCRIPTION_PLANS[plan] || SUBSCRIPTION_PLANS.BASIC;
   const expiry = new Date(purchase.getTime() + (planInfo.duration * 24 * 60 * 60 * 1000));
   return expiry;
+}
+
+export function parseSubscriptionDate(value) {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+
+  if (Array.isArray(value)) {
+    const [y, m, d, h = 0, min = 0, s = 0] = value;
+    const date = new Date(y, m - 1, d, h, min, s);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? null : date;
+}
+
+const pickFirstDate = (record, fields) => {
+  for (const field of fields) {
+    const date = parseSubscriptionDate(record?.[field]);
+    if (date) return date;
+  }
+  return null;
+};
+
+export function getSubscriptionPurchaseDate(record) {
+  return (
+    pickFirstDate(record, [
+      'subscriptionPurchaseDate',
+      'purchaseDate',
+      'purchasedAt',
+      'subscriptionStartDate',
+      'subscriptionStartedAt',
+      'startDate',
+      'startedAt',
+      'paidAt',
+      'paymentDate',
+      'approvedAt',
+      'createdAt',
+    ]) ||
+    pickFirstDate(record?.subscription, [
+      'purchaseDate',
+      'purchasedAt',
+      'startDate',
+      'startedAt',
+      'createdAt',
+    ]) ||
+    pickFirstDate(record?.paymentDetails, ['paidAt', 'paymentDate', 'createdAt'])
+  );
+}
+
+export function getSubscriptionExpiryDate(record, purchaseDate = getSubscriptionPurchaseDate(record)) {
+  return (
+    pickFirstDate(record, [
+      'subscriptionExpiry',
+      'subscriptionExpiryDate',
+      'expiryDate',
+      'expiresAt',
+      'expirationDate',
+      'subscriptionEndDate',
+      'endDate',
+      'validUntil',
+    ]) ||
+    pickFirstDate(record?.subscription, [
+      'expiryDate',
+      'expiresAt',
+      'endDate',
+      'validUntil',
+    ]) ||
+    (purchaseDate ? calculateExpiryDate(purchaseDate, record?.subscriptionPlan || record?.plan) : null)
+  );
+}
+
+export function normalizeSubscriptionRecord(record = {}) {
+  const purchaseDate = getSubscriptionPurchaseDate(record);
+  const expiryDate = getSubscriptionExpiryDate(record, purchaseDate);
+  const subscriptionPlan = String(
+    record.subscriptionPlan ||
+    record.plan ||
+    record.subscription?.subscriptionPlan ||
+    record.subscription?.plan ||
+    'BASIC',
+  ).toUpperCase();
+
+  return {
+    ...record,
+    subscriptionPlan,
+    subscriptionPurchaseDate: purchaseDate,
+    subscriptionExpiry: expiryDate,
+  };
+}
+
+export function formatSubscriptionDate(date, fallback = 'N/A') {
+  const parsed = parseSubscriptionDate(date);
+  return parsed ? parsed.toLocaleDateString('en-IN') : fallback;
 }
 
 // Calculate days remaining until expiry

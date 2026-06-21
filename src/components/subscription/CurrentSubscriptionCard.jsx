@@ -16,8 +16,8 @@ import {
   SUBSCRIPTION_STATUS,
   getDaysRemaining, 
   getSubscriptionStatus, 
-  formatPrice,
-  calculateExpiryDate
+  formatSubscriptionDate,
+  normalizeSubscriptionRecord
 } from '@/util/subscriptionUtils';
 import { toast } from 'sonner';
 
@@ -30,26 +30,11 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
     loadSubscription();
   }, []);
 
-  // Handles both ISO string and Java LocalDateTime array [y,m,d,h,min,s]
-  const parseDate = (value) => {
-    if (!value) return null;
-    if (Array.isArray(value)) {
-      const [y, m, d, h = 0, min = 0, s = 0] = value;
-      return new Date(y, m - 1, d, h, min, s);
-    }
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? null : d;
-  };
-
   const loadSubscription = async () => {
     try {
       setLoading(true);
       const data = await subscriptionService.getCurrentSubscription();
-      if (data) {
-        data.subscriptionPurchaseDate = parseDate(data.subscriptionPurchaseDate);
-        data.subscriptionExpiry = parseDate(data.subscriptionExpiry);
-      }
-      setSubscription(data);
+      setSubscription(data ? normalizeSubscriptionRecord(data) : data);
     } catch (error) {
       console.error('Failed to load subscription:', error);
       toast.error('Failed to load subscription details');
@@ -63,7 +48,7 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
       setRefreshing(true);
       await loadSubscription();
       toast.success('Subscription details refreshed');
-    } catch (error) {
+    } catch {
       toast.error('Failed to refresh subscription');
     } finally {
       setRefreshing(false);
@@ -128,15 +113,18 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
     );
   }
 
-  const plan = SUBSCRIPTION_PLANS[subscription.subscriptionPlan] || {
-    name: subscription.subscriptionPlan || 'Basic',
+  const planKey = String(subscription.subscriptionPlan || subscription.plan || 'BASIC').toUpperCase();
+  const plan = SUBSCRIPTION_PLANS[planKey] || {
+    name: planKey || 'Basic',
     price: 3500,
     color: '#059669',
     features: ['POS Access', 'Store Management']
   };
-  const daysRemaining = getDaysRemaining(subscription.subscriptionExpiry);
-  const status = getSubscriptionStatus(subscription.subscriptionExpiry);
-  const statusStyle = SUBSCRIPTION_STATUS[status];
+  const daysRemaining = subscription.subscriptionExpiry ? getDaysRemaining(subscription.subscriptionExpiry) : null;
+  const status = subscription.subscriptionExpiry
+    ? getSubscriptionStatus(subscription.subscriptionExpiry)
+    : String(subscription.subscriptionStatus || 'ACTIVE').toUpperCase();
+  const statusStyle = SUBSCRIPTION_STATUS[status] || SUBSCRIPTION_STATUS.ACTIVE;
 
   return (
     <>
@@ -144,6 +132,14 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        .subscription-price-heading > span:first-child {
+          font-size: 0 !important;
+        }
+        .subscription-price-heading > span:first-child::before {
+          content: 'NPR';
+          font-size: 12px;
+          font-weight: 800;
         }
       `}</style>
       
@@ -247,7 +243,7 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
             borderRadius: '12px',
             padding: '16px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <div className="subscription-price-heading" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <Calendar size={16} color={plan.color} />
               <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>
                 PURCHASE DATE
@@ -255,7 +251,7 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
             </div>
             <p style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1a1d23' }}>
               {subscription.subscriptionPurchaseDate 
-                ? new Date(subscription.subscriptionPurchaseDate).toLocaleDateString('en-IN')
+                ? formatSubscriptionDate(subscription.subscriptionPurchaseDate)
                 : 'N/A'
               }
             </p>
@@ -275,7 +271,7 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
             </div>
             <p style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1a1d23' }}>
               {subscription.subscriptionExpiry 
-                ? new Date(subscription.subscriptionExpiry).toLocaleDateString('en-IN')
+                ? formatSubscriptionDate(subscription.subscriptionExpiry)
                 : 'N/A'
               }
             </p>
@@ -304,10 +300,10 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
               </span>
             </div>
             <p style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1a1d23' }}>
-              {formatPrice(plan.price)}
+              NPR {plan.price.toLocaleString('en-IN')}
             </p>
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
-              {formatPrice(Math.round(plan.price / 12))}/month
+              NPR {Math.round(plan.price / 12).toLocaleString('en-IN')}/month
             </p>
           </div>
         </div>
@@ -350,8 +346,8 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
               flex: 1,
               minWidth: '140px',
               padding: '12px 20px',
-              background: daysRemaining <= 30 ? '#1a1d23' : 'white',
-              color: daysRemaining <= 30 ? 'white' : '#1a1d23',
+              background: daysRemaining !== null && daysRemaining <= 30 ? '#1a1d23' : 'white',
+              color: daysRemaining !== null && daysRemaining <= 30 ? 'white' : '#1a1d23',
               border: `1px solid #1a1d23`,
               borderRadius: '8px',
               fontSize: '14px',
@@ -365,10 +361,10 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
             }}
           >
             <CreditCard size={16} />
-            {daysRemaining <= 30 ? 'Renew Now' : 'Renew Subscription'}
+            {daysRemaining !== null && daysRemaining <= 30 ? 'Renew Now' : 'Renew Subscription'}
           </button>
 
-          {subscription.subscriptionPlan !== 'ENTERPRISE' && (
+          {planKey !== 'ENTERPRISE' && (
             <button
               onClick={() => onUpgradeClick?.(subscription)}
               style={{

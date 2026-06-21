@@ -6,6 +6,7 @@ import ProductManagement from "@/pages/storeAdmin/Products/ProductManagement";
 import EmployeeManagement from "@/pages/storeAdmin/Employees/EmployeeManagement";
 import CategoryManagement from "@/pages/storeAdmin/Categories/CategoryManagement";
 import StoreReports from "@/pages/storeAdmin/Reports/StoreReports";
+import StoreShiftSummary from "@/pages/storeAdmin/ShiftSummary/StoreShiftSummary";
 import StoreWarehouseInventory from "@/pages/storeAdmin/Inventory/StoreWarehouseInventory";
 import RestockManagement from "@/pages/storeAdmin/Restock/RestockManagement";
 import SubscriptionRequest from "@/pages/storeAdmin/Subscription/SubscriptionRequest";
@@ -23,6 +24,7 @@ const StoreAdminRoutes = () => {
         <Route path="subscription" element={<SubscriptionRequest />} />
         <Route path="employees"  element={<EmployeeManagement />} />
         <Route path="categories" element={<CategoryManagement />} />
+        <Route path="shift-summary" element={<StoreShiftSummary />} />
         <Route path="reports"    element={<StoreReports />} />
         <Route path="payment-settings" element={<PaymentSettings />} />
       </Route>

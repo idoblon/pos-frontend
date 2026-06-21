@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getAuthHeaders } from "@/util/getAuthHeader";
 import { getStoreName, resolveSubscriptionPlan } from "@/util/registrationDataMerger";
+import {
+  formatSubscriptionDate,
+  getDaysRemaining,
+  getSubscriptionExpiryDate,
+  getSubscriptionPurchaseDate,
+} from "@/util/subscriptionUtils";
 import secureStorage from "@/util/secureStorage";
 import api from "@/util/api";
 
@@ -127,6 +133,9 @@ export default function SubscriptionRequest() {
   const changeType = requestedPlan ? getPlanChangeType(currentPlan, requestedPlan) : "SAME";
   const amount = requestedPlan ? getPlanChangeAmount(currentPlan, requestedPlan) : 0;
   const storeName = getStoreName(store) || userData?.storeName || "Your Store";
+  const subscriptionPurchaseDate = getSubscriptionPurchaseDate(store);
+  const subscriptionExpiryDate = getSubscriptionExpiryDate(store, subscriptionPurchaseDate);
+  const daysRemaining = subscriptionExpiryDate ? getDaysRemaining(subscriptionExpiryDate) : null;
 
   const upsertRequest = (request) => {
     const normalized = normalizeRequest(request);
@@ -250,6 +259,31 @@ export default function SubscriptionRequest() {
             <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "#8a909c", textTransform: "uppercase" }}>Active Plan</p>
             <p style={{ margin: "0 0 8px", fontSize: 24, fontWeight: 900, color: "#1a1d23" }}>{SUBSCRIPTION_PLANS[currentPlan]?.name || currentPlan}</p>
             <p style={{ margin: "0", fontSize: 13, color: "#8a909c" }}>NPR {(SUBSCRIPTION_PLANS[currentPlan]?.price || 0).toLocaleString("en-IN")}/year</p>
+          </div>
+
+          {/* Subscription Dates */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 18 }}>
+            <div style={{ padding: 12, backgroundColor: "#f5f5f5", borderRadius: 8, border: "1px solid #e2e5e9" }}>
+              <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 800, color: "#8a909c", textTransform: "uppercase" }}>
+                Purchase Date
+              </p>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#1a1d23" }}>
+                {formatSubscriptionDate(subscriptionPurchaseDate)}
+              </p>
+            </div>
+            <div style={{ padding: 12, backgroundColor: "#f5f5f5", borderRadius: 8, border: "1px solid #e2e5e9" }}>
+              <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 800, color: "#8a909c", textTransform: "uppercase" }}>
+                Expiry Date
+              </p>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#1a1d23" }}>
+                {formatSubscriptionDate(subscriptionExpiryDate)}
+              </p>
+              {daysRemaining !== null && (
+                <p style={{ margin: "4px 0 0", fontSize: 11, fontWeight: 700, color: daysRemaining <= 0 ? "#dc2626" : daysRemaining <= 30 ? "#b45309" : "#166534" }}>
+                  {daysRemaining <= 0 ? "Expired" : `${daysRemaining} days remaining`}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Plan Features */}

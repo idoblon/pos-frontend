@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Plus, Search, Users, Pencil, Trash2, UserCircle, Clock } from "lucide-react";
 import { findStoreEmployee, createStoreEmpoyee, updateEmpoyee, deleteEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
@@ -15,6 +15,7 @@ import api from "@/util/api";
 
 const EMPTY_FORM = { fullName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER", branchId: "" };
 const ROLES = ["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER"];
+const STANDARD_DAILY_HOURS = 8;
 
 const roleStyle = {
   ROLE_BRANCH_MANAGER: { background: "#f5f3ff", color: "#7c3aed" },
@@ -32,6 +33,122 @@ const s = {
   iconBtn: { border: "1px solid #e5e7eb", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center" },
   empty: { textAlign: "center", padding: "40px 0", color: "#6b7280", fontSize: 13 },
   select: { width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 10px", fontFamily: "inherit", fontSize: 13, background: "#f5f5f5", outline: "none" },
+};
+
+const getId = (value) => value == null ? "" : String(value);
+
+const getCollection = (value) => {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+  return [value.data, value.items, value.results, value.content, value.shifts].find(Array.isArray) || [];
+};
+
+const parseDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getShiftStart = (shift) =>
+  parseDate(shift.startTime || shift.shiftStart || shift.loginTime || shift.startedAt || shift.createdAt);
+
+const getShiftEnd = (shift) =>
+  parseDate(shift.endTime || shift.shiftEnd || shift.logoutTime || shift.endedAt || shift.closedAt);
+
+const getEmployeeIdFromShift = (shift) =>
+  getId(
+    shift.cashierId ||
+    shift.userId ||
+    shift.employeeId ||
+    shift.cashier?.id ||
+    shift.cashier?._id ||
+    shift.employee?.id ||
+    shift.employee?._id,
+  );
+
+const getMonthRange = (monthYear) => {
+  const [year, month] = monthYear.split("-").map(Number);
+  const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  const end = new Date(year, month, 1, 0, 0, 0, 0);
+  return { start, end };
+};
+
+const formatDuration = (hours) => {
+  const totalMinutes = Math.round(Math.max(0, hours) * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
+
+const getLocalDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getMonthValue = (date) => getLocalDateKey(date).slice(0, 7);
+
+const addMinutesByDay = (dailyMinutes, start, end) => {
+  let cursor = new Date(start);
+
+  while (cursor < end) {
+    const nextDay = new Date(cursor);
+    nextDay.setHours(24, 0, 0, 0);
+
+    const segmentEnd = new Date(Math.min(nextDay.getTime(), end.getTime()));
+    const dayKey = getLocalDateKey(cursor);
+    const minutes = (segmentEnd - cursor) / (1000 * 60);
+
+    dailyMinutes[dayKey] = (dailyMinutes[dayKey] || 0) + minutes;
+    cursor = segmentEnd;
+  }
+};
+
+const calculateMonthlyWorkSummary = (employeeId, monthYear, shifts) => {
+  const { start: monthStart, end: monthEnd } = getMonthRange(monthYear);
+  const now = new Date();
+  const dailyMinutes = {};
+  let shiftCount = 0;
+  let activeShiftCount = 0;
+
+  shifts.forEach((shift) => {
+    if (getEmployeeIdFromShift(shift) !== getId(employeeId)) return;
+
+    const shiftStart = getShiftStart(shift);
+    if (!shiftStart) return;
+
+    const rawEnd = getShiftEnd(shift);
+    const shiftEnd = rawEnd || now;
+    if (shiftEnd <= monthStart || shiftStart >= monthEnd || shiftEnd <= shiftStart) return;
+
+    const clippedStart = new Date(Math.max(shiftStart.getTime(), monthStart.getTime()));
+    const clippedEnd = new Date(Math.min(shiftEnd.getTime(), monthEnd.getTime(), now.getTime()));
+    if (clippedEnd <= clippedStart) return;
+
+    addMinutesByDay(dailyMinutes, clippedStart, clippedEnd);
+    shiftCount += 1;
+    if (!rawEnd) activeShiftCount += 1;
+  });
+
+  const totalMinutes = Object.values(dailyMinutes).reduce((sum, minutes) => sum + minutes, 0);
+  const overtimeMinutes = Object.values(dailyMinutes).reduce(
+    (sum, minutes) => sum + Math.max(0, minutes - STANDARD_DAILY_HOURS * 60),
+    0,
+  );
+  const daysWorked = Object.keys(dailyMinutes).length;
+
+  return {
+    totalHours: Math.round((totalMinutes / 60) * 10) / 10,
+    overtimeHours: Math.round((overtimeMinutes / 60) * 10) / 10,
+    regularHours: Math.round(((totalMinutes - overtimeMinutes) / 60) * 10) / 10,
+    shifts: shiftCount,
+    activeShiftCount,
+    daysWorked,
+    averageHoursPerDay: daysWorked ? Math.round((totalMinutes / 60 / daysWorked) * 10) / 10 : 0,
+  };
 };
 
 export default function EmployeeManagement() {
@@ -53,6 +170,22 @@ export default function EmployeeManagement() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [allShifts, setAllShifts] = useState([]);
   const [staffSearch, setStaffSearch] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(() => getMonthValue(new Date()));
+  const monthOptions = useMemo(() => {
+    const months = [];
+
+    for (let i = 0; i < 6; i += 1) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - i);
+      months.push({
+        value: getMonthValue(d),
+        label: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      });
+    }
+
+    return months;
+  }, []);
 
   useEffect(() => {
     if (!storeId) {
@@ -72,53 +205,24 @@ export default function EmployeeManagement() {
   useEffect(() => {
     if (branches?.length > 0) {
       Promise.all(branches.map((b) => dispatch(getShiftsByBranch(b._id || b.id)).unwrap().catch(() => [])))
-        .then((results) => setAllShifts(results.flat()));
+        .then((results) => {
+          const seen = new Set();
+          const shifts = results.flatMap(getCollection).filter((shift) => {
+            const key = getId(shift.id || shift._id) || `${getEmployeeIdFromShift(shift)}-${getShiftStart(shift)?.toISOString() || ""}`;
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          setAllShifts(shifts);
+        });
     }
   }, [branches, dispatch]);
 
-  const getLastSixMonths = () => {
-    const months = [];
-    for (let i = 0; i < 6; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      months.push({ value: d.toISOString().slice(0, 7), label: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }) });
-    }
-    return months;
-  };
-
-  const getMonthlyWorkHours = (employeeId, monthYear) => {
-    const [year, month] = monthYear.split("-");
-    const targetMonth = parseInt(month) - 1;
-    const targetYear = parseInt(year);
-    const empShifts = allShifts.filter((shift) => {
-      const matches = shift.cashierId === employeeId || shift.userId === employeeId || shift.employeeId === employeeId;
-      if (!matches || !shift.startTime) return false;
-      const d = new Date(shift.startTime);
-      return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-    });
-    let totalHours = 0;
-    const dailyHours = {};
-    empShifts.forEach((shift) => {
-      const start = new Date(shift.startTime);
-      const end = shift.endTime ? new Date(shift.endTime) : new Date();
-      const h = Math.max(0, (end - start) / (1000 * 60 * 60));
-      totalHours += h;
-      dailyHours[start.toDateString()] = (dailyHours[start.toDateString()] || 0) + h;
-    });
-    const daysWorked = Object.keys(dailyHours).length;
-    return {
-      totalHours: Math.round(totalHours * 10) / 10,
-      overtimeHours: Math.round(Math.max(0, totalHours - 160) * 10) / 10,
-      shifts: empShifts.length,
-      daysWorked,
-    };
-  };
-
-  const searchedEmployees = employees?.filter((emp) => {
+  const visibleStaff = useMemo(() => employees?.filter((emp) => {
     if (!staffSearch.trim()) return false;
     return (emp.fullName || "").toLowerCase().includes(staffSearch.toLowerCase()) ||
       (emp.email || "").toLowerCase().includes(staffSearch.toLowerCase());
-  }) || [];
+  }) || [], [employees, staffSearch]);
 
   const filtered = employees?.filter(
     (e) => {
@@ -270,9 +374,19 @@ export default function EmployeeManagement() {
             onChange={(e) => setStaffSearch(e.target.value)}
           />
         </div>
-        {staffSearch && searchedEmployees.length > 0 && (
+        <div style={{ maxWidth: 220, marginBottom: 12 }}>
+          <select style={s.select} value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+            {monthOptions.map((month) => (
+              <option key={month.value} value={month.value}>{month.label}</option>
+            ))}
+          </select>
+        </div>
+        {staffSearch && visibleStaff.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {searchedEmployees.map((emp) => (
+            {visibleStaff.map((emp) => {
+              const summary = calculateMonthlyWorkSummary(emp._id || emp.id, selectedMonth, allShifts);
+
+              return (
               <div key={emp._id || emp.id} style={{ padding: 16, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                   <div style={{ padding: 6, background: "#eef1f5", borderRadius: "50%" }}>
@@ -284,23 +398,34 @@ export default function EmployeeManagement() {
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
-                  {getLastSixMonths().map(({ value, label }) => {
-                    const h = getMonthlyWorkHours(emp._id || emp.id, value);
-                    return (
-                      <div key={value} style={{ padding: 8, background: "white", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                        <p style={{ margin: 0, fontSize: 10, color: "#6b7280", fontWeight: 500 }}>{label.split(" ")[0]}</p>
-                        <p style={{ margin: "2px 0 0", fontSize: 14, fontWeight: 600, color: h.overtimeHours > 0 ? "#e53e3e" : "#1a1d23" }}>{h.totalHours}h</p>
-                        {h.overtimeHours > 0 && <p style={{ margin: 0, fontSize: 9, color: "#e53e3e" }}>+{h.overtimeHours}h OT</p>}
-                        <p style={{ margin: 0, fontSize: 9, color: "#8a909c" }}>{h.shifts} shifts</p>
-                      </div>
-                    );
-                  })}
+                  <div style={{ padding: 10, background: "white", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                    <p style={{ margin: 0, fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Total Hours</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 700, color: "#1a1d23" }}>{formatDuration(summary.totalHours)}</p>
+                  </div>
+                  <div style={{ padding: 10, background: "white", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                    <p style={{ margin: 0, fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Regular</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 700, color: "#1a1d23" }}>{formatDuration(summary.regularHours)}</p>
+                  </div>
+                  <div style={{ padding: 10, background: "white", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                    <p style={{ margin: 0, fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Overtime</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 700, color: summary.overtimeHours > 0 ? "#e53e3e" : "#1a1d23" }}>{formatDuration(summary.overtimeHours)}</p>
+                  </div>
+                  <div style={{ padding: 10, background: "white", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                    <p style={{ margin: 0, fontSize: 10, color: "#6b7280", fontWeight: 500 }}>Days / Shifts</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 700, color: "#1a1d23" }}>{summary.daysWorked} / {summary.shifts}</p>
+                  </div>
                 </div>
+                {summary.activeShiftCount > 0 && (
+                  <p style={{ margin: "8px 0 0", fontSize: 11, color: "#059669" }}>
+                    Includes {summary.activeShiftCount} active shift{summary.activeShiftCount === 1 ? "" : "s"} up to now
+                  </p>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
-        {staffSearch && searchedEmployees.length === 0 && (
+        {staffSearch && visibleStaff.length === 0 && (
           <div style={{ padding: 20, textAlign: "center", color: "#6b7280", fontSize: 13, background: "#f9fafb", borderRadius: 6, border: "1px dashed #d1d5db" }}>
             <Users size={24} color="#d1d5db" style={{ margin: "0 auto 8px", display: "block" }} />
             <p style={{ margin: 0, fontWeight: 500 }}>No employee found matching "{staffSearch}"</p>

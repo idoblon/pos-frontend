@@ -23,6 +23,10 @@ import {
   getStoreName,
   resolveSubscriptionPlan,
 } from "@/util/registrationDataMerger";
+import {
+  getSubscriptionExpiryDate,
+  getSubscriptionPurchaseDate,
+} from "@/util/subscriptionUtils";
 
 const SUBSCRIPTION_STATUS = {
   ACTIVE: { color: "#059669", bg: "#dcfce7", text: "Active" },
@@ -306,23 +310,12 @@ export default function StoreSubscriptionOverview() {
     }
   }, [stores]);
 
-  const parseDate = (value) => {
-    if (!value) return null;
-    if (Array.isArray(value)) {
-      const [y, m, d, h = 0, min = 0, s = 0] = value;
-      return new Date(y, m - 1, d, h, min, s);
-    }
-    const date = new Date(value);
-    return isNaN(date.getTime()) ? null : date;
-  };
-
   const transformStoreData = () => {
     const transformedStores = stores
       .filter((s) => !s.isRegistrationOnly)
       .map((store) => {
-        const purchaseDate = parseDate(store.subscriptionPurchaseDate || store.approvedAt || store.createdAt);
-        const expiryDate = parseDate(store.subscriptionExpiry) ||
-          (purchaseDate ? new Date(purchaseDate.getTime() + 365 * 24 * 60 * 60 * 1000) : null);
+        const purchaseDate = getSubscriptionPurchaseDate(store);
+        const expiryDate = getSubscriptionExpiryDate(store, purchaseDate);
 
         // Use backend subscriptionStatus if present, else derive from expiry
         let subscriptionStatus = store.subscriptionStatus

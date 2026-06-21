@@ -82,6 +82,24 @@ const mergeRegistrationDataWithStores = async (stores, headers) => {
         storeAddress: store.storeAddress || matchingRequest.storeAddress,
         email: store.email || matchingRequest.email,
         phone: store.phone || matchingRequest.phone,
+        subscriptionPurchaseDate:
+          store.subscriptionPurchaseDate ||
+          store.purchaseDate ||
+          matchingRequest.subscriptionPurchaseDate ||
+          matchingRequest.purchaseDate ||
+          matchingRequest.paidAt ||
+          matchingRequest.paymentDate ||
+          matchingRequest.approvedAt ||
+          matchingRequest.createdAt,
+        subscriptionExpiry:
+          store.subscriptionExpiry ||
+          store.subscriptionExpiryDate ||
+          store.expiryDate ||
+          store.expiresAt ||
+          matchingRequest.subscriptionExpiry ||
+          matchingRequest.subscriptionExpiryDate ||
+          matchingRequest.expiryDate ||
+          matchingRequest.expiresAt,
         registrationRequestId:
           store.registrationRequestId ?? matchingRequest.id,
       };
@@ -138,6 +156,18 @@ const mergeRegistrationDataWithStores = async (stores, headers) => {
         description: request.storeDescription,
         registrationRequestId: getId(request),
         paymentStatus: request.paymentStatus,
+        subscriptionPurchaseDate:
+          request.subscriptionPurchaseDate ||
+          request.purchaseDate ||
+          request.paidAt ||
+          request.paymentDate ||
+          request.approvedAt ||
+          request.createdAt,
+        subscriptionExpiry:
+          request.subscriptionExpiry ||
+          request.subscriptionExpiryDate ||
+          request.expiryDate ||
+          request.expiresAt,
         createdAt: request.createdAt,
         updatedAt: request.updatedAt,
         isRegistrationOnly: !request.createdStoreId,

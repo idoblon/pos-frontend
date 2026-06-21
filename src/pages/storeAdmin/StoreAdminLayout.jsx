@@ -36,6 +36,7 @@ const navItems = [
   { path: "/store-admin/subscription", label: "Subscription", icon: CreditCard },
   { path: "/store-admin/employees", label: "Employees", icon: Users },
   { path: "/store-admin/categories", label: "Categories", icon: Tag },
+  { path: "/store-admin/shift-summary", label: "Shift Summary", icon: Clock },
   { path: "/store-admin/reports", label: "Reports", icon: BarChart2 },
   { path: "/store-admin/payment-settings", label: "Payment Settings", icon: Settings },
 ];
@@ -104,7 +105,6 @@ function NavLinks({ onClose, pendingCount }) {
 export default function StoreAdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -143,26 +143,12 @@ export default function StoreAdminLayout() {
     return () => clearInterval(interval);
   }, [dispatch, storeId]);
 
-  // Get unread notifications
-  const readNotifications = JSON.parse(localStorage.getItem('readStoreNotifications') || '[]');
-  const pendingRequests = restockRequests?.filter(r => 
-    r.status === "PENDING" && !readNotifications.includes(r.id)
-  ) || [];
+  // Real pending restock requests from API
+  const pendingRequests = restockRequests?.filter(r => r.status === "PENDING") || [];
   const pendingCount = pendingRequests.length;
-  
-  const markAsRead = (requestId) => {
-    const currentRead = JSON.parse(localStorage.getItem('readStoreNotifications') || '[]');
-    if (!currentRead.includes(requestId)) {
-      const updatedRead = [...currentRead, requestId];
-      localStorage.setItem('readStoreNotifications', JSON.stringify(updatedRead));
-      setRefreshKey(prev => prev + 1); // Force re-render
-    }
-  };
-  
+
   const markAllAsRead = () => {
-    const allPendingIds = (restockRequests?.filter(r => r.status === "PENDING") || []).map(r => r.id);
-    localStorage.setItem('readStoreNotifications', JSON.stringify(allPendingIds));
-    setRefreshKey(prev => prev + 1); // Force re-render
+    navigate("/store-admin/restock-requests");
     setNotificationOpen(false);
   };
 
@@ -435,14 +421,7 @@ export default function StoreAdminLayout() {
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1a1d23" }}>Restock Requests</h3>
                         <div style={{ display: "flex", gap: 8 }}>
-                          {pendingCount > 0 && (
-                            <button
-                              onClick={markAllAsRead}
-                              style={{ fontSize: 11, color: "#6b7280", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-                            >
-                              Mark all read
-                            </button>
-                          )}
+
                           {pendingCount > 0 && (
                             <Link 
                               to="/store-admin/restock-requests"
@@ -472,7 +451,6 @@ export default function StoreAdminLayout() {
                               cursor: "pointer",
                             }}
                             onClick={() => {
-                              markAsRead(req.id);
                               navigate("/store-admin/restock-requests");
                               setNotificationOpen(false);
                             }}

@@ -12,6 +12,11 @@ import { toast } from "sonner";
 import { getAllStores } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getStoreName, resolveSubscriptionPlan } from "@/util/registrationDataMerger";
 import { getAuthHeaders } from "@/util/getAuthHeader";
+import {
+  formatSubscriptionDate,
+  getSubscriptionExpiryDate,
+  getSubscriptionPurchaseDate,
+} from "@/util/subscriptionUtils";
 import api from "@/util/api";
 
 const STORAGE_KEYS = {
@@ -100,6 +105,9 @@ function StatusPill({ status }) {
 function StoreSubscriptionCard({ store, onMarkPaid, onApprove }) {
   const planDetails = SUBSCRIPTION_PLANS[store.plan] || SUBSCRIPTION_PLANS.BASIC;
   const pendingRequest = store.upgradeRequest;
+  const daysUntilExpiry = store.expiryDate
+    ? Math.ceil((store.expiryDate - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
 
   return (
     <div
@@ -170,6 +178,22 @@ function StoreSubscriptionCard({ store, onMarkPaid, onApprove }) {
         </div>
 
         <div style={{ marginTop: 12, display: "grid", gap: 5 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12, color: "#4b5563" }}>
+            <span style={{ fontWeight: 700 }}>Purchased</span>
+            <span>{formatSubscriptionDate(store.purchaseDate)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12, color: "#4b5563" }}>
+            <span style={{ fontWeight: 700 }}>Expires</span>
+            <span>
+              {formatSubscriptionDate(store.expiryDate)}
+              {daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 60 && (
+                <span style={{ color: "#f59e0b", fontWeight: 700, marginLeft: 4 }}>
+                  ({daysUntilExpiry} days)
+                </span>
+              )}
+            </span>
+          </div>
+          <div style={{ height: 1, background: "#e5e7eb", margin: "3px 0" }} />
           {planDetails.features.map((feature) => (
             <div key={feature} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, color: "#6b7280" }}>
               <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#1a1d23" }} />
@@ -338,6 +362,8 @@ export default function SubscriptionManagement() {
       return stores.map((store) => {
         const id = String(store._id || store.id);
         const plan = planOverrides[id] || resolveSubscriptionPlan(store);
+        const purchaseDate = getSubscriptionPurchaseDate(store);
+        const expiryDate = getSubscriptionExpiryDate(store, purchaseDate);
 
         return {
           id,
@@ -348,6 +374,8 @@ export default function SubscriptionManagement() {
           adminName: store.fullName || store.ownerName || "Store Admin",
           email: store.email || store.contact?.email || "",
           phone: store.phone || store.contact?.phone || "",
+          purchaseDate,
+          expiryDate,
         };
       });
     }

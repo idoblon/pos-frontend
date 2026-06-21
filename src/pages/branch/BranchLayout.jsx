@@ -14,11 +14,13 @@ import {
   Bell,
   Menu,
   Truck,
+  Clock,
   CheckCircle,
   XCircle,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
+import { logout as clearAuth } from "@/Redux Toolkit/Features/auth/authSlice";
+import { logout as logoutThunk } from "@/Redux Toolkit/Features/auth/authThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { getBranchById } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { getRestockRequestsByBranch } from "@/Redux Toolkit/Features/restock/restockThunk";
@@ -35,6 +37,7 @@ const navItems = [
   { path: "/branch/customers", label: "Customers", icon: UserCircle },
   { path: "/branch/employees", label: "Employees", icon: Users },
   { path: "/branch/reports", label: "Reports", icon: BarChart2 },
+  { path: "/branch/shift-summary", label: "Shift Summary", icon: Clock },
   { path: "/branch/refunds", label: "Refunds", icon: RotateCcw },
   { path: "/branch/settings", label: "Settings", icon: Settings },
 ];
@@ -159,8 +162,12 @@ export default function BranchLayout() {
     setNotificationOpen(false);
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutThunk()).unwrap();
+    } catch {
+      dispatch(clearAuth());
+    }
     navigate("/login");
   };
 

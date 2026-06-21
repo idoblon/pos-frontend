@@ -87,7 +87,7 @@ const Login = () => {
         return;
       }
       
-      if (role === 'ROLE_BRANCH_CASHIER') {
+      if (role === 'ROLE_BRANCH_CASHIER' || role === 'ROLE_BRANCH_MANAGER') {
         try {
           const shiftResult = await dispatch(startShift()).unwrap();
           console.log('✅ Shift started successfully:', shiftResult);

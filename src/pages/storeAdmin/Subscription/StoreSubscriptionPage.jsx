@@ -4,7 +4,7 @@ import { Crown, CreditCard, TrendingUp, History, Bell } from 'lucide-react';
 import CurrentSubscriptionCard from '@/components/subscription/CurrentSubscriptionCard';
 import SubscriptionNotificationBanner from '@/components/subscription/SubscriptionNotificationBanner';
 import subscriptionService from '@/services/subscriptionService';
-import { SUBSCRIPTION_PLANS, formatPrice } from '@/util/subscriptionUtils';
+import { SUBSCRIPTION_PLANS, formatPrice, formatSubscriptionDate, normalizeSubscriptionRecord } from '@/util/subscriptionUtils';
 import { toast } from 'sonner';
 
 const StoreSubscriptionPage = () => {
@@ -18,25 +18,11 @@ const StoreSubscriptionPage = () => {
     loadSubscription();
   }, []);
 
-  const parseDate = (value) => {
-    if (!value) return null;
-    if (Array.isArray(value)) {
-      const [y, m, d, h = 0, min = 0, s = 0] = value;
-      return new Date(y, m - 1, d, h, min, s);
-    }
-    const date = new Date(value);
-    return isNaN(date.getTime()) ? null : date;
-  };
-
   const loadSubscription = async () => {
     try {
       setLoading(true);
       const data = await subscriptionService.getCurrentSubscription();
-      if (data) {
-        data.subscriptionPurchaseDate = parseDate(data.subscriptionPurchaseDate);
-        data.subscriptionExpiry = parseDate(data.subscriptionExpiry);
-      }
-      setSubscription(data);
+      setSubscription(data ? normalizeSubscriptionRecord(data) : data);
     } catch (error) {
       console.error('Failed to load subscription:', error);
       toast.error('Failed to load subscription details');
@@ -63,7 +49,7 @@ const StoreSubscriptionPage = () => {
           currentSubscription: subscription
         }
       });
-    } catch (error) {
+    } catch {
       toast.error('Failed to initiate subscription process');
     }
   };
@@ -353,17 +339,13 @@ const StoreSubscriptionPage = () => {
                 <div>
                   <span style={{ color: '#6b7280', fontWeight: '600' }}>Started:</span>
                   <p style={{ margin: '4px 0 0', color: '#1a1d23', fontWeight: '700' }}>
-                    {subscription.subscriptionPurchaseDate instanceof Date
-                      ? subscription.subscriptionPurchaseDate.toLocaleDateString('en-IN')
-                      : 'N/A'}
+                    {formatSubscriptionDate(subscription.subscriptionPurchaseDate)}
                   </p>
                 </div>
                 <div>
                   <span style={{ color: '#6b7280', fontWeight: '600' }}>Expires:</span>
                   <p style={{ margin: '4px 0 0', color: '#1a1d23', fontWeight: '700' }}>
-                    {subscription.subscriptionExpiry instanceof Date
-                      ? subscription.subscriptionExpiry.toLocaleDateString('en-IN')
-                      : 'N/A'}
+                    {formatSubscriptionDate(subscription.subscriptionExpiry)}
                   </p>
                 </div>
                 <div>

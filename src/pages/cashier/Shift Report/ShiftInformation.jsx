@@ -23,6 +23,25 @@ const formatTime = (date) =>
       })
     : "N/A";
 
+const formatDurationFromHours = (hours) => {
+  const totalMinutes = Math.max(0, Math.round((hours || 0) * 60));
+  const totalHours = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+
+  // If less than 24 hours, show hours and minutes normally
+  if (totalHours < 24) {
+    if (totalHours === 0) return `${m}m`;
+    return m > 0 ? `${totalHours}h ${m}m` : `${totalHours}h`;
+  }
+
+  // If 24 hours or more, show days + extra hours
+  const days = Math.floor(totalHours / 24);
+  const h = totalHours % 24;
+
+  if (h === 0) return `${days}d`;
+  return `${days}d ${h}h`;
+};
+
 const ShiftInformation = () => {
   const shiftData = useSelector((state) => state.shiftReport?.currentShift);
   const [shiftMetrics, setShiftMetrics] = useState({
@@ -56,12 +75,6 @@ const ShiftInformation = () => {
     return () => clearInterval(interval);
   }, [shiftData]);
 
-  const formatDuration = (hours) => {
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  };
-
   return (
     <div className="space-y-4">
       <Card className="h-full">
@@ -71,7 +84,7 @@ const ShiftInformation = () => {
           </h2>
           <div className="space-y-2">
             <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-sm text-gray-600">Cashier</span>
+              <span className="text-sm text-gray-600">Staff</span>
               <span className="font-medium text-gray-900 text-sm">
                 {shiftData?.cashier?.fullName || "N/A"}
               </span>
@@ -98,19 +111,9 @@ const ShiftInformation = () => {
                 Duration
               </span>
               <div className="text-right">
-                {shiftMetrics.overtimeHours > 0 ? (
-                  <div className="font-medium text-sm">
-                    <span className="text-gray-900">9h</span>
-                    <span className="mx-1 text-gray-500">+</span>
-                    <span className="text-red-600 font-semibold">
-                      {formatDuration(shiftMetrics.overtimeHours)} OT
-                    </span>
-                  </div>
-                ) : (
-                  <div className="font-medium text-sm text-gray-900">
-                    {formatDuration(shiftMetrics.totalHours)}
-                  </div>
-                )}
+                <div className="font-medium text-sm text-gray-900">
+                  {formatDurationFromHours(shiftMetrics.totalHours)}
+                </div>
               </div>
             </div>
           </div>

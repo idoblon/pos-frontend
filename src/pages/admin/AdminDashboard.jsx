@@ -11,6 +11,7 @@ import { getAllUsers } from "@/Redux Toolkit/Features/user/userThunk";
 import subscriptionService from "@/services/subscriptionService";
 import api from "@/util/api";
 import { getAuthHeaders } from "@/util/getAuthHeader";
+import { getSubscriptionExpiryDate } from "@/util/subscriptionUtils";
 
 const ROLE_COLORS = ["#1a1d23", "#3d3d3d", "#6b6b6b", "#9e9e9e"];
 
@@ -155,8 +156,7 @@ export default function AdminDashboard() {
     const now = new Date();
     const limit = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
     return realStores.filter((s) => {
-      if (!s.subscriptionExpiry) return false;
-      const exp = new Date(s.subscriptionExpiry);
+      const exp = getSubscriptionExpiryDate(s);
       return exp > now && exp <= limit;
     }).length;
   }, [realStores]);
@@ -278,10 +278,10 @@ export default function AdminDashboard() {
         />
         <StatCard
           title="Expiring Subscriptions"
-          value={expiringSubscriptions}
+          value={expiringCount}
           subtitle="Expiring in next 60 days"
           icon={AlertTriangle}
-          loading={storesLoading}
+          loading={statsLoading}
         />
         <StatCard
           title="Subscription Revenue"
