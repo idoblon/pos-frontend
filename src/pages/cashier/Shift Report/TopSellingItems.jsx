@@ -4,8 +4,9 @@ import { useSelector } from 'react-redux'
 
 
 
-const TopSellingItems = () => {
-    const shiftData=useSelector((state)=> state.shiftReport?.currentShift);
+const TopSellingItems = ({ shiftData: propData } = {}) => {
+    const reduxData = useSelector((state) => state.shiftReport?.currentShift);
+    const shiftData = propData ?? reduxData;
     return (
        <Card className="h-full">
         <CardContent className="p-4">

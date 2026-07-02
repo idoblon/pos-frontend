@@ -244,7 +244,7 @@ export default function EmployeeManagement() {
       email: e.email ?? "", 
       phone: e.phone ?? "", 
       role: e.role ?? "ROLE_BRANCH_CASHIER", 
-      branchId: e.branchId ?? "" 
+      branchId: e.branchId != null ? String(e.branchId) : "" 
     }); 
     setDialogOpen(true); 
   };
@@ -487,7 +487,7 @@ export default function EmployeeManagement() {
                         {emp.role?.replace('ROLE_', '').replace('_', ' ') ?? "CASHIER"}
                       </span>
                     </td>
-                    <td style={{ ...s.td, color: "#8a909c" }}>{branches?.find((b) => (b._id || b.id) === emp.branchId)?.name ?? "—"}</td>
+                    <td style={{ ...s.td, color: "#8a909c" }}>{branches?.find((b) => String(b._id || b.id) === String(emp.branchId))?.name ?? "—"}</td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                         <button style={s.iconBtn} onClick={() => openEdit(emp)}><Pencil size={13} color="#6b7280" /></button>
@@ -539,7 +539,7 @@ export default function EmployeeManagement() {
                 required={form.role === "ROLE_BRANCH_MANAGER" || form.role === "ROLE_BRANCH_CASHIER"}
               >
                 <option value="">Select branch</option>
-                {branches?.map((b) => <option key={b._id || b.id} value={b._id || b.id}>{b.name}</option>)}
+                {branches?.map((b) => <option key={b._id || b.id} value={String(b._id || b.id)}>{b.name}</option>)}
               </select>
               {(form.role === "ROLE_BRANCH_MANAGER" || form.role === "ROLE_BRANCH_CASHIER") && (
                 <p className="text-xs text-gray-500">Branch is required for this role</p>

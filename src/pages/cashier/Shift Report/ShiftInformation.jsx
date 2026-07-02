@@ -53,7 +53,11 @@ const ShiftInformation = () => {
 
   const calculateMetrics = () => {
     if (shiftData?.shiftStart) {
-      const startTime = parseShiftTime(shiftData.shiftStart);
+      const rawStart = parseShiftTime(shiftData.shiftStart);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      // Use the later of shiftStart or today's midnight — so only today's duration counts
+      const startTime = rawStart < todayStart ? todayStart : rawStart;
       const endTime = shiftData.shiftEnd ? parseShiftTime(shiftData.shiftEnd) : new Date();
 
       const totalHours = (endTime - startTime) / (1000 * 60 * 60);

@@ -29,22 +29,30 @@ export default function ProductSection({ onAddToCart }) {
   const productList = products?.content || products || [];
   productList.forEach(product => {
     const id = product.id || product._id;
-    productMap[id] = product;
+    if (id != null) productMap[String(id)] = product;
   });
 
   // Convert inventory items to product format, enriching with product details
   const productsFromInventory = (inventory || []).map(inv => {
-    const productDetails = productMap[inv.productId] || {};
+    const productDetails = productMap[String(inv.productId)] || {};
+    const image =
+      inv.productImage ||
+      inv.image ||
+      inv.imageUrl ||
+      productDetails.image ||
+      productDetails.imageUrl ||
+      productDetails.productImage ||
+      null;
     return {
       id: inv.productId,
       _id: inv.productId,
       name: inv.productName || productDetails.name,
-      sku: inv.productSku || productDetails.sku,
-      price: productDetails.sellingPrice || productDetails.price || 0,
-      sellingPrice: productDetails.sellingPrice || productDetails.price || 0,
+      sku: inv.productSku || inv.sku || productDetails.sku,
+      price: productDetails.sellingPrice || productDetails.price || inv.unitPrice || 0,
+      sellingPrice: productDetails.sellingPrice || productDetails.price || inv.unitPrice || 0,
       category: { name: inv.categoryName || productDetails.category?.name },
-      image: inv.productImage || productDetails.image || productDetails.imageUrl,
-      imageUrl: inv.productImage || productDetails.imageUrl || productDetails.image,
+      image,
+      imageUrl: image,
       description: productDetails.description || productDetails.desciption,
       stock: inv.quantity || 0,
     };
@@ -65,7 +73,7 @@ export default function ProductSection({ onAddToCart }) {
           <input
             className="search-input"
             style={{ paddingLeft: 32 }}
-            placeholder="Search products..."
+            placeholder="Search by name or SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

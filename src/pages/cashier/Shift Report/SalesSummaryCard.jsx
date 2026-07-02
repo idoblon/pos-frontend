@@ -3,8 +3,9 @@ import {Card, CardContent} from '@/components/ui/card'
 import React from 'react'
 
 
-const SalesSummaryCard = () => {
-    const shiftData= useSelector(state => state.shiftReport?.currentShift);
+const SalesSummaryCard = ({ shiftData: propData } = {}) => {
+    const reduxData = useSelector(state => state.shiftReport?.currentShift);
+    const shiftData = propData ?? reduxData;
     return (
        <Card className="h-full">
        <CardContent className="p-4">

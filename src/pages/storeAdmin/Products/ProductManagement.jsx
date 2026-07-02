@@ -428,24 +428,20 @@ export default function ProductManagement() {
 
         {filtered?.length > 0 && (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: 56 }} />
+                <col style={{ width: "22%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "14%" }} />
+                <col />
+                <col style={{ width: 110 }} />
+                <col style={{ width: 90 }} />
+              </colgroup>
               <thead>
                 <tr>
-                  {[
-                    "Image",
-                    "Name",
-                    "SKU",
-                    "Category",
-                    "Description",
-                    "Price",
-                    "Actions",
-                  ].map((h, i) => (
-                    <th
-                      key={h}
-                      style={{ ...s.th, textAlign: i >= 5 ? "right" : "left" }}
-                    >
-                      {h}
-                    </th>
+                  {["Image", "Name", "SKU", "Category", "Description", "Price", "Actions"].map((h, i) => (
+                    <th key={h} style={{ ...s.th, textAlign: i >= 5 ? "right" : "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -456,92 +452,37 @@ export default function ProductManagement() {
                     <tr
                       key={productId}
                       style={{ background: "white" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "#f5f5f5")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "white")
-                      }
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f5f5")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
                     >
                       <td style={s.td}>
                         {p.image || p.imageUrl ? (
                           <img
                             src={p.image || p.imageUrl}
                             alt={p.name}
-                            style={{
-                              width: 40,
-                              height: 40,
-                              objectFit: "cover",
-                              borderRadius: 6,
-                            }}
+                            style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6 }}
                           />
                         ) : (
-                          <div
-                            style={{
-                              width: 40,
-                              height: 40,
-                              background: "#f5f5f5",
-                              borderRadius: 6,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
+                          <div style={{ width: 40, height: 40, background: "#f5f5f5", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <Package size={20} color="#d1d5db" />
                           </div>
                         )}
                       </td>
-                      <td style={{ ...s.td, fontWeight: 600 }}>{p.name}</td>
-                      <td style={{ ...s.td, color: "#8a909c" }}>
-                        {p.sku ?? "—"}
+                      <td style={{ ...s.td, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</td>
+                      <td style={{ ...s.td, color: "#8a909c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.sku ?? "—"}</td>
+                      <td style={{ ...s.td, color: "#8a909c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {categories?.find((c) => (c.id || c._id) === p.categoryId)?.name || p.category?.name || "—"}
                       </td>
-                      <td style={{ ...s.td, color: "#8a909c" }}>
-                        {categories?.find(
-                          (c) => (c.id || c._id) === p.categoryId,
-                        )?.name ||
-                          p.category?.name ||
-                          "—"}
-                      </td>
-                      <td
-                        style={{
-                          ...s.td,
-                          color: "#8a909c",
-                          maxWidth: 200,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <td style={{ ...s.td, color: "#8a909c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {p.description || p.desciption || "—"}
                       </td>
-                      <td
-                        style={{
-                          ...s.td,
-                          textAlign: "right",
-                          fontWeight: 700,
-                          color: "#1a1d23",
-                        }}
-                      >
+                      <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#1a1d23", whiteSpace: "nowrap" }}>
                         रु {p.sellingPrice || p.price || 0}
                       </td>
                       <td style={{ ...s.td, textAlign: "right" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "flex-end",
-                            gap: 6,
-                          }}
-                        >
-                          <button style={s.iconBtn} onClick={() => openEdit(p)}>
-                            <Pencil size={13} color="#6b7280" />
-                          </button>
-                          <button
-                            style={{ ...s.iconBtn, borderColor: "#fecaca" }}
-                            onClick={() => openDelete(p)}
-                          >
-                            <Trash2 size={13} color="#e53e3e" />
-                          </button>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                          <button style={s.iconBtn} onClick={() => openEdit(p)}><Pencil size={13} color="#6b7280" /></button>
+                          <button style={{ ...s.iconBtn, borderColor: "#fecaca" }} onClick={() => openDelete(p)}><Trash2 size={13} color="#e53e3e" /></button>
                         </div>
                       </td>
                     </tr>

@@ -5,8 +5,9 @@ import { useSelector } from "react-redux";
 
 
 
-const RefundsTable = () => {
-    const shiftData=useSelector((state)=> state.shiftReport?.currentShift);
+const RefundsTable = ({ shiftData: propData } = {}) => {
+    const reduxData = useSelector((state) => state.shiftReport?.currentShift);
+    const shiftData = propData ?? reduxData;
     return (
          <Card>
         <CardContent className="p-4">

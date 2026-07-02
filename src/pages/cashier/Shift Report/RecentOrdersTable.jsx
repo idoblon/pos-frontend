@@ -4,8 +4,9 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 
 
-const RecentOrdersTable = () => {
-    const shiftData=useSelector((state)=> state.shiftReport?.currentShift);
+const RecentOrdersTable = ({ shiftData: propData } = {}) => {
+    const reduxData = useSelector((state) => state.shiftReport?.currentShift);
+    const shiftData = propData ?? reduxData;
     return (
        <Card>
         <CardContent className="p-4">

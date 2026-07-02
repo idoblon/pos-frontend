@@ -11,6 +11,7 @@ import BranchReports from "@/pages/branch/BranchReports";
 import BranchSettings from "@/pages/branch/BranchSettings";
 import BranchRestockRequests from "@/pages/branch/BranchRestockRequests";
 import ShiftSummaryPage from "@/pages/cashier/Shift Report/ShiftSummaryPage";
+import BranchShiftSummaryPage from "@/pages/cashier/Shift Report/BranchShiftSummaryPage";
 
 const BranchRoutes = () => (
   <Routes>
@@ -22,7 +23,7 @@ const BranchRoutes = () => (
       <Route path="customers"         element={<BranchCustomers />} />
       <Route path="employees"         element={<BranchEmployees />} />
       <Route path="reports"           element={<BranchReports />} />
-      <Route path="shift-summary"     element={<ShiftSummaryPage />} />
+      <Route path="shift-summary"     element={<BranchShiftSummaryPage />} />
       <Route path="refunds"           element={<BranchRefunds />} />
       <Route path="settings"          element={<BranchSettings />} />
     </Route>
