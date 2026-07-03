@@ -97,8 +97,10 @@ function NavLinks({ onClose, notificationCount }) {
 export default function BranchLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // Force re-render when notifications change
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [readNotifications, setReadNotifications] = useState(
+    () => JSON.parse(localStorage.getItem('readBranchNotifications') || '[]')
+  );
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
@@ -137,28 +139,24 @@ export default function BranchLayout() {
   }, [dispatch, branchId]);
 
   // Count approved/rejected/fulfilled requests (new notifications)
-  const readNotifications = JSON.parse(localStorage.getItem('readBranchNotifications') || '[]');
-  
-  const updatedRequests = restockRequests?.filter(r => 
-    (r.status === "APPROVED" || r.status === "REJECTED" || r.status === "FULFILLED") && !readNotifications.includes(r.id)
-  ) || [];
-  
-  const allNotifications = updatedRequests;
+  const allNotifications = (restockRequests || []).filter(r =>
+    (r.status === "APPROVED" || r.status === "REJECTED" || r.status === "FULFILLED") &&
+    !readNotifications.includes(r.id)
+  );
   const notificationCount = allNotifications.length;
-  
+
   const markAsRead = (requestId) => {
-    const currentRead = JSON.parse(localStorage.getItem('readBranchNotifications') || '[]');
-    if (!currentRead.includes(requestId)) {
-      const updatedRead = [...currentRead, requestId];
-      localStorage.setItem('readBranchNotifications', JSON.stringify(updatedRead));
-      setRefreshKey(prev => prev + 1); // Force re-render
+    if (!readNotifications.includes(requestId)) {
+      const updated = [...readNotifications, requestId];
+      localStorage.setItem('readBranchNotifications', JSON.stringify(updated));
+      setReadNotifications(updated);
     }
   };
-  
+
   const markAllAsRead = () => {
     const allIds = (restockRequests || []).map(r => r.id);
     localStorage.setItem('readBranchNotifications', JSON.stringify(allIds));
-    setRefreshKey(prev => prev + 1); // Force re-render
+    setReadNotifications(allIds);
     setNotificationOpen(false);
   };
 
@@ -514,7 +512,7 @@ export default function BranchLayout() {
                           
                           return (
                             <div
-                              key={`${req.id}-${refreshKey}`}
+                              key={req.id}
                               style={{
                                 padding: "12px 16px",
                                 borderBottom: i < Math.min(allNotifications.length, 5) - 1 ? "1px solid #f3f4f6" : "none",

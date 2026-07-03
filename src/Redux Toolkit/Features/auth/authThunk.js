@@ -3,6 +3,7 @@ import api from "@/util/api";
 import secureStorage from "@/util/secureStorage";
 import shiftManager from "@/util/shiftManager";
 import { validateUserAccess, updateBranchStatus } from "@/util/storeStatusChecker";
+import { resetShift } from "../shiftReport/shiftReportSlice";
 
 export const signup = createAsyncThunk(
   "auth/signup",
@@ -78,15 +79,14 @@ export const logout = createAsyncThunk(
   "auth/logout",
   async (_, { dispatch }) => {
     try {
-      // End current shift before logout
-      console.log("🔚 Ending shift before logout");
       await shiftManager.endCurrentShift(dispatch);
     } catch (error) {
-      console.warn("⚠️ Failed to end shift during logout:", error);
+      console.warn("Failed to end shift during logout:", error);
     }
     
-    // Clear authentication data
+    // Clear shift state so next login starts fresh
+    dispatch(resetShift());
+    
     secureStorage.clearAll();
-    console.log("✅ Logout completed");
   }
 );

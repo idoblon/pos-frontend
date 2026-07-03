@@ -27,7 +27,7 @@ export default function ProductCard({ product, stock, onAddToCart }) {
       {/* Image */}
       <div className="prod-img">
         {image ? (
-          <img src={image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
         ) : (
           <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f0f0" }}>
             <Package size={28} color="#c4c9d4" />
@@ -37,9 +37,6 @@ export default function ProductCard({ product, stock, onAddToCart }) {
 
       {/* Info */}
       <div className="prod-info">
-        {/* Category */}
-        <span className="prod-tag" style={{ alignSelf: "flex-start" }}>{categoryName}</span>
-
         {/* Name */}
         <div className="prod-name">{product.name}</div>
 

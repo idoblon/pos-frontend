@@ -1,4 +1,5 @@
 import { startShift, getCurrentShiftProgress, endShift } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
+import { resetShift } from "@/Redux Toolkit/Features/shiftReport/shiftReportSlice";
 import secureStorage from "./secureStorage";
 
 /**
@@ -15,49 +16,45 @@ class ShiftManager {
    * Start shift tracking for a user after login
    */
   async initializeShiftOnLogin(dispatch, userData) {
+    // Always reset first so UI never shows stale data
+    dispatch(resetShift());
+
     try {
       console.log("🔄 Initializing shift for user:", userData);
-      
+
       // Check if user already has an active shift
-      const currentShift = await dispatch(getCurrentShiftProgress()).unwrap();
-      
-      if (currentShift && !currentShift.endTime) {
-        console.log("✅ User already has active shift:", currentShift);
-        this.startShiftMonitoring(dispatch, currentShift);
-        return currentShift;
+      let currentShift = null;
+      try {
+        currentShift = await dispatch(getCurrentShiftProgress()).unwrap();
+      } catch (e) {
+        // No active shift on backend — proceed to start one
       }
-      
-      // Start new shift if no active shift exists
+
+      if (currentShift && !currentShift.shiftEnd) {
+        const shiftDate = new Date(currentShift.shiftStart).toDateString();
+        const today = new Date().toDateString();
+
+        if (shiftDate === today) {
+          console.log("✅ Reusing today's active shift:", currentShift);
+          this.startShiftMonitoring(dispatch, currentShift);
+          return currentShift;
+        }
+
+        // Stale shift from a previous day — backend startShift will force-close it
+        console.log("🔄 Stale shift detected, backend will close it on startShift");
+        dispatch(resetShift());
+      }
+
+      // Start new shift — backend force-closes any stale open shift automatically
       console.log("🚀 Starting new shift for user");
       const newShift = await dispatch(startShift()).unwrap();
       console.log("✅ New shift started:", newShift);
-      
-      // Store shift start time in localStorage for persistence
-      localStorage.setItem('currentShiftStart', new Date().toISOString());
-      localStorage.setItem('currentShiftId', newShift.id);
-      
       this.startShiftMonitoring(dispatch, newShift);
       return newShift;
-      
+
     } catch (error) {
       console.error("❌ Failed to initialize shift:", error);
-      
-      // Fallback: create local shift tracking if API fails
-      const fallbackShift = {
-        id: `LOCAL_${Date.now()}`,
-        startTime: new Date().toISOString(),
-        endTime: null,
-        cashierId: userData?.id || userData?.userId,
-        cashierName: userData?.fullName || userData?.username,
-        status: 'ACTIVE'
-      };
-      
-      localStorage.setItem('currentShiftStart', fallbackShift.startTime);
-      localStorage.setItem('currentShiftId', fallbackShift.id);
-      localStorage.setItem('fallbackShift', JSON.stringify(fallbackShift));
-      
-      this.startShiftMonitoring(dispatch, fallbackShift);
-      return fallbackShift;
+      // Do NOT set a fallback local shift — leave currentShift null so UI shows nothing stale
     }
   }
 
@@ -136,29 +133,13 @@ class ShiftManager {
    */
   async endCurrentShift(dispatch) {
     try {
-      console.log("🔚 Ending current shift");
-      
-      // Try to end shift via API
       await dispatch(endShift()).unwrap();
-      
-      // Clear local storage
       this.clearShiftData();
       this.stopShiftMonitoring();
-      
-      console.log("✅ Shift ended successfully");
       return true;
-      
     } catch (error) {
-      console.error("❌ Failed to end shift:", error);
-      
-      // Fallback: mark shift as ended locally
-      const fallbackShift = JSON.parse(localStorage.getItem('fallbackShift') || '{}');
-      if (fallbackShift.id) {
-        fallbackShift.endTime = new Date().toISOString();
-        fallbackShift.status = 'CLOSED';
-        localStorage.setItem('fallbackShift', JSON.stringify(fallbackShift));
-      }
-      
+      console.warn("⚠️ endShift API failed (shift may already be closed):", error);
+      // Still clear local data so next login starts clean
       this.clearShiftData();
       this.stopShiftMonitoring();
       return false;

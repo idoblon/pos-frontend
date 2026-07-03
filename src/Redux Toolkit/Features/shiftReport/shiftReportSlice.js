@@ -23,7 +23,16 @@ const initialState = {
 const shiftReportSlice = createSlice({
   name: "shiftReport",
   initialState,
-  reducers: {},
+  reducers: {
+    resetShift: (state) => {
+      state.currentShift = null;
+      state.selectedShift = null;
+      state.shifts = [];
+      state.shiftsByCashier = [];
+      state.shiftsByBranch = [];
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(startShift.pending, (state) => {
@@ -121,4 +130,5 @@ const shiftReportSlice = createSlice({
   },
 });
 
+export const { resetShift } = shiftReportSlice.actions;
 export default shiftReportSlice.reducer;
