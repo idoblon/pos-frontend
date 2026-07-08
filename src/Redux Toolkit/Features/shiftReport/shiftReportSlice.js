@@ -17,6 +17,7 @@ const initialState = {
   shiftsByCashier: [],
   shiftsByBranch: [],
   loading: false,
+  endingShift: false,
   error: null,
 };
 
@@ -49,9 +50,11 @@ const shiftReportSlice = createSlice({
       // end shift
       .addCase(endShift.pending, (state) => {
         state.loading = true;
+        state.endingShift = true;
       })
       .addCase(endShift.fulfilled, (state, action) => {
         state.loading = false;
+        state.endingShift = false;
         if (state.currentShift && state.currentShift.id === action.payload.id) {
           state.currentShift = action.payload;
         }
@@ -64,6 +67,7 @@ const shiftReportSlice = createSlice({
       })
       .addCase(endShift.rejected, (state, action) => {
         state.loading = false;
+        state.endingShift = false;
         state.error = action.payload;
       })
       // get current shift progess

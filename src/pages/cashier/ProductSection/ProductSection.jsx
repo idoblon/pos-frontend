@@ -60,7 +60,8 @@ export default function ProductSection({ onAddToCart }) {
   
   const filtered = productsFromInventory.filter((p) =>
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+    p.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.category?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const loading = inventoryLoading || productsLoading;
@@ -73,7 +74,7 @@ export default function ProductSection({ onAddToCart }) {
           <input
             className="search-input"
             style={{ paddingLeft: 32 }}
-            placeholder="Search by name or SKU..."
+            placeholder="Search by name, SKU, or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

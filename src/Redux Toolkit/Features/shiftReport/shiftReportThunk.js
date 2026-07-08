@@ -31,8 +31,22 @@ export const endShift = createAsyncThunk(
       const res = await api.patch(`/api/shift-reports/end`, {}, { headers });
       return res.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to end shift");
+      const message = error.response?.data?.message || "Failed to end shift";
+      const isDuplicateShiftClose =
+        message.includes("Duplicate entry") &&
+        message.includes("shift_report_top_selling_products");
+
+      return rejectWithValue(
+        isDuplicateShiftClose
+          ? "Shift is already being closed. Please wait a moment."
+          : message
+      );
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      return !getState().shiftReport?.endingShift;
+    },
   },
 );
 

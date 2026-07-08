@@ -42,9 +42,41 @@ const navItems = [
   { path: "/branch/settings", label: "Settings", icon: Settings },
 ];
 
+const READ_BRANCH_NOTIFICATIONS_KEY = "readBranchNotifications";
+const NOTIFICATION_STATUSES = new Set(["APPROVED", "REJECTED", "FULFILLED"]);
+
+const getNotificationId = (request) => {
+  const rawId =
+    request?.id ??
+    request?._id ??
+    request?.requestId ??
+    request?.restockRequestId;
+
+  if (rawId !== undefined && rawId !== null && rawId !== "") {
+    return String(rawId);
+  }
+
+  return [
+    request?.productId ?? request?.productName ?? "product",
+    request?.requestedQuantity ?? "qty",
+    request?.status ?? "status",
+    request?.createdAt ?? "date",
+  ].join(":");
+};
+
+const readStoredNotifications = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(READ_BRANCH_NOTIFICATIONS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+};
+
 function NavLinks({ onClose, notificationCount }) {
   const location = useLocation();
-  return navItems.map(({ path, label, icon: Icon }) => {
+  return navItems.map(({ path, label, icon }) => {
+    const NavIcon = icon;
     const active = location.pathname === path;
     const isRestockPage = path === "/branch/restock-requests";
     return (
@@ -68,7 +100,7 @@ function NavLinks({ onClose, notificationCount }) {
           position: "relative",
         }}
       >
-        <Icon size={17} color={active ? "white" : "#1a1d23"} />
+        <NavIcon size={17} color={active ? "white" : "#1a1d23"} />
         {label}
         {isRestockPage && notificationCount > 0 && (
           <span style={{
@@ -98,9 +130,7 @@ export default function BranchLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [readNotifications, setReadNotifications] = useState(
-    () => JSON.parse(localStorage.getItem('readBranchNotifications') || '[]')
-  );
+  const [readNotifications, setReadNotifications] = useState(readStoredNotifications);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
@@ -139,24 +169,28 @@ export default function BranchLayout() {
   }, [dispatch, branchId]);
 
   // Count approved/rejected/fulfilled requests (new notifications)
-  const allNotifications = (restockRequests || []).filter(r =>
-    (r.status === "APPROVED" || r.status === "REJECTED" || r.status === "FULFILLED") &&
-    !readNotifications.includes(r.id)
+  const allNotifications = (restockRequests || []).filter((request) =>
+    NOTIFICATION_STATUSES.has(request.status) &&
+    !readNotifications.includes(getNotificationId(request))
   );
   const notificationCount = allNotifications.length;
 
   const markAsRead = (requestId) => {
-    if (!readNotifications.includes(requestId)) {
-      const updated = [...readNotifications, requestId];
-      localStorage.setItem('readBranchNotifications', JSON.stringify(updated));
+    const notificationId = String(requestId);
+    if (!readNotifications.includes(notificationId)) {
+      const updated = [...readNotifications, notificationId];
+      localStorage.setItem(READ_BRANCH_NOTIFICATIONS_KEY, JSON.stringify(updated));
       setReadNotifications(updated);
     }
   };
 
   const markAllAsRead = () => {
-    const allIds = (restockRequests || []).map(r => r.id);
-    localStorage.setItem('readBranchNotifications', JSON.stringify(allIds));
-    setReadNotifications(allIds);
+    const notificationIds = (restockRequests || [])
+      .filter((request) => NOTIFICATION_STATUSES.has(request.status))
+      .map(getNotificationId);
+    const updated = Array.from(new Set([...readNotifications, ...notificationIds]));
+    localStorage.setItem(READ_BRANCH_NOTIFICATIONS_KEY, JSON.stringify(updated));
+    setReadNotifications(updated);
     setNotificationOpen(false);
   };
 
@@ -483,7 +517,6 @@ export default function BranchLayout() {
                         allNotifications.slice(0, 5).map((req, i) => {
                           const isApproved = req.status === "APPROVED";
                           const isPending = req.status === "PENDING";
-                          const isRejected = req.status === "REJECTED";
                           const isFulfilled = req.status === "FULFILLED";
                           
                           let StatusIcon, statusColor, statusBg, statusText;
@@ -512,7 +545,7 @@ export default function BranchLayout() {
                           
                           return (
                             <div
-                              key={req.id}
+                              key={getNotificationId(req)}
                               style={{
                                 padding: "12px 16px",
                                 borderBottom: i < Math.min(allNotifications.length, 5) - 1 ? "1px solid #f3f4f6" : "none",
@@ -520,7 +553,7 @@ export default function BranchLayout() {
                                 transition: "all 0.2s ease",
                               }}
                               onClick={() => {
-                                markAsRead(req.id);
+                                markAsRead(getNotificationId(req));
                                 navigate("/branch/restock-requests");
                                 setNotificationOpen(false);
                               }}

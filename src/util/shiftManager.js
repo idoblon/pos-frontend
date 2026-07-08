@@ -1,6 +1,5 @@
 import { startShift, getCurrentShiftProgress, endShift } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { resetShift } from "@/Redux Toolkit/Features/shiftReport/shiftReportSlice";
-import secureStorage from "./secureStorage";
 
 /**
  * Shift Manager - Handles automatic shift creation and tracking
@@ -8,6 +7,7 @@ import secureStorage from "./secureStorage";
 class ShiftManager {
   constructor() {
     this.shiftCheckInterval = null;
+    this.endShiftPromise = null;
     this.SHIFT_DURATION_HOURS = 10;
     this.CHECK_INTERVAL_MS = 60000; // Check every minute
   }
@@ -26,7 +26,7 @@ class ShiftManager {
       let currentShift = null;
       try {
         currentShift = await dispatch(getCurrentShiftProgress()).unwrap();
-      } catch (e) {
+      } catch {
         // No active shift on backend — proceed to start one
       }
 
@@ -132,6 +132,20 @@ class ShiftManager {
    * End current shift
    */
   async endCurrentShift(dispatch) {
+    if (this.endShiftPromise) {
+      return this.endShiftPromise;
+    }
+
+    this.endShiftPromise = this.performEndCurrentShift(dispatch);
+
+    try {
+      return await this.endShiftPromise;
+    } finally {
+      this.endShiftPromise = null;
+    }
+  }
+
+  async performEndCurrentShift(dispatch) {
     try {
       await dispatch(endShift()).unwrap();
       this.clearShiftData();

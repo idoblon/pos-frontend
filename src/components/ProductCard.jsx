@@ -5,9 +5,10 @@ export default function ProductCard({ product, stock, onAddToCart }) {
   const id = product.id || product._id;
   const outOfStock = stock === 0 || stock === undefined || stock === null;
   const image = product.image || product.imageUrl;
-  const categoryName = product.category?.name || "—";
   const price = product.sellingPrice || product.price || 0;
   const lowStockThreshold = getLowStockThreshold();
+  const productName = product.name || "Unnamed product";
+  const sku = product.sku || "No SKU";
 
   const stockColor = outOfStock ? "#e53e3e" : stock <= lowStockThreshold ? "#d97706" : "#059669";
   const stockBg = outOfStock ? "#fff5f5" : stock <= lowStockThreshold ? "#fffbeb" : "#f0fdf4";
@@ -27,9 +28,9 @@ export default function ProductCard({ product, stock, onAddToCart }) {
       {/* Image */}
       <div className="prod-img">
         {image ? (
-          <img src={image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          <img className="prod-img-el" src={image} alt={productName} />
         ) : (
-          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f0f0" }}>
+          <div className="prod-img-empty">
             <Package size={28} color="#c4c9d4" />
           </div>
         )}
@@ -38,13 +39,13 @@ export default function ProductCard({ product, stock, onAddToCart }) {
       {/* Info */}
       <div className="prod-info">
         {/* Name */}
-        <div className="prod-name">{product.name}</div>
+        <div className="prod-name" title={productName}>{productName}</div>
 
         {/* SKU */}
-        {product.sku && <div className="prod-sku">SKU: {product.sku}</div>}
+        <div className="prod-sku" title={`SKU: ${sku}`}>SKU: {sku}</div>
 
         {/* Inventory */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
+        <div className="prod-stock-row">
           <span style={{
             fontSize: 10,
             fontWeight: 700,

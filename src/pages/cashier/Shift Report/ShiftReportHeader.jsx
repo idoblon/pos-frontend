@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { endShift } from '@/Redux Toolkit/Features/shiftReport/shiftReportThunk'
@@ -11,8 +11,11 @@ const ShiftReportHeader = () => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
     const [loading, setLoading] = useState(false)
+    const endingShiftRef = useRef(false)
 
     const handleEndShiftAndLogout = async () => {
+        if (endingShiftRef.current) return
+        endingShiftRef.current = true
         setLoading(true)
         try {
             await dispatch(endShift()).unwrap()
@@ -21,6 +24,7 @@ const ShiftReportHeader = () => {
             toast.error(error || 'Failed to end shift')
         } finally {
             setLoading(false)
+            endingShiftRef.current = false
             dispatch(logout())
             navigate('/login')
         }
