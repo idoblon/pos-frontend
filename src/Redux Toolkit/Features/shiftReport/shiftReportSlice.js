@@ -21,6 +21,8 @@ const initialState = {
   error: null,
 };
 
+const isSilentRequest = (action) => action.meta?.arg && typeof action.meta.arg === "object" && action.meta.arg.silent;
+
 const shiftReportSlice = createSlice({
   name: "shiftReport",
   initialState,
@@ -108,15 +110,21 @@ const shiftReportSlice = createSlice({
         state.error = action.payload;
       })
       // get shift by branch
-      .addCase(getShiftsByBranch.pending, (state) => {
-        state.loading = true;
+      .addCase(getShiftsByBranch.pending, (state, action) => {
+        if (!isSilentRequest(action)) {
+          state.loading = true;
+        }
       })
       .addCase(getShiftsByBranch.fulfilled, (state, action) => {
-        state.loading = false;
+        if (!isSilentRequest(action)) {
+          state.loading = false;
+        }
         state.shiftsByBranch = action.payload;
       })
       .addCase(getShiftsByBranch.rejected, (state, action) => {
-        state.loading = false;
+        if (!isSilentRequest(action)) {
+          state.loading = false;
+        }
         state.error = action.payload;
       })
       // get shift by id

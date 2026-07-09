@@ -7,7 +7,7 @@ import { endShift } from '@/Redux Toolkit/Features/shiftReport/shiftReportThunk'
 import { logout } from '@/Redux Toolkit/Features/auth/authSlice'
 import { toast } from 'sonner'
 
-const ShiftReportHeader = () => {
+export const EndShiftLogoutButton = () => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
     const [loading, setLoading] = useState(false)
@@ -31,6 +31,15 @@ const ShiftReportHeader = () => {
     }
 
     return (
+        <Button variant={"destructive"} size="sm" onClick={handleEndShiftAndLogout} disabled={loading}>
+            {loading ? 'Ending Shift...' : 'End Shift & Logout'}
+            <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+    )
+}
+
+const ShiftReportHeader = () => {
+    return (
         <div className='bg-white border-b shadow-sm'>
           <div className="px-4 py-3">
             <div className="flex justify-between items-center">
@@ -39,10 +48,7 @@ const ShiftReportHeader = () => {
                 <p className="text-xs text-gray-500 mt-0.5">Monitor your current shift performance</p>
               </div>
               <div className='flex gap-2'>
-                <Button variant={"destructive"} size="sm" onClick={handleEndShiftAndLogout} disabled={loading}>
-                  {loading ? 'Ending Shift...' : 'End Shift & Logout'}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <EndShiftLogoutButton />
               </div>
             </div>
           </div>  

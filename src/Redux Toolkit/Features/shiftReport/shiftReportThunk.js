@@ -104,8 +104,9 @@ export const getShiftsByCashier = createAsyncThunk(
 
 export const getShiftsByBranch = createAsyncThunk(
   "/shiftReport/getByBranch",
-  async (branchId, { rejectWithValue }) => {
+  async (params, { rejectWithValue }) => {
     try {
+      const branchId = typeof params === "object" ? params.branchId : params;
       const sanitizedParams = sanitizePathParams({ branchId });
       const headers = getAuthHeaders();
       const res = await api.get(`/api/shift-reports/branch/${sanitizedParams.branchId}`, { headers });
