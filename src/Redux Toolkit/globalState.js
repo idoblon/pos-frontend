@@ -13,6 +13,7 @@ import employeeReducer from "./Features/Employee/employeeSlice";
 import storeReducer from "./Features/Store/storeSlice";
 import cartReducer from "./Features/Cart/cartSlice";
 import restockReducer from "./Features/restock/restockSlice";
+import { saveHeldOrders } from "@/util/heldOrdersStorage";
 
 export const store = configureStore({
   reducer: {
@@ -31,6 +32,10 @@ export const store = configureStore({
     cart: cartReducer,
     restock: restockReducer,
   },
+});
+
+store.subscribe(() => {
+  saveHeldOrders(store.getState().cart.heldOrders);
 });
 
 export default store;

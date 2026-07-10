@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Search } from "lucide-react";
 import { getInventoryByBranch } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
@@ -9,6 +9,7 @@ import secureStorage from "@/util/secureStorage";
 export default function ProductSection({ onAddToCart }) {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
+  const searchInputRef = useRef(null);
   const { inventory, loading: inventoryLoading } = useSelector((state) => state.inventory);
   const { products, loading: productsLoading } = useSelector((state) => state.product);
   const userData = secureStorage.getUserData();
@@ -24,6 +25,17 @@ export default function ProductSection({ onAddToCart }) {
     }
   }, [dispatch, branchId, storeId]);
 
+  useEffect(() => {
+    const focusSearch = (event) => {
+      if (event.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+
   // Create a map of productId to product details for quick lookup
   const productMap = {};
   const productList = products?.content || products || [];
@@ -33,7 +45,18 @@ export default function ProductSection({ onAddToCart }) {
   });
 
   // Convert inventory items to product format, enriching with product details
-  const productsFromInventory = (inventory || []).map(inv => {
+  const inventoryByProductId = new Map();
+  (inventory || []).forEach((item) => {
+    const key = String(item.productId);
+    const current = inventoryByProductId.get(key);
+    // A product should have one branch inventory row. Until duplicate data is
+    // repaired server-side, show the record with the highest available stock.
+    if (!current || Number(item.quantity || 0) > Number(current.quantity || 0)) {
+      inventoryByProductId.set(key, item);
+    }
+  });
+
+  const productsFromInventory = [...inventoryByProductId.values()].map(inv => {
     const productDetails = productMap[String(inv.productId)] || {};
     const image =
       inv.productImage ||
@@ -66,17 +89,31 @@ export default function ProductSection({ onAddToCart }) {
 
   const loading = inventoryLoading || productsLoading;
 
+  const handleSearchKeyDown = (event) => {
+    if (event.key !== "Enter" || !searchTerm.trim()) return;
+    const query = searchTerm.trim().toLowerCase();
+    const exactProduct = productsFromInventory.find((product) =>
+      product.sku?.toLowerCase() === query || String(product.id) === query,
+    );
+    if (exactProduct) {
+      onAddToCart(exactProduct);
+      setSearchTerm("");
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div className="search-wrap">
         <div style={{ position: "relative" }}>
           <Search size={14} color="#9ca3af" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
           <input
+            ref={searchInputRef}
             className="search-input"
             style={{ paddingLeft: 32 }}
-            placeholder="Search by name, SKU, or category..."
+            placeholder="Search by name, SKU, or category... ( / )"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
           />
         </div>
       </div>

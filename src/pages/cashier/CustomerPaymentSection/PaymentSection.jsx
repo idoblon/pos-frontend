@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { CreditCard } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 
-const PaymentSection = ({ total, cart, customer, discount, discountType, note, onOrderComplete }) => {
+const PaymentSection = ({ total, cart, onOrderComplete }) => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   return (
@@ -18,9 +18,10 @@ const PaymentSection = ({ total, cart, customer, discount, discountType, note, o
         <button
           className="pay-btn"
           onClick={() => setIsPaymentDialogOpen(true)}
+          disabled={!cart.length}
         >
           <CreditCard size={15} />
-          Process Payment
+          {cart.length ? "Process Payment" : "Add items to pay"}
         </button>
       </div>
 

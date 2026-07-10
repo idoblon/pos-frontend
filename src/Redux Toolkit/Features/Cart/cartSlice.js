@@ -1,5 +1,6 @@
 import { createSlice} from "@reduxjs/toolkit"
 import { getAdminTaxRate } from "@/util/adminSystemSettings";
+import { loadHeldOrders } from "@/util/heldOrdersStorage";
 
 const initialState = {
   items: [],
@@ -8,6 +9,7 @@ const initialState = {
   discount: { type: "percentage", value: 0 },
   paymentMethod: "cash",
   currentOrder: null,
+  heldOrders: loadHeldOrders(),
 };
 
 const cartSlice = createSlice({
@@ -69,6 +71,33 @@ const cartSlice = createSlice({
       state.paymentMethod = "cash";
       state.currentOrder = null;
     },
+    holdCurrentOrder: (state) => {
+      if (!state.items.length) return;
+      state.heldOrders.unshift({
+        id: `held-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        items: state.items,
+        selectedCustomer: state.selectedCustomer,
+        note: state.note,
+        discount: state.discount,
+      });
+      state.items = [];
+      state.selectedCustomer = null;
+      state.note = "";
+      state.discount = { type: "percentage", value: 0 };
+    },
+    restoreHeldOrder: (state, action) => {
+      const heldOrder = state.heldOrders.find((order) => order.id === action.payload);
+      if (!heldOrder || state.items.length) return;
+      state.items = heldOrder.items;
+      state.selectedCustomer = heldOrder.selectedCustomer;
+      state.note = heldOrder.note;
+      state.discount = heldOrder.discount;
+      state.heldOrders = state.heldOrders.filter((order) => order.id !== action.payload);
+    },
+    discardHeldOrder: (state, action) => {
+      state.heldOrders = state.heldOrders.filter((order) => order.id !== action.payload);
+    },
     setSelectedCustomer: (state, action) => {
       state.selectedCustomer = action.payload;
     },
@@ -102,6 +131,7 @@ export const selectCartNote = (state) => state.cart.note;
 export const selectDiscount = (state) => state.cart.discount;
 export const selectPaymentMethod = (state) => state.cart.paymentMethod;
 export const selectCurrentOrder = (state) => state.cart.currentOrder;
+export const selectHeldOrders = (state) => state.cart.heldOrders;
 
 export const selectSubtotal = (state) => {
   return state.cart.items.reduce((total, item) => total + (item.price || item.sellingPrice || 0) * item.quantity, 0);
@@ -115,11 +145,12 @@ export const selectTax = (state) => {
 export const selectDiscountAmount = (state) => {
   const subtotal = selectSubtotal(state);
   const discount = state.cart.discount;
+  const value = Number(discount.value) || 0;
 
   if (discount.type === "percentage") {
-    return subtotal * (discount.value / 100);
+    return subtotal * (Math.min(Math.max(value, 0), 100) / 100);
   } else {
-    return discount.value;
+    return Math.min(Math.max(value, 0), subtotal);
   }
 };
 
@@ -128,7 +159,7 @@ export const selectTotal = (state) => {
   const tax = selectTax(state);
   const discountAmount = selectDiscountAmount(state);
 
-  return subtotal + tax - discountAmount;
+  return Math.max(0, subtotal + tax - discountAmount);
 };
 
 export const {
@@ -142,6 +173,9 @@ export const {
   setPaymentMethod,
   setCurrentOrder,
   resetOrder,
+  holdCurrentOrder,
+  restoreHeldOrder,
+  discardHeldOrder,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

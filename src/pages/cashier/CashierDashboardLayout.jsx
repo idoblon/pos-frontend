@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
@@ -18,11 +18,16 @@ import {
   selectTotal,
   selectSelectedCustomer,
   selectDiscount,
-  selectCartNote
+  selectCartNote,
+  selectHeldOrders,
+  holdCurrentOrder,
+  restoreHeldOrder,
+  discardHeldOrder
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
 import { toast } from "sonner";
 
-import { Menu, ShoppingCart, User, History, RotateCcw, FileText, Lock } from "lucide-react";
+import { Menu, ShoppingCart, Lock, X, Archive, RotateCcw } from "lucide-react";
+import { formatMoney } from "@/util/currency";
 import Sidebar from "./sidebar/Sidebar";
 import CustomerSection from "./CustomerPaymentSection/CustomerSection";
 import DiscountSection from "./CustomerPaymentSection/DiscountSection";
@@ -38,8 +43,9 @@ import "./cashier-styles.css";
 export default function CashierDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [isFirstLogin, setIsFirstLogin] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(() =>
+    isPasswordChangeRequired(secureStorage.getUserData()?.userId),
+  );
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
@@ -48,19 +54,9 @@ const userData = secureStorage.getUserData();
   
   // Check for active shift on mount
   useEffect(() => {
-    dispatch(getCurrentShiftProgress()).catch(() => {
-      // Silently handle 404 - no active shift exists
-      console.log("No active shift found");
-    });
+    dispatch(getCurrentShiftProgress()).catch(() => undefined);
   }, [dispatch]);
 
-  useEffect(() => {
-    const userId = secureStorage.getUserData()?.userId;
-    if (isPasswordChangeRequired(userId)) {
-      setPasswordDialogOpen(true);
-    }
-  }, []);
-  
   // Redux cart state
   const cart = useSelector(selectCartItems);
   const selectedCustomer = useSelector(selectSelectedCustomer);
@@ -72,17 +68,7 @@ const userData = secureStorage.getUserData();
   const total = useSelector(selectTotal);
   const taxRate = getAdminTaxRate();
   const lowStockThreshold = getLowStockThreshold();
-
-  // Debug logging
-  useEffect(() => {
-    console.log('💰 Cart Calculations:', {
-      subtotal: subtotal.toFixed(2),
-      tax: tax.toFixed(2),
-      discount: discount,
-      discountAmt: discountAmt.toFixed(2),
-      total: total.toFixed(2)
-    });
-  }, [subtotal, tax, discount, discountAmt, total]);
+  const heldOrders = useSelector(selectHeldOrders);
 
   const fullName = userProfile?.fullName || user?.fullName || userData?.fullName;
 const email = userProfile?.email || user?.email || userData?.email;
@@ -119,7 +105,7 @@ const initials = fullName
     dispatch(addToCart({ ...product, id: product.id || product._id }));
   };
 
-  const updateQty = (id, delta) => {
+  const updateQty = useCallback((id, delta) => {
     const item = cart.find(i => i.id === id);
     if (item) {
       const newQty = item.quantity + delta;
@@ -132,23 +118,53 @@ const initials = fullName
       
       dispatch(updateCartItemQuantity({ id, quantity: newQty }));
     }
-  };
+  }, [cart, dispatch]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+      if (event.target.closest("input, textarea, [contenteditable='true']")) return;
+      if (event.key === "F2" && cart.length) {
+        event.preventDefault();
+        document.querySelector(".pay-btn")?.click();
+      }
+      if (event.key.toLowerCase() === "h" && cart.length) {
+        event.preventDefault();
+        dispatch(holdCurrentOrder());
+        toast.success("Order held. Retrieve it from Held orders.");
+      }
+      if ((event.key === "+" || event.key === "-") && cart.length) {
+        event.preventDefault();
+        const item = cart[cart.length - 1];
+        updateQty(item.id, event.key === "+" ? 1 : -1);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [cart, dispatch, updateQty]);
 
   const removeItem = (id) => dispatch(removeFromCart(id));
-  const handleClearCart = () => dispatch(clearCart());
+  const handleClearCart = () => {
+    if (cart.length && window.confirm("Clear this cart? This cannot be undone.")) {
+      dispatch(clearCart());
+    }
+  };
   const totalItems = cart.reduce((sum, i) => sum + (i.quantity || 1), 0);
 
   return (
     <div className="cashier-layout">
       {sidebarOpen && (
-        <div className="sidebar open">
-          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        </div>
+        <>
+          <button className="sidebar-backdrop" aria-label="Close navigation menu" onClick={() => setSidebarOpen(false)} />
+          <div className="sidebar open" role="dialog" aria-label="Navigation menu">
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          </div>
+        </>
       )}
 
       {/* HEADER */}
       <header className="header">
-        <button className="menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        <button className="menu-btn" aria-label="Open navigation menu" onClick={() => setSidebarOpen(!sidebarOpen)}>
           <Menu size={16} color="#fff" />
         </button>
         <div className="header-center">
@@ -157,6 +173,10 @@ const initials = fullName
         </div>
         <div style={{ position: "relative" }}>
           <div
+            role="button"
+            tabIndex={0}
+            aria-haspopup="menu"
+            aria-expanded={profileOpen}
             style={{
               display: "flex",
               alignItems: "center",
@@ -165,6 +185,9 @@ const initials = fullName
               cursor: "pointer",
             }}
             onClick={() => setProfileOpen((o) => !o)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") setProfileOpen((o) => !o);
+            }}
           >
             <div className="avatar" style={{ flexShrink: 0 }}>
               {initials}
@@ -231,13 +254,23 @@ const initials = fullName
               Cart ({totalItems} items)
             </div>
             <div className="cart-actions">
-              <button className="cart-btn" onClick={handleClearCart}>
+              <button className="cart-btn" onClick={() => dispatch(holdCurrentOrder())} disabled={!cart.length} title="Hold order (H)">
+                <Archive size={13} /> Hold
+              </button>
+              <button className="cart-btn" onClick={handleClearCart} disabled={!cart.length}>
                 Clear
               </button>
             </div>
           </div>
 
           <div className="cart-list">
+            {cart.length === 0 && (
+              <div className="cart-empty">
+                <ShoppingCart size={28} strokeWidth={1.5} />
+                <strong>Your cart is empty</strong>
+                <span>Search or select a product to begin an order.</span>
+              </div>
+            )}
             {cart.map((item) => {
               const stock = item.stock || 0;
               const atMaxStock = item.quantity >= stock;
@@ -264,10 +297,10 @@ const initials = fullName
                   </button>
                 </div>
                 <div className="ci-price">
-                  <div className="ci-unit">{item.price || item.sellingPrice}</div>
-                  <div className="ci-total">{((item.price || item.sellingPrice) * (item.quantity || 1)).toFixed(2)}</div>
+                  <div className="ci-unit">{formatMoney(item.price || item.sellingPrice)}</div>
+                  <div className="ci-total">{formatMoney((item.price || item.sellingPrice) * (item.quantity || 1))}</div>
                 </div>
-                <button className="del-btn" onClick={() => removeItem(item.id)}>✕</button>
+                <button className="del-btn" aria-label={`Remove ${item.name} from cart`} onClick={() => removeItem(item.id)}><X size={14} /></button>
               </div>
             )})}
             {cart.length > 0 && (
@@ -284,6 +317,20 @@ const initials = fullName
 
         {/* RIGHT: Customer + Payment */}
         <div className="right-panel">
+          <section className="held-orders" aria-label="Held orders">
+            <div className="held-orders-title"><Archive size={14} /> Held orders ({heldOrders.length})</div>
+            {heldOrders.length === 0 ? (
+              <p className="held-orders-empty">Hold an order to help the next customer without losing this cart.</p>
+            ) : heldOrders.map((order, index) => (
+              <div className="held-order" key={order.id}>
+                <span>#{index + 1} · {order.items.reduce((count, item) => count + item.quantity, 0)} items</span>
+                <div>
+                  <button className="icon-action" aria-label={`Retrieve held order ${index + 1}`} title="Retrieve order" disabled={cart.length > 0} onClick={() => dispatch(restoreHeldOrder(order.id))}><RotateCcw size={14} /></button>
+                  <button className="icon-action danger" aria-label={`Discard held order ${index + 1}`} title="Discard held order" onClick={() => dispatch(discardHeldOrder(order.id))}><X size={14} /></button>
+                </div>
+              </div>
+            ))}
+          </section>
           <CustomerSection
             selectedCustomer={selectedCustomer}
             onSelectCustomer={(customer) => dispatch(setSelectedCustomer(customer))}

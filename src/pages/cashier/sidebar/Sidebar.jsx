@@ -1,4 +1,5 @@
-import { X, ShoppingCart, History, Users, RotateCcw, FileText } from "lucide-react";
+import { X, ShoppingCart, History, Users, RotateCcw, FileText, Archive } from "lucide-react";
+import { selectHeldOrders } from "@/Redux Toolkit/Features/Cart/cartSlice";
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -7,12 +8,13 @@ import { getBranchById } from "@/Redux Toolkit/Features/branch/branchThunk";
 import secureStorage from "@/util/secureStorage";
 import posLogo from "@/logo/pos.png";
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ onClose }) => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { userProfile } = useSelector((s) => s.user);
   const { user } = useSelector((s) => s.auth);
   const userData = secureStorage.getUserData();
+  const heldOrders = useSelector(selectHeldOrders);
   
   const [branchName, setBranchName] = useState(null);
   const [branchAddress, setBranchAddress] = useState(null);
@@ -44,6 +46,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   
   const navItems = [
     { path: "/cashier", label: "POS Terminal", icon: <ShoppingCart className="h-5 w-5" /> },
+    { path: "/cashier/held-orders", label: "Held Orders", icon: <Archive className="h-5 w-5" />, count: heldOrders.length },
     { path: "/cashier/orders", label: "Order History", icon: <History className="h-5 w-5" /> },
     { path: "/cashier/customers", label: "Customers", icon: <Users className="h-5 w-5" /> },
     { path: "/cashier/returns", label: "Returns", icon: <RotateCcw className="h-5 w-5" /> },
@@ -77,6 +80,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           >
             {item.icon}
             <span className="font-medium">{item.label}</span>
+            {item.count > 0 && <span className="ml-auto min-w-5 rounded-full bg-amber-100 px-1.5 py-0.5 text-center text-xs font-bold text-amber-800">{item.count}</span>}
           </Link>
         ))}
       </nav>

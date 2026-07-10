@@ -12,9 +12,9 @@ import {
   selectTotal,
   selectSelectedCustomer,
   selectDiscount,
-  selectCartNote,
-  clearCart
+  selectCartNote
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
+import { formatMoney } from "@/util/currency";
 const PAYMENT_METHODS = [
   { id: "CASH",   label: "Cash",   icon: Banknote },
   { id: "CARD",   label: "Card",   icon: CreditCard },
@@ -36,10 +36,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const [esewaRef, setEsewaRef] = useState("");
   const [khaltiMobile, setKhaltiMobile] = useState("");
   const [khaltiToken, setKhaltiToken] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardHolder, setCardHolder] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
+  const [cardReference, setCardReference] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -47,17 +44,13 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
 
   const change = amountReceived ? Math.max(0, parseFloat(amountReceived) - total) : 0;
 
-  const formatCard = (v) => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
-  const formatExpiry = (v) => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0,2)+"/"+d.slice(2) : d; };
-  const rawCard = cardNumber.replace(/\s/g, "");
-
   const submitOrder = async (transactionId = null) => {
     setError("");
     if (cartItems.length === 0) { setError("Please add items to the cart first."); return; }
 
     const hasInvalidProducts = cartItems.some((item) => {
-      const productId = item.id || item._id;
-      return !productId || (typeof productId === "string" && productId.startsWith("p"));
+      const productId = Number(item.id ?? item._id);
+      return !Number.isSafeInteger(productId) || productId <= 0;
     });
     if (hasInvalidProducts) { setError("Cannot process order with invalid products."); return; }
 
@@ -67,7 +60,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       const orderItems = cartItems.map((item) => {
         const productId = item.id || item._id;
         return {
-          productId: typeof productId === "number" ? productId : parseInt(productId, 10),
+          productId: Number(productId),
           quantity: item.quantity || 1,
           price: item.price || item.sellingPrice,
         };
@@ -102,15 +95,18 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       }));
 
       setTimeout(() => {
-        dispatch(clearCart());
         handleClose();
         onOrderComplete?.();
       }, 2000);
     } catch (err) {
       const msg = err.response?.data?.message || "Payment failed. Please try again.";
-      setError(msg.includes("not found in branch inventory") || msg.includes("Product not found")
-        ? "⚠️ Some products are not available in your branch inventory."
-        : msg);
+      if (msg.includes("query did not return a unique result")) {
+        setError("This product has duplicate inventory records in this branch. Ask an administrator to merge the duplicate inventory entry, then try again.");
+      } else {
+        setError(msg.includes("not found in branch inventory") || msg.includes("Product not found")
+          ? "Some products are not available in your branch inventory."
+          : msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -122,7 +118,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
 
     if (paymentMethod === "CASH") {
       if (!amountReceived || parseFloat(amountReceived) < total) {
-        setError("Amount received must be at least रु " + total.toFixed(2));
+        setError(`Amount received must be at least ${formatMoney(total)}`);
         return;
       }
       submitOrder();
@@ -134,11 +130,8 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       if (!khaltiToken.trim()) { setError("Please enter the Khalti transaction token."); return; }
       submitOrder(khaltiToken.trim());
     } else if (paymentMethod === "CARD") {
-      if (rawCard.length < 16) { setError("Please enter a valid 16-digit card number."); return; }
-      if (cardExpiry.length < 5) { setError("Please enter a valid expiry date (MM/YY)."); return; }
-      if (cardCvv.length < 3) { setError("Please enter a valid CVV."); return; }
-      if (!cardHolder.trim()) { setError("Please enter the cardholder name."); return; }
-      submitOrder(rawCard.slice(-4));
+      if (!cardReference.trim()) { setError("Please enter the terminal receipt or approval reference."); return; }
+      submitOrder(cardReference.trim());
     }
   };
 
@@ -146,7 +139,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
     if (loading) return;
     setAmountReceived(""); setPaymentMethod("CASH"); setSuccess(false); setError("");
     setEsewaRef(""); setKhaltiMobile(""); setKhaltiToken("");
-    setCardNumber(""); setCardHolder(""); setCardExpiry(""); setCardCvv("");
+    setCardReference("");
     onClose();
   };
 
@@ -171,7 +164,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
               <div style={{ background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px", textAlign: "center" }}>
                 <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Total Amount</p>
                 <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 800, color: "#1a1d23", letterSpacing: "-1px" }}>
-                  रु {total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                  {formatMoney(total)}
                 </p>
                 {customer && (
                   <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
@@ -184,7 +177,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
               <div>
                 <Label className="mb-2 block">Payment Method</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
+                  {PAYMENT_METHODS.map(({ id, label, icon: PaymentMethodIcon }) => (
                     <button key={id} type="button" onClick={() => { setPaymentMethod(id); setError(""); }}
                       style={{
                         padding: "12px 8px", borderRadius: 10, cursor: "pointer",
@@ -193,7 +186,10 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                         display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
                       }}
                     >
-                      <Icon size={22} color={paymentMethod === id ? "#1a1d23" : "#6b7280"} />
+                      {React.createElement(PaymentMethodIcon, {
+                        size: 22,
+                        color: paymentMethod === id ? "#1a1d23" : "#6b7280",
+                      })}
                       <span style={{ fontSize: 12, fontWeight: 600, color: paymentMethod === id ? "#1a1d23" : "#6b7280" }}>{label}</span>
                     </button>
                   ))}
@@ -211,7 +207,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                   {amountReceived && parseFloat(amountReceived) >= total && (
                     <div style={{ marginTop: 8, padding: "10px 14px", background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                       <span style={{ color: "#6b7280" }}>Change to return:</span>
-                      <span style={{ fontWeight: 700, color: "#1a1d23" }}>रु {change.toFixed(2)}</span>
+                      <span style={{ fontWeight: 700, color: "#1a1d23" }}>{formatMoney(change)}</span>
                     </div>
                   )}
                 </div>
@@ -222,7 +218,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                 <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: 16 }}>
                   <ol style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 12, color: "#374151", lineHeight: 1.8 }}>
                     <li>Open your <strong>eSewa</strong> app and tap <strong>Send Money</strong></li>
-                    <li>Enter amount: <strong>रु {total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></li>
+                    <li>Enter amount: <strong>{formatMoney(total)}</strong></li>
                     <li>Complete the payment and note the reference</li>
                   </ol>
                   <Label htmlFor="esewa-ref" style={{ fontSize: 12, fontWeight: 600 }}>Transaction Reference *</Label>
@@ -275,38 +271,14 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
               {/* CARD */}
               {paymentMethod === "CARD" && (
                 <div style={{ background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 10, padding: 16 }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div>
-                      <Label htmlFor="card-number" style={{ fontSize: 12, fontWeight: 600 }}>Card Number *</Label>
-                      <Input id="card-number" placeholder="1234 5678 9012 3456" value={cardNumber}
-                        onChange={(e) => { setCardNumber(formatCard(e.target.value)); setError(""); }}
-                        style={{ marginTop: 4, letterSpacing: 2, fontFamily: "monospace" }} autoFocus
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="card-holder" style={{ fontSize: 12, fontWeight: 600 }}>Cardholder Name *</Label>
-                      <Input id="card-holder" placeholder="JOHN DOE" value={cardHolder}
-                        onChange={(e) => { setCardHolder(e.target.value.toUpperCase()); setError(""); }}
-                        style={{ marginTop: 4 }}
-                      />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      <div>
-                        <Label htmlFor="card-expiry" style={{ fontSize: 12, fontWeight: 600 }}>Expiry *</Label>
-                        <Input id="card-expiry" placeholder="MM/YY" value={cardExpiry} maxLength={5}
-                          onChange={(e) => { setCardExpiry(formatExpiry(e.target.value)); setError(""); }}
-                          style={{ marginTop: 4 }}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="card-cvv" style={{ fontSize: 12, fontWeight: 600 }}>CVV *</Label>
-                        <Input id="card-cvv" placeholder="123" value={cardCvv} type="password" maxLength={4}
-                          onChange={(e) => { setCardCvv(e.target.value.replace(/\D/g, "")); setError(""); }}
-                          style={{ marginTop: 4 }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <p style={{ margin: "0 0 10px", fontSize: 12, color: "#4b5563", lineHeight: 1.5 }}>
+                    Complete the payment on the card terminal, then record its receipt or approval reference. Card details are never entered or stored here.
+                  </p>
+                  <Label htmlFor="card-reference" style={{ fontSize: 12, fontWeight: 600 }}>Terminal reference *</Label>
+                  <Input id="card-reference" placeholder="e.g. terminal receipt number" value={cardReference}
+                    onChange={(e) => { setCardReference(e.target.value); setError(""); }}
+                    style={{ marginTop: 4 }} autoFocus
+                  />
                 </div>
               )}
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import ShiftReportHeader from "./ShiftReportHeader";
@@ -12,10 +12,8 @@ import RefundsTable from "./RefundsTable";
 const ShiftSummaryPage = () => {
   const dispatch = useDispatch();
   const { currentShift, loading } = useSelector((s) => s.shiftReport);
-  const [initialLoading, setInitialLoading] = React.useState(true);
 
   useEffect(() => {
-    console.log('📊 ShiftSummaryPage mounted, fetching current shift...');
     dispatch(getCurrentShiftProgress());
     
     // Auto-refresh every 30 seconds
@@ -26,14 +24,7 @@ const ShiftSummaryPage = () => {
     return () => clearInterval(interval);
   }, [dispatch]);
 
-  useEffect(() => {
-    console.log('📊 Current shift data:', currentShift);
-    if (currentShift !== null || !loading) {
-      setInitialLoading(false);
-    }
-  }, [currentShift, loading]);
-
-  if (initialLoading && loading) {
+  if (loading && !currentShift) {
     return (
       <div className="h-full flex items-center justify-center">
         <p className="text-gray-500">Loading shift data...</p>

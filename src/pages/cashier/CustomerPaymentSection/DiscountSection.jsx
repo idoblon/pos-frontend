@@ -15,6 +15,8 @@ const DiscountSection = ({ discount, discountType, onDiscountChange, onDiscountT
           className="disc-input"
           value={discount || ""}
           min={0}
+          max={discountType === "%" ? 100 : undefined}
+          step="0.01"
           onChange={(e) => onDiscountChange(e.target.value)}
           onFocus={(e) => e.target.select()}
           placeholder="0"

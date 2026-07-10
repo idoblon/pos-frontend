@@ -1,5 +1,6 @@
 import { Package, ShoppingCart } from "lucide-react";
 import { getLowStockThreshold } from "@/util/adminSystemSettings";
+import { formatMoney } from "@/util/currency";
 
 export default function ProductCard({ product, stock, onAddToCart }) {
   const id = product.id || product._id;
@@ -60,9 +61,10 @@ export default function ProductCard({ product, stock, onAddToCart }) {
 
         {/* Price + Add */}
         <div className="prod-footer">
-          <span className="prod-price">रु {price.toLocaleString()}</span>
+          <span className="prod-price">{formatMoney(price)}</span>
           <button
             className="prod-add-btn"
+            aria-label={`Add ${productName} to cart`}
             disabled={outOfStock}
             onClick={(e) => { e.stopPropagation(); handleAddProductToCart(); }}
             style={{ opacity: outOfStock ? 0.4 : 1, cursor: outOfStock ? "not-allowed" : "pointer" }}
