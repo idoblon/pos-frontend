@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Banknote, Smartphone, CheckCircle, Loader2 } from "lucide-react";
+import { CreditCard, Banknote, Smartphone, CheckCircle, Loader2, Mail, MessageSquare, Printer } from "lucide-react";
 import api from "@/util/api";
 import { patchOrder } from "@/Redux Toolkit/Features/order/orderSlice";
 import {
@@ -41,6 +41,8 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [completedOrder, setCompletedOrder] = useState(null);
+  const [receiptMessage, setReceiptMessage] = useState("");
 
   const change = amountReceived ? Math.max(0, parseFloat(amountReceived) - total) : 0;
 
@@ -79,6 +81,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         total,
       });
 
+      setCompletedOrder(response.data);
       setSuccess(true);
       const isWalkIn = !customer?.id;
       dispatch(patchOrder({
@@ -94,10 +97,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         customerId: customer?.id || null,
       }));
 
-      setTimeout(() => {
-        handleClose();
-        onOrderComplete?.();
-      }, 2000);
+      onOrderComplete?.();
     } catch (err) {
       const msg = err.response?.data?.message || "Payment failed. Please try again.";
       if (msg.includes("query did not return a unique result")) {
@@ -140,7 +140,58 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
     setAmountReceived(""); setPaymentMethod("CASH"); setSuccess(false); setError("");
     setEsewaRef(""); setKhaltiMobile(""); setKhaltiToken("");
     setCardReference("");
+    setCompletedOrder(null); setReceiptMessage("");
     onClose();
+  };
+
+  const receiptNumber = completedOrder?.id ? `ORD-${completedOrder.id}` : "Order";
+  const receiptTotal = completedOrder?.totalAmount ?? total;
+  const receiptCustomerName = customer?.fullName || customer?.firstName || "Customer";
+  const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;",
+  })[character]);
+
+  const printReceipt = () => {
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=420,height=600");
+    if (!printWindow) {
+      setReceiptMessage("Allow pop-ups to print this receipt.");
+      return;
+    }
+    printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(receiptNumber)}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{font-size:20px;margin:0 0 8px}p{margin:6px 0}.total{font-size:20px;font-weight:700;margin-top:16px;border-top:1px dashed #777;padding-top:12px}</style></head><body><h1>Payment Receipt</h1><p>Order: ${escapeHtml(receiptNumber)}</p><p>Customer: ${escapeHtml(receiptCustomerName)}</p><p>Payment: ${escapeHtml(paymentMethod)}</p><p>Date: ${escapeHtml(new Date().toLocaleString())}</p><p class="total">Total: ${escapeHtml(formatMoney(receiptTotal))}</p><p>Thank you for your purchase.</p><script>window.print();window.onafterprint=()=>window.close();</script></body></html>`);
+    printWindow.document.close();
+  };
+
+  const emailReceipt = async () => {
+    const email = customer?.email;
+    if (!email) {
+      setReceiptMessage("Add a customer email before sending a receipt.");
+      return;
+    }
+    try {
+      setLoading(true);
+      await api.post("/api/email/order-confirmation", {
+        to: email,
+        userName: receiptCustomerName,
+        orderNumber: receiptNumber,
+        amount: receiptTotal,
+        storeName: "POS System",
+      });
+      setReceiptMessage(`Receipt emailed to ${email}.`);
+    } catch {
+      setReceiptMessage("Unable to send the receipt email. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const composeSmsReceipt = () => {
+    const phone = customer?.phone || customer?.phoneNumber;
+    if (!phone) {
+      setReceiptMessage("Add a customer phone number before composing an SMS receipt.");
+      return;
+    }
+    const body = encodeURIComponent(`POS receipt ${receiptNumber}: ${formatMoney(receiptTotal)} paid by ${paymentMethod}. Thank you.`);
+    window.location.href = `sms:${phone}?body=${body}`;
   };
 
   return (
@@ -150,7 +201,15 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
           <div className="text-center py-10">
             <CheckCircle className="h-16 w-16 mx-auto mb-4" style={{ color: "#1a1d23" }} />
             <h2 className="text-2xl font-bold mb-2" style={{ color: "#1a1d23" }}>Payment Successful!</h2>
-            <p style={{ color: "#6b7280" }}>Order has been created successfully</p>
+            <p style={{ color: "#6b7280" }}>Order <strong>{receiptNumber}</strong> has been created successfully.</p>
+            <p style={{ fontSize: 24, fontWeight: 800, margin: "12px 0 20px" }}>{formatMoney(receiptTotal)}</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button variant="outline" onClick={printReceipt}><Printer size={15} className="mr-1" />Print</Button>
+              <Button variant="outline" onClick={emailReceipt} disabled={loading}><Mail size={15} className="mr-1" />Email</Button>
+              <Button variant="outline" onClick={composeSmsReceipt}><MessageSquare size={15} className="mr-1" />SMS</Button>
+            </div>
+            {receiptMessage && <p style={{ color: "#4b5563", fontSize: 12, marginTop: 12 }}>{receiptMessage}</p>}
+            <Button className="w-full mt-4" onClick={handleClose} disabled={loading}>Done</Button>
           </div>
         ) : (
           <>
@@ -219,18 +278,13 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                   <ol style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 12, color: "#374151", lineHeight: 1.8 }}>
                     <li>Open your <strong>eSewa</strong> app and tap <strong>Send Money</strong></li>
                     <li>Enter amount: <strong>{formatMoney(total)}</strong></li>
-                    <li>Complete the payment and note the reference</li>
+                    <li>Complete the provider flow and use the server-issued transaction UUID</li>
                   </ol>
-                  <Label htmlFor="esewa-ref" style={{ fontSize: 12, fontWeight: 600 }}>Transaction Reference *</Label>
-                  <Input id="esewa-ref" placeholder="e.g. ESW2024XXXX" value={esewaRef}
+                  <Label htmlFor="esewa-ref" style={{ fontSize: 12, fontWeight: 600 }}>Merchant Transaction UUID *</Label>
+                  <Input id="esewa-ref" placeholder="Server-issued transaction UUID" value={esewaRef}
                     onChange={(e) => { setEsewaRef(e.target.value); setError(""); }}
                     style={{ marginTop: 4, borderColor: "#bbf7d0" }} autoFocus
                   />
-                  <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
-                    🧪 Test:{" "}
-                    <strong style={{ fontFamily: "monospace", color: "#15803d", cursor: "pointer" }}
-                      onClick={() => setEsewaRef("ESW2024TEST")}>ESW2024TEST</strong>
-                  </p>
                 </div>
               )}
 
@@ -255,14 +309,6 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                         onChange={(e) => { setKhaltiToken(e.target.value); setError(""); }}
                         style={{ marginTop: 4, borderColor: "#e9d5ff" }}
                       />
-                      <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
-                        🧪 Mobile:{" "}
-                        <strong style={{ fontFamily: "monospace", color: "#5C2D91", cursor: "pointer" }}
-                          onClick={() => setKhaltiMobile("9800000001")}>9800000001</strong>
-                        {" "}Token:{" "}
-                        <strong style={{ fontFamily: "monospace", color: "#5C2D91", cursor: "pointer" }}
-                          onClick={() => setKhaltiToken("123456")}>123456</strong>
-                      </p>
                     </div>
                   </div>
                 </div>

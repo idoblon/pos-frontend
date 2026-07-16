@@ -6,16 +6,24 @@ import { Route, Routes } from "react-router-dom";
 import RefundPage from "@/pages/cashier/Refund/RefundPage";
 import ShiftSummaryPage from "@/pages/cashier/Shift Report/ShiftSummaryPage";
 import HeldOrdersPage from "@/pages/cashier/HeldOrders/HeldOrdersPage";
+import CashierPageShell from "@/pages/cashier/CashierPageShell";
+import { createElement } from "react";
+
+const withCashierShell = (title, description, Page) => (
+  <CashierPageShell title={title} description={description}>
+    {createElement(Page)}
+  </CashierPageShell>
+);
 
 const CashierRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<CashierDashboardLayout />} />
-      <Route path="orders" element={<OrderHistory />} />
-      <Route path="customers" element={<CustomersLookup />} />
-      <Route path="returns" element={<RefundPage />} />
-      <Route path="shift-summary" element={<ShiftSummaryPage />} />
-      <Route path="held-orders" element={<HeldOrdersPage />} />
+      <Route path="orders" element={withCashierShell("Order history", "Review completed branch orders", OrderHistory)} />
+      <Route path="customers" element={withCashierShell("Customers", "Find customer details and order history", CustomersLookup)} />
+      <Route path="returns" element={withCashierShell("Returns", "Process customer returns and refunds", RefundPage)} />
+      <Route path="shift-summary" element={withCashierShell("Shift summary", "Review your sales and payment totals", ShiftSummaryPage)} />
+      <Route path="held-orders" element={withCashierShell("Held orders", "Resume or discard carts saved on this device", HeldOrdersPage)} />
     </Routes>
   );
 };

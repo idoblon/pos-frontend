@@ -43,16 +43,11 @@ const inventorySlice = createSlice({
       })
       .addCase(getInventoryByStore.fulfilled, (state, action) => {
         state.loading = false;
-        console.log("📝 INVENTORY SLICE: Received payload:", action.payload);
-        console.log("📝 INVENTORY SLICE: Payload type:", typeof action.payload);
-        console.log("📝 INVENTORY SLICE: Is array:", Array.isArray(action.payload));
         state.inventory = Array.isArray(action.payload) ? action.payload : (action.payload?.content || []);
-        console.log("📝 INVENTORY SLICE: Final inventory state:", state.inventory);
       })
       .addCase(getInventoryByStore.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        console.error("📝 INVENTORY SLICE: Error:", action.payload);
       })
       .addCase(getLowStockItems.fulfilled, (state, action) => {
         state.lowStockItems = action.payload;

@@ -17,11 +17,11 @@ const METHOD_META = {
 const FIELDS = {
   ESEWA: [
     { key: "esewaSettlementId", label: "Settlement ID / Merchant Code", placeholder: "EPAYTEST" },
-    { key: "esewaSecretKey",    label: "Secret Key",                    placeholder: "8gBm/:&EnhH.1/q", inputType: "password" },
+    { key: "esewaSecretKey",    label: "Secret Key",                    placeholder: "Enter eSewa secret key", inputType: "password" },
   ],
   KHALTI: [
     { key: "khaltiPublicKey", label: "Public Key",  placeholder: "test_public_key_..." },
-    { key: "khaltiSecretKey", label: "Secret Key",  placeholder: "test_secret_key_...", inputType: "password" },
+    { key: "khaltiSecretKey", label: "Secret Key",  placeholder: "Enter Khalti secret key", inputType: "password" },
   ],
   CARD: [
     { key: "cardProcessorName", label: "Processor Name", placeholder: "Stripe / PayPal" },

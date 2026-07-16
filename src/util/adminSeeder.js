@@ -29,28 +29,15 @@ export const createPosAdmin = async () => {
       storeAddress: "System Administrative Office"
     };
 
-    console.log("🚀 Creating POS Admin user...");
-    console.log("📧 Email:", POS_ADMIN_CREDENTIALS.email);
-    console.log("🔑 Password:", POS_ADMIN_CREDENTIALS.password);
-    console.log("🎭 Role:", POS_ADMIN_CREDENTIALS.role);
     const response = await api.post("/auth/signup", adminData);
     
     if (response.data) {
-      console.log("✅ POS Admin user created successfully!");
-      console.log("📧 Email:", POS_ADMIN_CREDENTIALS.email);
-      console.log("🔑 Password:", POS_ADMIN_CREDENTIALS.password);
-      console.log("🎭 Role:", POS_ADMIN_CREDENTIALS.role);
-      console.log("📊 Admin Dashboard: /admin");
       return response.data;
     }
   } catch (error) {
     if (error.response?.status === 409 || error.response?.data?.message?.includes("already exists")) {
-      console.log("ℹ️  POS Admin user already exists!");
-      console.log("📧 Email:", POS_ADMIN_CREDENTIALS.email);
-      console.log("🔑 Password:", POS_ADMIN_CREDENTIALS.password);
       return { message: "User already exists" };
     } else {
-      console.error("❌ Failed to create POS Admin user:", error.response?.data?.message || error.message);
       throw error;
     }
   }
@@ -72,14 +59,10 @@ export const createAdminUser = async (adminUserData = null) => {
   const userData = adminUserData || defaultAdminData;
   
   try {
-    console.log("🔧 Creating admin user via direct API...");
-    
     // Try to create user directly if there's a dedicated admin endpoint
     const response = await api.post("/admin/users", userData);
-    console.log("✅ Admin user created via admin API!");
     return response.data;
   } catch (error) {
-    console.log("ℹ️  Admin API not available, using signup endpoint...");
     // Fallback to signup if admin endpoint doesn't exist
     return await createPosAdmin();
   }
