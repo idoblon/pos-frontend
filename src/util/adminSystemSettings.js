@@ -14,7 +14,7 @@ export const DEFAULT_ADMIN_SYSTEM_SETTINGS = {
   registrationRefreshSeconds: 30,
   paymentPollingSeconds: 10,
   lowStockThreshold: 10,
-  requirePaymentBeforeActivation: true,
+  requirePaymentBeforeActivation: false,
   backupFrequency: "daily",
   apiRateLimit: 1000,
   maintenanceMode: false,

@@ -106,15 +106,26 @@ export default function InventoryManagement() {
       return;
     }
 
-    dispatch(addInventoryItem({
-      branchId: form.branchId,
-      productId: form.productId,
-      quantity: Number(form.quantity),
-      unitPrice: Number(unitPrice),
-    }))
+    const existingItem = inventory?.find(item =>
+      String(item.branchId) === String(form.branchId) &&
+      String(item.productId) === String(form.productId),
+    );
+    const action = existingItem
+      ? updateInventoryStock({
+          inventoryId: existingItem.id || existingItem._id,
+          quantity: Number(existingItem.quantity || 0) + Number(form.quantity),
+        })
+      : addInventoryItem({
+          branchId: form.branchId,
+          productId: form.productId,
+          quantity: Number(form.quantity),
+          unitPrice: Number(unitPrice),
+        });
+
+    dispatch(action)
       .unwrap()
       .then(() => {
-        toast.success("Product added to branch inventory successfully");
+        toast.success(existingItem ? "Branch inventory stock updated successfully" : "Product added to branch inventory successfully");
         setDialogOpen(false);
         dispatch(getInventoryByStore({ storeId }));
       })
@@ -161,9 +172,11 @@ export default function InventoryManagement() {
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px" }}>Inventory Management</h1>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>Manage stock across all branches</p>
         </div>
-        <button style={s.addBtn} onClick={openAdd}>
-          <Plus size={14} /> Add to Inventory
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={s.addBtn} onClick={openAdd}>
+            <Plus size={14} /> Add to Inventory
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}

@@ -248,6 +248,7 @@ export default function StoreReports() {
           id: order._id || order.id,
           amount: order.totalAmount || 0,
           paymentMethod: order.paymentType || 'CASH',
+          transactionId: order.transactionId || order.paymentReference || '—',
           branch: branch?.name || 'Unknown Branch',
           time: order.createdAt,
           items: Array.isArray(order.orderItems) ? order.orderItems.length : 0,
@@ -284,6 +285,7 @@ export default function StoreReports() {
             orderId: order._id || order.id,
             amount: order.totalAmount || 0,
             paymentMethod: order.paymentType || 'CASH',
+            transactionId: order.transactionId || order.paymentReference || '',
             branch: branch?.name || 'Unknown Branch',
             date: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'Unknown Date',
             time: order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : 'Unknown Time',
@@ -306,11 +308,12 @@ export default function StoreReports() {
       linkElement.click();
       
       // Also create CSV version for transactions
-      const csvHeaders = ['Order ID', 'Amount', 'Payment Method', 'Branch', 'Date', 'Time', 'Items'];
+      const csvHeaders = ['Order ID', 'Amount', 'Payment Method', 'Transaction ID', 'Branch', 'Date', 'Time', 'Items'];
       const csvRows = exportData.transactions.map(t => [
         t.orderId,
         `₹${t.amount}`,
         t.paymentMethod,
+        t.transactionId,
         t.branch,
         t.date,
         t.time,
@@ -627,6 +630,7 @@ export default function StoreReports() {
                   <th style={{ padding: "8px 0", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#8a909c" }}>Order ID</th>
                   <th style={{ padding: "8px 0", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#8a909c" }}>Amount</th>
                   <th style={{ padding: "8px 0", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#8a909c" }}>Payment</th>
+                  <th style={{ padding: "8px 0", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#8a909c" }}>Transaction ID</th>
                   <th style={{ padding: "8px 0", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#8a909c" }}>Branch</th>
                   <th style={{ padding: "8px 0", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#8a909c" }}>Items</th>
                   <th style={{ padding: "8px 0", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#8a909c" }}>Time</th>
@@ -654,6 +658,9 @@ export default function StoreReports() {
                       }}>
                         {transaction.paymentMethod}
                       </span>
+                    </td>
+                    <td style={{ padding: "10px 8px 10px 0", fontSize: 11, color: "#4b5563", fontFamily: "monospace" }}>
+                      {transaction.transactionId}
                     </td>
                     <td style={{ padding: "10px 0", fontSize: 12, color: "#1a1d23" }}>
                       {transaction.branch}

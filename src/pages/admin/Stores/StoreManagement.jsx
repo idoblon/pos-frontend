@@ -12,6 +12,12 @@ import { toast } from "sonner";
 import { getAllStores, updateStore, deleteStore } from "@/Redux Toolkit/Features/Store/storeThunk";
 import api from "@/util/api";
 import { getAuthHeaders } from "@/util/getAuthHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -147,154 +153,71 @@ function StoreCard({ store, onEdit, onView, onDelete }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
+  const statusVariant = { active: "success", inactive: "warning", suspended: "destructive", pending: "secondary" };
+
   return (
-    <div style={{
-      background: "white",
-      border: "1px solid #e2e8f0",
-      borderRadius: "16px",
-      padding: "22px",
-      position: "relative",
-      transition: "all 0.25s ease",
-      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-      cursor: "default",
-    }}
-      onMouseEnter={e => e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"}
-      onMouseLeave={e => e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)"}
-    >
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{
-            width: "52px", height: "52px", borderRadius: "14px",
-            background: "linear-gradient(135deg, #1a1d23 0%, #2d3748 100%)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0
-          }}>
-            <StoreIcon size={24} color="white" />
-          </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#1a202c", lineHeight: 1.2 }}>
-              {store.name}
-            </h3>
-            {store.type && (
-              <span style={{ fontSize: "11px", color: "#718096", marginTop: "2px", display: "block" }}>
-                {store.type}
-              </span>
-            )}
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "5px" }}>
-              <span style={{
-                display: "inline-flex", alignItems: "center", gap: "5px",
-                padding: "2px 10px", borderRadius: "20px",
-                background: colors.bg, color: colors.text,
-                fontSize: "11px", fontWeight: "600"
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: colors.dot, display: "inline-block" }} />
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardContent className="pt-5">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#1a1d23] to-[#2d3748] flex items-center justify-center shrink-0">
+              <StoreIcon size={22} color="white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-gray-900 leading-tight">{store.name}</h3>
+              {store.type && <p className="text-xs text-gray-400 mt-0.5">{store.type}</p>}
+              <Badge variant={statusVariant[store.status] || "outline"} className="mt-1.5 text-[10px]">
                 {formatStatus(store.status)}
-              </span>
+              </Badge>
             </div>
           </div>
+
+          <div ref={menuRef} className="relative">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMenuOpen(v => !v)}>
+              <MoreHorizontal size={16} />
+            </Button>
+            {menuOpen && (
+              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-xl min-w-[160px] z-50 overflow-hidden">
+                {[
+                  { icon: Eye, label: "View Details", action: () => { onView(store); setMenuOpen(false); } },
+                  { icon: Edit2, label: "Edit Profile", action: () => { onEdit(store); setMenuOpen(false); } },
+                  { icon: Trash2, label: "Delete Store", action: () => { onDelete(store); setMenuOpen(false); }, danger: true },
+                ].map(({ icon: Icon, label, action, danger }) => (
+                  <button key={label} onClick={action}
+                    className={`w-full px-3 py-2.5 text-left flex items-center gap-2.5 text-xs font-medium hover:bg-gray-50 transition-colors ${
+                      danger ? "text-red-500 border-t border-red-50 hover:bg-red-50" : "text-gray-700"
+                    }`}>
+                    <Icon size={13} />{label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Actions Menu */}
-        <div ref={menuRef} style={{ position: "relative" }}>
-          <button
-            onClick={() => setMenuOpen(v => !v)}
-            style={{
-              background: menuOpen ? "#f1f5f9" : "none",
-              border: "1px solid " + (menuOpen ? "#e2e8f0" : "transparent"),
-              padding: "7px", borderRadius: "8px", cursor: "pointer", transition: "all 0.15s"
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"}
-            onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background = "none"; }}
-          >
-            <MoreHorizontal size={16} color="#718096" />
-          </button>
+        <div className="flex items-start gap-1.5 mb-4">
+          <MapPin size={12} className="text-gray-400 mt-0.5 shrink-0" />
+          <span className="text-xs text-gray-500 leading-relaxed">{store.address || "Address not provided"}</span>
+        </div>
 
-          {menuOpen && (
-            <div style={{
-              position: "absolute", top: "calc(100% + 6px)", right: 0,
-              background: "white", border: "1px solid #e2e8f0",
-              borderRadius: "12px", boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-              minWidth: "172px", zIndex: 50, overflow: "hidden"
-            }}>
-              {[
-                { icon: Eye, label: "View Details", color: "#4a5568", action: () => { onView(store); setMenuOpen(false); } },
-                { icon: Edit2, label: "Edit Profile", color: "#4a5568", action: () => { onEdit(store); setMenuOpen(false); } },
-                { icon: Trash2, label: "Delete Store", color: "#e53e3e", action: () => { onDelete(store); setMenuOpen(false); }, danger: true },
-              ].map(({ icon: Icon, label, color, action, danger }) => (
-                <button key={label} onClick={action} style={{
-                  width: "100%", padding: "11px 14px", background: "none", border: "none",
-                  textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center",
-                  gap: "10px", fontSize: "13px", fontWeight: "500", color,
-                  transition: "background 0.15s",
-                  borderTop: danger ? "1px solid #fee2e2" : "none"
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = danger ? "#fff5f5" : "#f8fafc"}
-                  onMouseLeave={e => e.currentTarget.style.background = "none"}
-                >
-                  <Icon size={14} />
-                  {label}
-                </button>
-              ))}
+        <Separator className="mb-3" />
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { icon: GitBranch, label: "Branches", value: store.branchCount ?? 0 },
+            { icon: Users, label: "Employees", value: store.employeeCount ?? 0 },
+            { icon: TrendingUp, label: "Revenue", value: formatCurrency(store.totalRevenue), small: true },
+          ].map(({ icon: Icon, label, value, small }) => (
+            <div key={label} className="text-center p-2 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Icon size={11} className="text-gray-400" />
+                <span className="text-[10px] text-gray-400 font-medium">{label}</span>
+              </div>
+              <p className={`font-bold text-gray-900 m-0 ${small ? "text-sm" : "text-xl"}`}>{value}</p>
             </div>
-          )}
+          ))}
         </div>
-      </div>
-
-      {/* Address */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "7px", marginBottom: "16px" }}>
-        <MapPin size={13} color="#94a3b8" style={{ flexShrink: 0, marginTop: 2 }} />
-        <span style={{ fontSize: "12.5px", color: "#64748b", lineHeight: 1.5 }}>
-          {store.address || "Address not provided"}
-        </span>
-      </div>
-
-      {/* Stats */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
-        gap: "8px", paddingTop: "14px", borderTop: "1px solid #f0f4f8"
-      }}>
-        <div style={{
-          textAlign: "center", padding: "10px 6px", background: "#f8fafc",
-          borderRadius: "10px"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 3 }}>
-            <GitBranch size={12} color="#64748b" />
-            <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>Branches</span>
-          </div>
-          <p style={{ margin: 0, fontSize: "22px", fontWeight: "800", color: "#1e293b" }}>
-            {store.branchCount ?? 0}
-          </p>
-        </div>
-
-        <div style={{
-          textAlign: "center", padding: "10px 6px", background: "#f8fafc",
-          borderRadius: "10px"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 3 }}>
-            <Users size={12} color="#64748b" />
-            <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>Employees</span>
-          </div>
-          <p style={{ margin: 0, fontSize: "22px", fontWeight: "800", color: "#1e293b" }}>
-            {store.employeeCount ?? 0}
-          </p>
-        </div>
-
-        <div style={{
-          textAlign: "center", padding: "10px 6px",
-          background: "#f5f5f5",
-          borderRadius: "10px"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 3 }}>
-            <TrendingUp size={12} color="#1a1d23" />
-            <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 500 }}>Revenue</span>
-          </div>
-          <p style={{ margin: 0, fontSize: "14px", fontWeight: "800", color: "#1a1d23" }}>
-            {formatCurrency(store.totalRevenue)}
-          </p>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 

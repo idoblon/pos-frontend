@@ -1,516 +1,341 @@
 import React, { useState, useEffect } from "react";
-import { Check, X, Clock, Mail, Phone, MapPin, Building2, Calendar, Eye } from "lucide-react";
+import { Check, X, Clock, Mail, Phone, MapPin, Calendar, DollarSign, RefreshCw, Building2, User } from "lucide-react";
 import { toast } from "sonner";
-import SubscriptionValidation from "@/components/admin/SubscriptionValidation";
-import emailService from "@/services/emailService";
 import api from "@/util/api";
-import { isPaymentRequiredBeforeActivation } from "@/util/adminSystemSettings";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+
+const STATUS_VARIANT = {
+  PENDING: "warning",
+  APPROVED: "success",
+  REJECTED: "destructive",
+};
+
+const PLAN_PRICE = {
+  BASIC: "रु 2,999/mo",
+  PROFESSIONAL: "रु 5,999/mo",
+  ENTERPRISE: "रु 12,999/mo",
+};
+
+const FILTERS = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
 export default function StoreRegistrationRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [filter, setFilter] = useState("ALL_PENDING");
-  const [subscriptionValidations, setSubscriptionValidations] = useState({});
-
-  const handleSubscriptionValidation = (requestId, isValid) => {
-    setSubscriptionValidations(prev => ({ ...prev, [requestId]: isValid }));
-    setRequests(prev => prev.map(req =>
-      req.id === requestId ? { ...req, subscriptionValidated: isValid } : req
-    ));
-  };
-
-  useEffect(() => {
-    fetchRequests();
-  }, [filter]);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [filter, setFilter] = useState("PENDING");
+  const [selected, setSelected] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectInput, setShowRejectInput] = useState(false);
 
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      // If filter is ALL_PENDING, we need to fetch both PENDING and PAYMENT_PENDING
-      if (filter === "ALL_PENDING") {
-        const res = await api.get(`/api/admin/registration-requests`);
-        const allRequests = Array.isArray(res.data) ? res.data : [];
-        const pendingRequests = allRequests.filter(req =>
-          req.status === "PENDING" || req.status === "PAYMENT_PENDING"
-        );
-        setRequests(pendingRequests);
-      } else {
-        const res = await api.get(`/api/admin/registration-requests`);
-        const allRequests = Array.isArray(res.data) ? res.data : [];
-        setRequests(allRequests.filter(req => req.status === filter));
-      }
-    } catch (error) {
-      console.error("Fetch error:", error.response?.status, error.response?.data);
-      toast.error(`Failed to load requests: ${error.response?.data?.message || error.message}`);
-      setRequests([]);
+      const params = filter && filter !== "ALL" ? `?status=${filter}` : "";
+      const res = await api.get(`/api/admin/store-requests${params}`);
+      setRequests(res.data);
+    } catch {
+      toast.error("Failed to load requests");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (requestId) => {
-    const request = requests.find(r => r.id === requestId);
-    if (request && !request.subscriptionValidated) {
-      toast.error("Please validate subscription before approving");
-      return;
-    }
+  useEffect(() => { fetchRequests(); }, [filter]);
 
+  const handleApprove = async (id) => {
+    setActionLoading(id + "_approve");
     try {
-      if (request.status === "PAYMENT_PENDING" || !isPaymentRequiredBeforeActivation()) {
-        await api.post(`/api/admin/registration-requests/${requestId}/approve-final`, {}, { timeout: 30000 });
-        setRequests(prev => prev.filter(req => req.id !== requestId));
-        toast.success(`Store approved! Login credentials sent to ${request.email}.`);
-      } else {
-        // Send payment link email, move to PAYMENT_PENDING
-        await api.post(`/api/admin/registration-requests/${requestId}/approve`);
-        setRequests(prev => prev.map(req =>
-          req.id === requestId ? { ...req, status: "PAYMENT_PENDING" } : req
-        ));
-        toast.success(`Approved! Payment link sent to ${request.email}.`);
-      }
-      setSelectedRequest(null);
-    } catch (error) {
-      console.error('Approval process failed:', error);
-      toast.error(`Failed: ${error.response?.data?.message || error.message}`);
-    }
-  };
-
-  const _simulateApprovalProcess = (request) => {
-    // Simulate sending approval email with payment link
-    console.log("📧 Approval Email Sent:");
-    console.log("─────────────────────────────────────");
-    console.log(`To: ${request.email}`);
-    console.log(`Store: ${request.storeName}`);
-    console.log(`Plan: ${request.subscriptionPlan} - रु ${getPlanPrice(request.subscriptionPlan)}/year`);
-    console.log(`Payment Link: https://payment.pos-system.com/pay/${request.id}`);
-    console.log("─────────────────────────────────────");
-    console.log("✅ Email delivery simulated successfully");
-    
-    // Store approval data for reference
-    const approvalData = {
-      requestId: request.id,
-      storeName: request.storeName,
-      email: request.email,
-      plan: request.subscriptionPlan,
-      price: getPlanPrice(request.subscriptionPlan),
-      approvedAt: new Date().toISOString(),
-      paymentLink: `https://payment.pos-system.com/pay/${request.id}`,
-      status: 'PAYMENT_PENDING'
-    };
-    
-    // Store in localStorage for reference
-    const existingApprovals = JSON.parse(localStorage.getItem('approvedRequests') || '[]');
-    existingApprovals.push(approvalData);
-    localStorage.setItem('approvedRequests', JSON.stringify(existingApprovals));
-  };
-
-  const getPlanPrice = (plan) => {
-    switch(plan) {
-      case 'BASIC': return '3,500';
-      case 'PROFESSIONAL': return '7,000';
-      case 'ENTERPRISE': return '10,000';
-      default: return '3,500';
-    }
-  };
-
-  const handleReject = async (requestId, reason) => {
-    try {
-      await api.post(`/api/admin/registration-requests/${requestId}/reject`, { reason });
-      toast.success("Store registration rejected. Email sent with reason.");
+      await api.post(`/api/admin/store-requests/${id}/approve`);
+      toast.success("Store approved! Login credentials sent via email.");
+      setSelected(null);
       fetchRequests();
-      setSelectedRequest(null);
-    } catch (error) {
-      // If API fails, simulate the rejection process
-      console.warn("API endpoint not available, simulating rejection process:", error.message);
-      
-      const request = requests.find(r => r.id === requestId);
-      // Send rejection email through email service
-      await emailService.sendRejectionEmail(request, reason);
-      
-      // Update the request status locally
-      setRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: "REJECTED", rejectionReason: reason, rejectedAt: new Date().toISOString() }
-            : req
-        )
-      );
-      
-      toast.success(`${request.storeName} registration rejected. Notification sent to ${request.email}`);
-      setSelectedRequest(null);
+    } catch (e) {
+      toast.error(e.response?.data || "Failed to approve");
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  const _simulateRejectionProcess = (request, reason) => {
-    // Simulate sending rejection email
-    console.log("❌ Rejection Email Sent:");
-    console.log("─────────────────────────────────────");
-    console.log(`To: ${request.email}`);
-    console.log(`Store: ${request.storeName}`);
-    console.log(`Reason: ${reason}`);
-    console.log("─────────────────────────────────────");
-    console.log("✅ Rejection email delivery simulated successfully");
+  const handleReject = async (id) => {
+    if (!rejectReason.trim()) { toast.error("Please enter a rejection reason"); return; }
+    setActionLoading(id + "_reject");
+    try {
+      await api.post(`/api/admin/store-requests/${id}/reject`, { reason: rejectReason });
+      toast.success("Request rejected. Email sent to applicant.");
+      setSelected(null);
+      setRejectReason("");
+      setShowRejectInput(false);
+      fetchRequests();
+    } catch (e) {
+      toast.error(e.response?.data || "Failed to reject");
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      PENDING: { bg: "#fff3cd", color: "#856404", text: "Pending" },
-      PAYMENT_PENDING: { bg: "#fef3c7", color: "#92400e", text: "Payment Pending" },
-      APPROVED: { bg: "#d4edda", color: "#155724", text: "Approved" },
-      REJECTED: { bg: "#f8d7da", color: "#721c24", text: "Rejected" }
-    };
-    const s = styles[status] || styles.PENDING;
-    
-    return (
-      <span style={{
-        padding: "4px 12px",
-        borderRadius: "12px",
-        fontSize: "12px",
-        fontWeight: "600",
-        background: s.bg,
-        color: s.color
-      }}>
-        {s.text}
-      </span>
-    );
+  const closeModal = () => {
+    setSelected(null);
+    setShowRejectInput(false);
+    setRejectReason("");
   };
 
   return (
-    <div style={{ padding: "24px", fontFamily: "'DM Sans','Inter',sans-serif" }}>
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ margin: "0 0 8px", fontSize: "20px", fontWeight: "700", color: "#1a1d23" }}>
-          Store Registration Requests
-        </h1>
-        <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
-          Manage new store registration requests and subscriptions
-        </p>
+    <div className="space-y-6 font-sans">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Store Registration Requests</h1>
+          <p className="text-xs text-gray-500 mt-1">Review and approve new store registrations</p>
+        </div>
+        <Button
+          size="sm"
+          onClick={fetchRequests}
+          disabled={loading}
+          className="bg-gradient-to-r from-[#1a1d23] to-[#4a4d55] text-white hover:opacity-90"
+        >
+          <RefreshCw size={13} className={loading ? "animate-spin mr-1.5" : "mr-1.5"} />
+          Refresh
+        </Button>
       </div>
 
       {/* Filter Tabs */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
-        {["ALL_PENDING", "APPROVED", "REJECTED"].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            style={{
-              padding: "12px 20px",
-              background: "none",
-              border: "none",
-              borderBottom: filter === status ? "2px solid #1a1d23" : "2px solid transparent",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: filter === status ? 600 : 500,
-              color: filter === status ? "#1a1d23" : "#6b7280",
-              transition: "all 0.2s"
-            }}
-          >
-            {status === "ALL_PENDING" ? "Pending" : status}
-          </button>
-        ))}
+      <div className="flex gap-0 border-b border-gray-200">
+        {FILTERS.map((s) => {
+          const active = s === "ALL" ? filter === "" : filter === s;
+          return (
+            <button
+              key={s}
+              onClick={() => setFilter(s === "ALL" ? "" : s)}
+              className={`px-5 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+                active
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {s}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Requests List */}
+      {/* List */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
-          Loading requests...
-        </div>
+        <div className="text-center py-12 text-sm text-gray-400">Loading...</div>
       ) : requests.length === 0 ? (
-        <div style={{
-          background: "white",
-          border: "1px solid #e5e7eb",
-          borderRadius: "10px",
-          padding: "40px",
-          textAlign: "center"
-        }}>
-          <Clock size={48} color="#e5e7eb" style={{ margin: "0 auto 16px" }} />
-          <p style={{ margin: 0, fontSize: "14px", color: "#6b7280" }}>
-            No {filter.toLowerCase()} requests found
-          </p>
-        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center py-12 gap-3">
+            <Clock size={40} className="text-gray-200" />
+            <p className="text-sm text-gray-400">No {filter || ""} requests found</p>
+          </CardContent>
+        </Card>
       ) : (
-        <div style={{ display: "grid", gap: "16px" }}>
+        <div className="flex flex-col gap-3">
           {requests.map((req) => (
-            <div
+            <Card
               key={req.id}
-              style={{
-                background: "white",
-                border: "1px solid #e5e7eb",
-                borderRadius: "10px",
-                padding: "20px",
-                cursor: "pointer",
-                transition: "box-shadow 0.2s"
-              }}
-              onClick={() => setSelectedRequest(req)}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)"}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => { setSelected(req); setShowRejectInput(false); setRejectReason(""); }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                <div>
-                  <h3 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: "700", color: "#1a1d23" }}>
-                    {req.storeName}
-                  </h3>
-                  <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
-                    Requested by: {req.ownerName}
-                  </p>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="font-bold text-sm text-gray-900">{req.storeName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                      <User size={11} /> {req.ownerName}
+                    </p>
+                  </div>
+                  <Badge variant={STATUS_VARIANT[req.status] || "outline"}>{req.status}</Badge>
                 </div>
-                {getStatusBadge(req.status)}
-              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginTop: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Mail size={14} color="#6b7280" />
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>{req.email}</span>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {[
+                    { icon: Mail, text: req.email },
+                    { icon: Phone, text: req.phone },
+                    { icon: DollarSign, text: `${req.subscriptionPlan} — ${PLAN_PRICE[req.subscriptionPlan] || ""}` },
+                    { icon: Calendar, text: req.createdAt ? new Date(req.createdAt).toLocaleDateString() : "" },
+                  ].map(({ icon: Icon, text }, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <Icon size={12} className="text-gray-400 shrink-0" />
+                      <span className="text-xs text-gray-500 truncate">{text}</span>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Phone size={14} color="#6b7280" />
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>{req.phone}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#6b7280" }}>रु</span>
-                  <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "600" }}>
-                    {req.subscriptionPlan || "Basic"} Plan
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Calendar size={14} color="#6b7280" />
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>
-                    {new Date(req.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
 
-              {(req.status === "PENDING" || req.status === "PAYMENT_PENDING") && (
-                <div style={{ display: "flex", gap: "8px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #f3f4f6" }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedRequest(req); // Open modal for full validation
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: "8px 16px",
-                      background: "linear-gradient(135deg, #059669, #047857)",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    <Check size={14} />
-                    Approve
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const reason = prompt("Enter rejection reason:");
-                      if (reason) handleReject(req.id, reason);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: "8px 16px",
-                      background: "white",
-                      color: "#e53e3e",
-                      border: "1px solid #e53e3e",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    <X size={14} />
-                    Reject
-                  </button>
-                </div>
-              )}
-            </div>
+                {req.status === "PENDING" && (
+                  <>
+                    <Separator className="my-3" />
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-gradient-to-r from-[#1a1d23] to-[#4a4d55] text-white hover:opacity-90"
+                        disabled={actionLoading === req.id + "_approve"}
+                        onClick={() => handleApprove(req.id)}
+                      >
+                        <Check size={13} className="mr-1" />
+                        {actionLoading === req.id + "_approve" ? "Approving..." : "Approve"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                        onClick={() => { setSelected(req); setShowRejectInput(true); }}
+                      >
+                        <X size={13} className="mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
 
       {/* Detail Modal */}
-      {selectedRequest && (
+      {selected && (
         <>
           <div
-            onClick={() => setSelectedRequest(null)}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              zIndex: 50
-            }}
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={closeModal}
           />
-          <div style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            background: "white",
-            borderRadius: "12px",
-            padding: "24px",
-            width: "90%",
-            maxWidth: "600px",
-            maxHeight: "80vh",
-            overflowY: "auto",
-            zIndex: 51,
-            boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-              <div>
-                <h2 style={{ margin: "0 0 4px", fontSize: "20px", fontWeight: "700", color: "#1a1d23" }}>
-                  {selectedRequest.storeName}
-                </h2>
-                <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
-                  Registration Request Details
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedRequest(null)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "4px"
-                }}
-              >
-                <X size={20} color="#6b7280" />
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
-                  Status
-                </label>
-                {getStatusBadge(selectedRequest.status)}
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
-                  Owner Name
-                </label>
-                <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23" }}>{selectedRequest.ownerName}</p>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
-                  Email Address
-                </label>
-                <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23" }}>{selectedRequest.email}</p>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
-                  Phone Number
-                </label>
-                <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23" }}>{selectedRequest.phone}</p>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
-                  Store Address
-                </label>
-                <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23" }}>{selectedRequest.storeAddress}</p>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
-                  Subscription Plan
-                </label>
-                <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23", fontWeight: "600" }}>
-                  {selectedRequest.subscriptionPlan || "Basic"} Plan
-                </p>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
-                  Request Date
-                </label>
-                <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23" }}>
-                  {new Date(selectedRequest.createdAt).toLocaleString()}
-                </p>
-              </div>
-
-              {selectedRequest.rejectionReason && (
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#e53e3e", marginBottom: "4px" }}>
-                    Rejection Reason
-                  </label>
-                  <p style={{ margin: 0, fontSize: "14px", color: "#1a1d23", padding: "12px", background: "#fef2f2", borderRadius: "6px" }}>
-                    {selectedRequest.rejectionReason}
-                  </p>
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-51 w-[90%] max-w-[560px] max-h-[85vh] overflow-y-auto bg-white rounded-xl shadow-2xl p-6"
+            style={{ zIndex: 51 }}>
+            {/* Modal Header */}
+            <div className="flex items-start justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <Building2 size={18} className="text-gray-600" />
                 </div>
-              )}
-
-              {(selectedRequest.status === "PENDING" || selectedRequest.status === "PAYMENT_PENDING") && (
-                <>
-                  <SubscriptionValidation 
-                    request={selectedRequest}
-                    onValidation={(isValid) => handleSubscriptionValidation(selectedRequest.id, isValid)}
-                  />
-                  <div style={{ display: "flex", gap: "12px", marginTop: "8px", paddingTop: "16px", borderTop: "1px solid #e5e7eb" }}>
-                    <button
-                      onClick={() => handleApprove(selectedRequest.id)}
-                      disabled={!subscriptionValidations[selectedRequest.id]}
-                      style={{
-                        flex: 1,
-                        padding: "12px",
-                        background: subscriptionValidations[selectedRequest.id] 
-                          ? "linear-gradient(135deg, #1a1d23, #4a4d55)"
-                          : "#e5e7eb",
-                        color: subscriptionValidations[selectedRequest.id] ? "white" : "#9ca3af",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        cursor: subscriptionValidations[selectedRequest.id] ? "pointer" : "not-allowed",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px"
-                      }}
-                    >
-                      <Check size={16} />
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => {
-                        const reason = prompt("Enter rejection reason:");
-                        if (reason) handleReject(selectedRequest.id, reason);
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: "12px",
-                        background: "white",
-                        color: "#e53e3e",
-                        border: "2px solid #e53e3e",
-                        borderRadius: "8px",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px"
-                      }}
-                    >
-                      <X size={16} />
-                      Reject Request
-                    </button>
-                  </div>
-                </>
-              )}
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">{selected.storeName}</h2>
+                  <Badge variant={STATUS_VARIANT[selected.status] || "outline"} className="mt-1">
+                    {selected.status}
+                  </Badge>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={closeModal} className="h-8 w-8">
+                <X size={16} />
+              </Button>
             </div>
+
+            <Separator className="mb-5" />
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {[
+                ["Owner Name", selected.ownerName, User],
+                ["Email", selected.email, Mail],
+                ["Phone", selected.phone, Phone],
+                ["Store Type", selected.storeType, Building2],
+                ["Subscription", `${selected.subscriptionPlan} — ${PLAN_PRICE[selected.subscriptionPlan] || ""}`, DollarSign],
+                ["Submitted", selected.createdAt ? new Date(selected.createdAt).toLocaleString() : "—", Calendar],
+              ].map(([label, value, Icon]) => (
+                <div key={label}>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <Icon size={10} /> {label}
+                  </p>
+                  <p className="text-sm text-gray-800">{value || "—"}</p>
+                </div>
+              ))}
+            </div>
+
+            {selected.storeAddress && (
+              <div className="mb-4">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1">
+                  <MapPin size={10} /> Address
+                </p>
+                <p className="text-sm text-gray-800">{selected.storeAddress}</p>
+              </div>
+            )}
+
+            {selected.storeDescription && (
+              <div className="mb-4">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Description</p>
+                <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{selected.storeDescription}</p>
+              </div>
+            )}
+
+            {selected.rejectionReason && (
+              <div className="mb-4">
+                <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wide mb-1">Rejection Reason</p>
+                <p className="text-sm text-gray-800 bg-red-50 rounded-lg p-3">{selected.rejectionReason}</p>
+              </div>
+            )}
+
+            {selected.createdStoreId && (
+              <div className="mb-4">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Store ID Created</p>
+                <p className="text-sm text-gray-800">#{selected.createdStoreId}</p>
+              </div>
+            )}
+
+            {/* Reject textarea */}
+            {showRejectInput && selected.status === "PENDING" && (
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-gray-700 mb-1.5 block">
+                  Rejection Reason <span className="text-red-500">*</span>
+                </label>
+                <Textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={3}
+                  placeholder="Enter reason for rejection..."
+                  className="resize-none text-sm"
+                />
+              </div>
+            )}
+
+            {/* Actions */}
+            {selected.status === "PENDING" && (
+              <>
+                <Separator className="mb-4" />
+                <div className="flex gap-3">
+                  {!showRejectInput ? (
+                    <>
+                      <Button
+                        className="flex-1 bg-gradient-to-r from-[#1a1d23] to-[#4a4d55] text-white hover:opacity-90"
+                        disabled={actionLoading === selected.id + "_approve"}
+                        onClick={() => handleApprove(selected.id)}
+                      >
+                        <Check size={15} className="mr-2" />
+                        {actionLoading === selected.id + "_approve" ? "Approving..." : "Approve & Create Account"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-red-500 border-red-200 hover:bg-red-50"
+                        onClick={() => setShowRejectInput(true)}
+                      >
+                        <X size={15} className="mr-2" />
+                        Reject
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                        disabled={actionLoading === selected.id + "_reject"}
+                        onClick={() => handleReject(selected.id)}
+                      >
+                        {actionLoading === selected.id + "_reject" ? "Rejecting..." : "Confirm Rejection"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => { setShowRejectInput(false); setRejectReason(""); }}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </>
       )}

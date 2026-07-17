@@ -14,6 +14,37 @@ const METHOD_META = {
   CARD:   { label: "Card / Bank", icon: CreditCard, color: "#1a1d23", bg: "#f5f5f5", border: "#e5e7eb" },
 };
 
+// Provider-issued sandbox credentials. These must never be used in production.
+const TEST_CREDENTIALS = {
+  ESEWA: {
+    esewaSettlementId: "EPAYTEST",
+    esewaSecretKey: "8gBm/:&EnhH.1/q",
+  },
+  // Khalti's public key is specific to each sandbox merchant account. The
+  // documented sandbox secret below supports server-side verification.
+  KHALTI: {
+    khaltiPublicKey: "",
+    khaltiSecretKey: "test_secret_key_f59e8b7d18b4499ca40f68195a846e9b",
+  },
+};
+
+const emptyFormValues = (config = {}) => ({
+  esewaSettlementId: config.esewaSettlementId || "",
+  esewaSecretKey: config.esewaSecretKey || "",
+  khaltiPublicKey: config.khaltiPublicKey || "",
+  khaltiSecretKey: config.khaltiSecretKey || "",
+  cardProcessorName: config.cardProcessorName || "",
+  cardApiKey: config.cardApiKey || "",
+  cardSecretKey: config.cardSecretKey || "",
+});
+
+const initialFormValues = (config) => ({
+  ...emptyFormValues(),
+  ...(TEST_CREDENTIALS[config.paymentType] || {}),
+  // Stored credentials always take precedence, including production values.
+  ...Object.fromEntries(Object.entries(emptyFormValues(config)).filter(([, value]) => value)),
+});
+
 const FIELDS = {
   ESEWA: [
     { key: "esewaSettlementId", label: "Settlement ID / Merchant Code", placeholder: "EPAYTEST" },
@@ -53,28 +84,24 @@ export default function PaymentSettings() {
       const missing = ["ESEWA", "KHALTI", "CARD"].filter(t => !existingTypes.includes(t));
       if (missing.length > 0) {
         await Promise.all(
-          missing.map(t => api.post("/api/payment-config", { paymentType: t, isEnabled: true }, { headers: getAuthHeaders() }))
+          missing.map(t => api.post("/api/payment-config", {
+            paymentType: t,
+            isEnabled: true,
+            ...(TEST_CREDENTIALS[t] || {}),
+          }, { headers: getAuthHeaders() }))
         );
         const res2 = await api.get("/api/payment-config/store", { headers: getAuthHeaders() });
         const data2 = res2.data || [];
         setConfigs(data2);
         const fd2 = {};
-        data2.forEach(c => { fd2[c.paymentType] = { esewaSettlementId: c.esewaSettlementId || "", esewaSecretKey: c.esewaSecretKey || "", khaltiPublicKey: c.khaltiPublicKey || "", khaltiSecretKey: c.khaltiSecretKey || "", cardProcessorName: c.cardProcessorName || "", cardApiKey: c.cardApiKey || "", cardSecretKey: c.cardSecretKey || "" }; });
+        data2.forEach(c => { fd2[c.paymentType] = initialFormValues(c); });
         setFormData(fd2);
         return;
       }
 
       const fd = {};
       data.forEach(c => {
-        fd[c.paymentType] = {
-          esewaSettlementId: c.esewaSettlementId || "",
-          esewaSecretKey:    c.esewaSecretKey    || "",
-          khaltiPublicKey:   c.khaltiPublicKey   || "",
-          khaltiSecretKey:   c.khaltiSecretKey   || "",
-          cardProcessorName: c.cardProcessorName || "",
-          cardApiKey:        c.cardApiKey        || "",
-          cardSecretKey:     c.cardSecretKey     || "",
-        };
+        fd[c.paymentType] = initialFormValues(c);
       });
       setFormData(fd);
     } catch {
