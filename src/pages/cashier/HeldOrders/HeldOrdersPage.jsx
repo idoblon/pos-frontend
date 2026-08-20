@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Archive, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  discardHeldOrder,
-  restoreHeldOrder,
+  discardHeldOrderRemotely,
+  resumeHeldOrderRemotely,
   selectCartItems,
   selectHeldOrders,
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
@@ -26,15 +26,15 @@ export default function HeldOrdersPage() {
       toast.error("Finish, clear, or hold the current cart before retrieving another order.");
       return;
     }
-    dispatch(restoreHeldOrder(order.id));
-    toast.success("Held order restored to the POS terminal.");
-    navigate("/cashier");
+    dispatch(resumeHeldOrderRemotely(order)).then(() => {
+      toast.success("Held order restored to the POS terminal.");
+      navigate("/cashier");
+    }).catch(() => toast.error("Unable to resume this held order."));
   };
 
   const discard = (order) => {
     if (window.confirm("Discard this held order? This cannot be undone.")) {
-      dispatch(discardHeldOrder(order.id));
-      toast.success("Held order discarded.");
+      dispatch(discardHeldOrderRemotely(order)).then(() => toast.success("Held order discarded.")).catch(() => toast.error("Unable to discard this held order."));
     }
   };
 

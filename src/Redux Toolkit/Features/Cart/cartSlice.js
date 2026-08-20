@@ -1,6 +1,6 @@
 import { createSlice} from "@reduxjs/toolkit"
 import { getAdminTaxRate } from "@/util/adminSystemSettings";
-import { loadHeldOrders } from "@/util/heldOrdersStorage";
+import api from "@/util/api";
 
 const initialState = {
   items: [],
@@ -9,7 +9,7 @@ const initialState = {
   discount: { type: "percentage", value: 0 },
   paymentMethod: "cash",
   currentOrder: null,
-  heldOrders: loadHeldOrders(),
+  heldOrders: [],
 };
 
 const cartSlice = createSlice({
@@ -98,6 +98,12 @@ const cartSlice = createSlice({
     discardHeldOrder: (state, action) => {
       state.heldOrders = state.heldOrders.filter((order) => order.id !== action.payload);
     },
+    addHeldOrder: (state, action) => {
+      state.heldOrders.unshift(action.payload);
+    },
+    setHeldOrders: (state, action) => {
+      state.heldOrders = action.payload;
+    },
     setSelectedCustomer: (state, action) => {
       state.selectedCustomer = action.payload;
     },
@@ -176,6 +182,41 @@ export const {
   holdCurrentOrder,
   restoreHeldOrder,
   discardHeldOrder,
+  addHeldOrder,
+  setHeldOrders,
 } = cartSlice.actions;
+
+export const holdOrderRemotely = (context = {}) => async (dispatch, getState) => {
+  const cart = getState().cart;
+  if (!cart.items.length) return null;
+  const response = await api.post("/api/orders/held", {
+    items: cart.items.map((item) => ({ productId: item.id || item._id, quantity: item.quantity || 1, price: item.price || item.sellingPrice })),
+    customerId: cart.selectedCustomer?.id || cart.selectedCustomer?._id || null,
+    selectedCustomer: cart.selectedCustomer,
+    note: cart.note,
+    discount: cart.discount.value,
+    discountType: cart.discount.type,
+    ...context,
+  });
+  dispatch(clearCart());
+  dispatch(addHeldOrder({ ...response.data, selectedCustomer: cart.selectedCustomer }));
+  return response.data;
+};
+
+export const resumeHeldOrderRemotely = (order) => async (dispatch) => {
+  await api.post(`/api/orders/${encodeURIComponent(order.id)}/resume`);
+  dispatch(restoreHeldOrder(order.id));
+};
+
+export const discardHeldOrderRemotely = (order) => async (dispatch) => {
+  await api.delete(`/api/orders/${encodeURIComponent(order.id)}`);
+  dispatch(discardHeldOrder(order.id));
+};
+
+export const fetchHeldOrders = (params = {}) => async (dispatch) => {
+  const response = await api.get("/api/orders/held", { params });
+  dispatch(setHeldOrders(response.data));
+  return response.data;
+};
 
 export default cartSlice.reducer;

@@ -14,20 +14,6 @@ const METHOD_META = {
   CARD:   { label: "Card / Bank", icon: CreditCard, color: "#1a1d23", bg: "#f5f5f5", border: "#e5e7eb" },
 };
 
-// Provider-issued sandbox credentials. These must never be used in production.
-const TEST_CREDENTIALS = {
-  ESEWA: {
-    esewaSettlementId: "EPAYTEST",
-    esewaSecretKey: "8gBm/:&EnhH.1/q",
-  },
-  // Khalti's public key is specific to each sandbox merchant account. The
-  // documented sandbox secret below supports server-side verification.
-  KHALTI: {
-    khaltiPublicKey: "",
-    khaltiSecretKey: "test_secret_key_f59e8b7d18b4499ca40f68195a846e9b",
-  },
-};
-
 const emptyFormValues = (config = {}) => ({
   esewaSettlementId: config.esewaSettlementId || "",
   esewaSecretKey: config.esewaSecretKey || "",
@@ -38,12 +24,7 @@ const emptyFormValues = (config = {}) => ({
   cardSecretKey: config.cardSecretKey || "",
 });
 
-const initialFormValues = (config) => ({
-  ...emptyFormValues(),
-  ...(TEST_CREDENTIALS[config.paymentType] || {}),
-  // Stored credentials always take precedence, including production values.
-  ...Object.fromEntries(Object.entries(emptyFormValues(config)).filter(([, value]) => value)),
-});
+const initialFormValues = (config) => emptyFormValues(config);
 
 const FIELDS = {
   ESEWA: [
@@ -62,9 +43,9 @@ const FIELDS = {
 };
 
 const HINTS = {
-  ESEWA:  "Enter your eSewa merchant credentials. Leave blank to use the system defaults.",
-  KHALTI: "Enter your Khalti API keys. Leave blank to use the system defaults.",
-  CARD:   "Configure your card payment processor (e.g. Stripe).",
+  ESEWA:  "Gateway secrets belong in the server-side secret store. Configure only the merchant settings that your API supports.",
+  KHALTI: "Gateway secrets belong in the server-side secret store. Configure only the merchant settings that your API supports.",
+  CARD:   "Configure a PCI-compliant card payment processor; never enter raw card data in this application.",
 };
 
 export default function PaymentSettings() {
@@ -79,7 +60,7 @@ export default function PaymentSettings() {
       const data = res.data || [];
       setConfigs(data);
 
-      // Auto-create config for any missing methods so they exist in DB
+      // Auto-create configuration records only; credentials are never seeded in the browser.
       const existingTypes = data.map(c => c.paymentType);
       const missing = ["ESEWA", "KHALTI", "CARD"].filter(t => !existingTypes.includes(t));
       if (missing.length > 0) {
@@ -87,7 +68,6 @@ export default function PaymentSettings() {
           missing.map(t => api.post("/api/payment-config", {
             paymentType: t,
             isEnabled: true,
-            ...(TEST_CREDENTIALS[t] || {}),
           }, { headers: getAuthHeaders() }))
         );
         const res2 = await api.get("/api/payment-config/store", { headers: getAuthHeaders() });

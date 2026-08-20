@@ -13,24 +13,18 @@ import {
   selectSelectedCustomer,
   selectDiscount,
   selectCartNote,
+  selectTax,
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
 import { formatMoney } from "@/util/currency";
-import EsewaPaymentPopup from "./EsewaPaymentPopup";
-import KhaltiPaymentPopup from "./KhaltiPaymentPopup";
-import CardPaymentPopup from "./CardPaymentPopup";
 
 const PAYMENT_METHODS = [
   { id: "CASH",   label: "Cash",   icon: Banknote },
-  { id: "CARD",   label: "Card",   icon: CreditCard },
-  { id: "ESEWA",  label: "eSewa",  icon: Smartphone },
-  { id: "KHALTI", label: "Khalti", icon: Smartphone },
+  { id: "CARD",   label: "Card",   icon: CreditCard, unavailable: true },
+  { id: "ESEWA",  label: "eSewa",  icon: Smartphone, unavailable: true },
+  { id: "KHALTI", label: "Khalti", icon: Smartphone, unavailable: true },
 ];
 
-const generateEsewaUuid = () => {
-  const ts = Date.now().toString(36).toUpperCase();
-  const rnd = (globalThis.crypto?.randomUUID?.().replaceAll("-", "") || Math.random().toString(36).slice(2, 12));
-  return `ESEWA-${ts}-${rnd.slice(0, 10).toUpperCase()}`;
-};
+const checkoutKey = () => globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const dispatch = useDispatch();
@@ -39,14 +33,11 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const customer  = useSelector(selectSelectedCustomer);
   const discount  = useSelector(selectDiscount);
   const note      = useSelector(selectCartNote);
+  const tax       = useSelector(selectTax);
 
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [amountReceived, setAmountReceived] = useState("");
-  const [esewaRef]       = useState(generateEsewaUuid);
-
-  const [showEsewa,  setShowEsewa]  = useState(false);
-  const [showKhalti, setShowKhalti] = useState(false);
-  const [showCard,   setShowCard]   = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState(checkoutKey);
 
   const [loading,        setLoading]        = useState(false);
   const [success,        setSuccess]        = useState(false);
@@ -84,8 +75,9 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         amountReceived: paymentMethod === "CASH" ? parseFloat(amountReceived) : total,
         transactionId,
         paymentReference: transactionId,
+        tax,
         total,
-      });
+      }, { headers: { "Idempotency-Key": idempotencyKey } });
 
       setCompletedOrder(response.data);
       setSuccess(true);
@@ -102,6 +94,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         customerId: customer?.id || null,
       }));
       onOrderComplete?.();
+      setIdempotencyKey(checkoutKey());
     } catch (err) {
       const msg = err.response?.data?.message || "Payment failed. Please try again.";
       setError(
@@ -123,15 +116,14 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         return;
       }
       submitOrder();
-    } else if (paymentMethod === "ESEWA")  { onClose(); setShowEsewa(true); }
-    else if (paymentMethod === "KHALTI")   { onClose(); setShowKhalti(true); }
-    else if (paymentMethod === "CARD")     { onClose(); setShowCard(true); }
+    } else {
+      setError("Digital payments are disabled until the server-verified gateway redirect flow is connected to this checkout.");
+    }
   };
 
   const resetState = () => {
     setAmountReceived(""); setPaymentMethod("CASH");
     setSuccess(false); setError("");
-    setShowEsewa(false); setShowKhalti(false); setShowCard(false);
     setCompletedOrder(null); setReceiptMessage("");
   };
 
@@ -217,18 +209,19 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                 <div>
                   <Label className="mb-2 block">Payment Method</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
+                    {PAYMENT_METHODS.map(({ id, label, icon: Icon, unavailable }) => (
                       <button key={id} type="button"
-                        onClick={() => { setPaymentMethod(id); setError(""); }}
+                        onClick={() => { if (unavailable) { setError("This payment method is not configured for verified checkout yet."); return; } setPaymentMethod(id); setError(""); }}
+                        aria-disabled={unavailable}
                         style={{
                           padding: "12px 8px", borderRadius: 10, cursor: "pointer",
                           border: `2px solid ${paymentMethod === id ? "#1a1d23" : "#e5e7eb"}`,
-                          background: paymentMethod === id ? "#f5f5f5" : "white",
+                          background: paymentMethod === id ? "#f5f5f5" : "white", opacity: unavailable ? 0.55 : 1,
                           display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
                         }}
                       >
                         <Icon size={22} color={paymentMethod === id ? "#1a1d23" : "#6b7280"} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: paymentMethod === id ? "#1a1d23" : "#6b7280" }}>{label}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: paymentMethod === id ? "#1a1d23" : "#6b7280" }}>{label}{unavailable ? " (setup required)" : ""}</span>
                       </button>
                     ))}
                   </div>
@@ -251,14 +244,6 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                   </div>
                 )}
 
-                {/* Digital method hint */}
-                {["ESEWA", "KHALTI", "CARD"].includes(paymentMethod) && (
-                  <div style={{ background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 16px", fontSize: 12, color: "#6b7280", textAlign: "center" }}>
-                    Click <strong style={{ color: "#1a1d23" }}>Complete Payment</strong> to open the{" "}
-                    {paymentMethod === "ESEWA" ? "eSewa" : paymentMethod === "KHALTI" ? "Khalti" : "Card"} payment form with test credentials
-                  </div>
-                )}
-
                 {error && <p style={{ fontSize: 13, color: "#e53e3e", textAlign: "center", margin: 0 }}>{error}</p>}
 
                 <div className="flex gap-2">
@@ -275,72 +260,6 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
         </DialogContent>
       </Dialog>
 
-      <EsewaPaymentPopup
-        open={showEsewa}
-        onClose={() => { setShowEsewa(false); resetState(); onOrderComplete?.(); }}
-        amount={total}
-        transactionUuid={esewaRef}
-        loading={loading}
-        onConfirm={async (uuid) => { await submitOrder(uuid); }}
-        onPrint={printReceipt}
-        onEmail={emailReceipt}
-        onSms={composeSmsReceipt}
-        receiptMessage={receiptMessage}
-        emailLoading={loading}
-      />
-      <KhaltiPaymentPopup
-        open={showKhalti}
-        onClose={() => { setShowKhalti(false); resetState(); onOrderComplete?.(); }}
-        amount={total}
-        loading={loading}
-        onConfirm={async ({ token }) => { await submitOrder(token); }}
-        onPrint={printReceipt}
-        onEmail={emailReceipt}
-        onSms={composeSmsReceipt}
-        receiptMessage={receiptMessage}
-        emailLoading={loading}
-      />
-      <CardPaymentPopup
-        open={showCard}
-        onClose={(wasSuccess) => { setShowCard(false); if (wasSuccess) { onOrderComplete?.(); resetState(); } else resetState(); }}
-        amount={total}
-        onSubmit={async (paymentMethodId) => {
-          if (cartItems.length === 0) throw new Error("Please add items to the cart first.");
-          const orderItems = cartItems.map((item) => ({
-            productId: Number(item.id || item._id),
-            quantity:  item.quantity || 1,
-            price:     item.price || item.sellingPrice,
-          }));
-          const response = await api.post("/api/orders", {
-            customerId:       customer?.id || customer?._id || null,
-            items:            orderItems,
-            discount:         discount.value || 0,
-            discountType:     discount.type  || "percentage",
-            note:             note || "",
-            paymentMethod:    "CARD",
-            amountReceived:   total,
-            transactionId:    paymentMethodId,
-            paymentReference: paymentMethodId,
-            total,
-          });
-          dispatch(patchOrder({
-            ...response.data,
-            items: response.data.items?.map((item) => ({
-              ...item,
-              unitPrice: item.unitPrice || item.price / (item.quantity || 1),
-            })),
-            status: "COMPLETED", paymentMethod: "CARD", paymentType: "CARD",
-            customer: !customer?.id ? null : customer,
-            customerId: customer?.id || null,
-          }));
-          setCompletedOrder(response.data);
-        }}
-        onPrint={printReceipt}
-        onEmail={emailReceipt}
-        onSms={composeSmsReceipt}
-        receiptMessage={receiptMessage}
-        emailLoading={loading}
-      />
     </>
   );
 };

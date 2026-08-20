@@ -20,9 +20,10 @@ import {
   selectDiscount,
   selectCartNote,
   selectHeldOrders,
-  holdCurrentOrder,
-  restoreHeldOrder,
-  discardHeldOrder
+  holdOrderRemotely,
+  resumeHeldOrderRemotely,
+  discardHeldOrderRemotely,
+  fetchHeldOrders
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
 import { toast } from "sonner";
 
@@ -55,6 +56,7 @@ const userData = secureStorage.getUserData();
   // Check for active shift on mount
   useEffect(() => {
     dispatch(getCurrentShiftProgress()).catch(() => undefined);
+    dispatch(fetchHeldOrders()).catch(() => toast.error("Unable to load held orders."));
   }, [dispatch]);
 
   // Redux cart state
@@ -130,8 +132,7 @@ const initials = fullName
       }
       if (event.key.toLowerCase() === "h" && cart.length) {
         event.preventDefault();
-        dispatch(holdCurrentOrder());
-        toast.success("Order held. Retrieve it from Held orders.");
+        dispatch(holdOrderRemotely()).then(() => toast.success("Order held. Retrieve it from Held orders.")).catch(() => toast.error("Unable to save the held order."));
       }
       if ((event.key === "+" || event.key === "-") && cart.length) {
         event.preventDefault();
@@ -254,7 +255,7 @@ const initials = fullName
               Cart ({totalItems} items)
             </div>
             <div className="cart-actions">
-              <button className="cart-btn" onClick={() => dispatch(holdCurrentOrder())} disabled={!cart.length} title="Hold order (H)">
+              <button className="cart-btn" onClick={() => dispatch(holdOrderRemotely()).then(() => toast.success("Order held.")).catch(() => toast.error("Unable to save the held order."))} disabled={!cart.length} title="Hold order (H)">
                 <Archive size={13} /> Hold
               </button>
               <button className="cart-btn" onClick={handleClearCart} disabled={!cart.length}>
@@ -325,8 +326,8 @@ const initials = fullName
               <div className="held-order" key={order.id}>
                 <span>#{index + 1} · {order.items.reduce((count, item) => count + item.quantity, 0)} items</span>
                 <div>
-                  <button className="icon-action" aria-label={`Retrieve held order ${index + 1}`} title="Retrieve order" disabled={cart.length > 0} onClick={() => dispatch(restoreHeldOrder(order.id))}><RotateCcw size={14} /></button>
-                  <button className="icon-action danger" aria-label={`Discard held order ${index + 1}`} title="Discard held order" onClick={() => dispatch(discardHeldOrder(order.id))}><X size={14} /></button>
+                  <button className="icon-action" aria-label={`Retrieve held order ${index + 1}`} title="Retrieve order" disabled={cart.length > 0} onClick={() => dispatch(resumeHeldOrderRemotely(order)).catch(() => toast.error("Unable to resume held order."))}><RotateCcw size={14} /></button>
+                  <button className="icon-action danger" aria-label={`Discard held order ${index + 1}`} title="Discard held order" onClick={() => dispatch(discardHeldOrderRemotely(order)).catch(() => toast.error("Unable to discard held order."))}><X size={14} /></button>
                 </div>
               </div>
             ))}
