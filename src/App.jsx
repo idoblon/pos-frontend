@@ -10,6 +10,7 @@ import StoreAdminRoutes from "./routes/StoreAdminRoutes";
 import BranchRoutes from "./routes/BranchRoutes";
 import AdminRoutes from "./routes/AdminRoutes";
 import Login from "./pages/Auth/Login";
+import ResetPassword from "./pages/Auth/ResetPassword";
 import Signup from "./pages/Auth/Signup";
 import Landing from "./pages/Landing";
 import AdminSeeder from "./pages/AdminSeeder";
@@ -79,6 +80,7 @@ function App() {
         />
         <Route path="/branch/*" element={<BranchRoutes />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/suspended" element={<StoreSuspended />} />
         <Route path="/payment-required" element={<PaymentRequired />} />

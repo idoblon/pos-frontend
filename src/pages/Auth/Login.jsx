@@ -13,6 +13,8 @@ import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { enforcePaymentRequirement } from "@/util/paymentValidator";
 import { syncFirstLoginPasswordState } from "@/util/firstLoginPassword";
+import api from "@/util/api";
+import { toast } from "sonner";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -21,6 +23,7 @@ const Login = () => {
 
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [sendingResetLink, setSendingResetLink] = useState(false);
   const [formData, setFormData] = useState({ 
     email: "", 
     password: "" 
@@ -132,15 +135,26 @@ const Login = () => {
     }
   };
 
-  const handleForgotPassword = (e) => {
+  const handleForgotPassword = async (e) => {
     e.preventDefault();
     if (!validateEmail(forgotPasswordEmail)) {
-      alert("Please enter a valid email address");
+      toast.error("Please enter a valid email address");
       return;
     }
-    // TODO: Implement forgot password API call
-    console.log("Forgot Password:", sanitizeInput(forgotPasswordEmail));
-    alert("Password reset link sent to your email (Demo mode)");
+
+    setSendingResetLink(true);
+    try {
+      await api.post("/auth/forgot-password", {
+        email: sanitizeInput(forgotPasswordEmail).trim().toLowerCase(),
+      });
+      toast.success("If that account exists, a password reset link has been sent.");
+      setForgotPasswordEmail("");
+    } catch (error) {
+      const message = error.response?.data?.message || "Unable to send the reset link. Please try again.";
+      toast.error(message);
+    } finally {
+      setSendingResetLink(false);
+    }
   };
 
   return (
@@ -264,8 +278,8 @@ const Login = () => {
                 >
                   Back to Login
                 </Button>
-                <Button className="py-4 flex-1" type="submit">
-                  Send Reset Link
+                <Button className="py-4 flex-1" type="submit" disabled={sendingResetLink}>
+                  {sendingResetLink ? "Sending..." : "Send Reset Link"}
                 </Button>
               </div>
             </form>

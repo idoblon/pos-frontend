@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { GitBranch, Package, Users, Tag } from "lucide-react";
+import { GitBranch, Package, Users, Tag, Banknote, CreditCard, Smartphone } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -66,14 +66,18 @@ export default function StoreDashboard() {
 
   const [allOrders, setAllOrders] = useState([]);
 
-  // Fetch all orders from all branches into local state (avoids Redux overwrite)
+  // Fetch all orders from all branches into local state (avoids Redux overwrite).
+  // Refreshing also picks up payments completed by cashiers while this dashboard is open.
   useEffect(() => {
     if (!branches?.length) return;
-    Promise.all(
+    const loadOrders = () => Promise.all(
       branches.map(b => api.get(`/api/orders/branch/${b.id || b._id}`))
     ).then(results => {
       setAllOrders(results.flatMap(r => r.data || []));
     }).catch(() => {});
+    loadOrders();
+    const interval = setInterval(loadOrders, 30000);
+    return () => clearInterval(interval);
   }, [branches]);
 
   useEffect(() => {
@@ -122,6 +126,17 @@ export default function StoreDashboard() {
   }, [branches, allOrders]);
 
   const maxRevenue = Math.max(...branchSales.map(b => b.revenue), 1);
+
+  const paymentBreakdown = useMemo(() => {
+    const totals = { CASH: 0, CARD: 0, ESEWA: 0, KHALTI: 0 };
+    allOrders.forEach((order) => {
+      const method = String(order.paymentType || order.paymentMethod || "").toUpperCase();
+      if (Object.hasOwn(totals, method)) {
+        totals[method] += Number(order.totalAmount ?? order.total ?? 0) || 0;
+      }
+    });
+    return totals;
+  }, [allOrders]);
 
   const summaryStats = [
     {
@@ -232,6 +247,29 @@ export default function StoreDashboard() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div style={card}>
+        <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700 }}>Payments by Method</p>
+        <p style={{ margin: "0 0 16px", fontSize: 11, color: "#8a909c" }}>All recorded sales across your branches</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+          {[
+            { type: "CASH", label: "Cash", icon: Banknote, color: "#059669", bg: "#f0fdf4" },
+            { type: "CARD", label: "Card", icon: CreditCard, color: "#2563eb", bg: "#eff6ff" },
+            { type: "ESEWA", label: "eSewa", icon: Smartphone, color: "#65a30d", bg: "#f7fee7" },
+            { type: "KHALTI", label: "Khalti", icon: Smartphone, color: "#7c3aed", bg: "#f5f3ff" },
+          ].map(({ type, label, icon: Icon, color, bg }) => (
+            <div key={type} style={{ padding: 14, borderRadius: 8, background: bg, border: `1px solid ${color}22` }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color }}>{label}</span>
+                <Icon size={17} color={color} />
+              </div>
+              <p style={{ margin: "8px 0 0", fontSize: 20, fontWeight: 800, color: "#1a1d23" }}>
+                Rs {paymentBreakdown[type].toLocaleString("en-IN")}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Two panels — Sales Trend + Recent Sales */}

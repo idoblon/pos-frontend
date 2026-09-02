@@ -350,7 +350,11 @@ const initials = fullName
             discount={discount}
             discountType={discount.type}
             note={note}
-            onOrderComplete={() => dispatch(clearCart())}
+            onOrderComplete={() => {
+              dispatch(clearCart());
+              // Keep the active-shift payment summary in sync with completed payments.
+              dispatch(getCurrentShiftProgress()).catch(() => undefined);
+            }}
           />
         </div>
       </div>

@@ -5,7 +5,9 @@ import { validateApiUrl } from "./urlValidator";
 import secureStorage from "./secureStorage";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080",
+  // Use the deployed API in production.  The localhost fallback keeps local
+  // development working when no Vite environment value has been configured.
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080",
   headers: {
     "Content-Type": "application/json",
   },
