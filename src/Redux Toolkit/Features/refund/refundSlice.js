@@ -1,10 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { createRefund, getAllRefund, getRefundsByCashier, getRefundsByBranch, getRefundsByShift, getRefundByCashierAndDateRange, getRefundById } from "./refundThunk";
+import { createRefund, getAllRefund, getRefundsByCashier, getRefundsByBranch, getRefundsByShift, getRefundByCashierAndDateRange, getRefundById, getRefundsByStore } from "./refundThunk";
 
 const initialState = {
   refunds: [],
   refundsByCashier: [],
   refundsByBranch: [],
+  refundsByStore: [],
   refundsByShift: [],
   refundsByDateRange: [],
   selectedRefund: null,
@@ -107,6 +108,19 @@ const refundSlice = createSlice({
         state.selectedRefund = action.payload;
       })
       .addCase(getRefundById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // get refunds by store
+      .addCase(getRefundsByStore.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getRefundsByStore.fulfilled, (state, action) => {
+        state.loading = false;
+        state.refundsByStore = action.payload;
+      })
+      .addCase(getRefundsByStore.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

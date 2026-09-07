@@ -112,6 +112,20 @@ export const getRefundsByBranch = createAsyncThunk(
   },
 );
 
+export const getRefundsByStore = createAsyncThunk(
+  "refund/getByStore",
+  async (storeId, { rejectWithValue }) => {
+    try {
+      const sanitizedParams = sanitizePathParams({ storeId });
+      const headers = getAuthHeaders();
+      const res = await api.get(`/api/refunds/store/${sanitizedParams.storeId}`, { headers });
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to get refunds by store");
+    }
+  },
+);
+
 export const getRefundsByShift = createAsyncThunk(
   "refund/getByShift",
   async (shiftReportId, { rejectWithValue }) => {

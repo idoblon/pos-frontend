@@ -3,6 +3,8 @@ import api from "@/util/api";
 import secureStorage from "@/util/secureStorage";
 import shiftManager from "@/util/shiftManager";
 import { validateUserAccess, updateBranchStatus } from "@/util/storeStatusChecker";
+import { validateStoreAccess } from "@/util/paymentValidator";
+import { isPaymentRequiredBeforeActivation } from "@/util/adminSystemSettings";
 import { resetShift } from "../shiftReport/shiftReportSlice";
 
 export const signup = createAsyncThunk(
@@ -31,9 +33,27 @@ export const login = createAsyncThunk(
       const { role, storeId, branchId, storeName, id: userId, email, fullName, username } = res.data.user ?? {};
 
       const userDataToStore = { role, storeId, branchId, storeName, userId, email, fullName, username };
+
+      const isStoreUser = storeId && ['ROLE_STORE_ADMIN', 'ROLE_STORE_MANAGER', 'ROLE_BRANCH_MANAGER', 'ROLE_BRANCH_CASHIER'].includes(role);
+
+      // The API may already reject unpaid accounts. This additional check keeps
+      // older API deployments from creating an authenticated session before the
+      // registration payment is complete.
+      if (isStoreUser && isPaymentRequiredBeforeActivation()) {
+        secureStorage.setToken(jwt);
+        const paymentValidation = await validateStoreAccess(userDataToStore);
+
+        if (!paymentValidation.allowed) {
+          secureStorage.clearAll();
+          return rejectWithValue({
+            message: paymentValidation.reason || 'Subscription payment is required before login.',
+            redirectTo: paymentValidation.redirectTo || '/payment-required',
+          });
+        }
+      }
       
       // Validate store access for store/branch users
-      if (storeId && ['ROLE_STORE_ADMIN', 'ROLE_STORE_MANAGER', 'ROLE_BRANCH_MANAGER', 'ROLE_BRANCH_CASHIER'].includes(role)) {
+      if (isStoreUser) {
         const accessValidation = await validateUserAccess(userDataToStore);
         
         if (!accessValidation.allowed) {
@@ -71,7 +91,11 @@ export const login = createAsyncThunk(
       return { jwt, role, storeId, branchId, storeName, userId, email, fullName, username };
     } catch (error) {
       console.error("❌ Login error:", error);
-      return rejectWithValue(error.response?.data?.message || "login failed");
+      const message = error.response?.data?.message || "login failed";
+      if (message.toLowerCase().includes("subscription payment") || message.toLowerCase().includes("pending_payment")) {
+        return rejectWithValue({ message, redirectTo: "/payment-required" });
+      }
+      return rejectWithValue(message);
     }
   },
 );

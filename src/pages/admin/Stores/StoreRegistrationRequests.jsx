@@ -35,9 +35,9 @@ export default function StoreRegistrationRequests() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const params = filter && filter !== "ALL" ? `?status=${filter}` : "";
-      const res = await api.get(`/api/admin/store-requests${params}`);
-      setRequests(res.data);
+      const res = await api.get("/api/admin/registration-requests");
+      const allRequests = Array.isArray(res.data) ? res.data : res.data?.content || [];
+      setRequests(filter === "ALL" ? allRequests : allRequests.filter((request) => request.status === filter));
     } catch {
       toast.error("Failed to load requests");
     } finally {
@@ -50,7 +50,7 @@ export default function StoreRegistrationRequests() {
   const handleApprove = async (id) => {
     setActionLoading(id + "_approve");
     try {
-      await api.post(`/api/admin/store-requests/${id}/approve`);
+      await api.post(`/api/admin/registration-requests/${id}/approve`);
       toast.success("Store approved! Login credentials sent via email.");
       setSelected(null);
       fetchRequests();
@@ -65,7 +65,7 @@ export default function StoreRegistrationRequests() {
     if (!rejectReason.trim()) { toast.error("Please enter a rejection reason"); return; }
     setActionLoading(id + "_reject");
     try {
-      await api.post(`/api/admin/store-requests/${id}/reject`, { reason: rejectReason });
+      await api.post(`/api/admin/registration-requests/${id}/reject`, { reason: rejectReason });
       toast.success("Request rejected. Email sent to applicant.");
       setSelected(null);
       setRejectReason("");

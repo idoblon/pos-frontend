@@ -835,19 +835,18 @@ export default function StoreManagement() {
     };
   }, [metricStoreIds, reduxStores]);
 
-  // Normalize store data
+  // Normalize store data — read from contact (backend's resolved single source)
   const stores = (reduxStores || []).map(s => ({
     id: getStoreId(s),
     name: s.brand || s.name || s.storeName || "Unnamed Store",
-    address: getStoreAddress(s) || storeMetrics[getMetricKey(s)]?.firstBranchAddress || "",
+    address: s.contact?.address || s.storeAddress || "",
     phone: s.contact?.phone || s.phone || "",
     email: s.contact?.email || s.email || "",
     status: (s.status || "active").toLowerCase(),
     branchCount: storeMetrics[getMetricKey(s)]?.branchCount ?? getBranchCount(s),
     employeeCount: storeMetrics[getMetricKey(s)]?.employeeCount ?? getEmployeeCount(s),
     totalRevenue: storeMetrics[getMetricKey(s)]?.totalRevenue || getStoreRevenue(s),
-    managerName: s.storeAdmin?.fullName || s.managerName || s.ownerName || s.fullName || "",
-    managerEmail: s.storeAdmin?.email || s.managerEmail || s.email || "",
+    managerName: s.storeAdmin?.fullName || s.fullName || s.ownerName || "",
     subscriptionPlan: s.subscriptionPlan || "",
     description: s.description || "",
     type: s.storeType || s.type || "",
@@ -869,14 +868,13 @@ export default function StoreManagement() {
     try {
       const payload = {
         brand: formData.name,
+        storeAddress: formData.address,
+        email: formData.email,
+        phone: formData.phone,
+        contact: { address: formData.address, email: formData.email, phone: formData.phone },
         status: formData.status.toUpperCase(),
         description: formData.description,
         storeType: formData.type,
-        contact: {
-          address: formData.address,
-          phone: formData.phone,
-          email: formData.email,
-        },
       };
       const result = await dispatch(updateStore({ id: editStore.id, storeData: payload }));
       if (result.meta.requestStatus === "fulfilled") {

@@ -10,6 +10,17 @@ class EmailService {
     }
   }
 
+  getPaymentLink(requestData) {
+    const origin = window.location.origin;
+    const email = requestData.email || requestData.ownerEmail;
+    const query = new URLSearchParams({ email });
+    const requestId = requestData.id || requestData.requestId || requestData.registrationRequestId;
+
+    if (requestId) query.set('requestId', requestId);
+
+    return `${origin}/payment-required?${query.toString()}`;
+  }
+
   async sendApprovalEmail(requestData) {
     const payload = {
       to: requestData.email,
@@ -17,7 +28,7 @@ class EmailService {
       storeName: requestData.storeName,
       subscriptionPlan: requestData.subscriptionPlan,
       planPrice: this.getPlanPrice(requestData.subscriptionPlan),
-      paymentLink: `http://localhost:5173/payment/${requestData.id}`
+      paymentLink: this.getPaymentLink(requestData),
     };
 
     try {
@@ -28,6 +39,13 @@ class EmailService {
       console.error('Approval email failed:', error.response?.data || error.message);
       throw error;
     }
+  }
+
+  // Registration uses the same server-side mail template as an approval.  Keep
+  // this call here so the payment URL is produced from the deployed frontend
+  // origin rather than a hard-coded localhost address.
+  async sendPaymentLinkEmail(requestData) {
+    return this.sendApprovalEmail(requestData);
   }
 
   async sendCredentialsEmail(storeData, credentials) {

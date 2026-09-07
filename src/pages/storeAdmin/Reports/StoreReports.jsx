@@ -174,8 +174,8 @@ export default function StoreReports() {
 
   // Payment methods data based on filtered orders
   const paymentMethodsData = useMemo(() => {
-    const paymentCounts = { CASH: 0, ESEWA: 0, KHALTI: 0 };
-    const paymentColors = { CASH: '#1a1d23', ESEWA: '#4a4d55', KHALTI: '#6b7280' };
+    const paymentCounts = { CASH: 0, CARD: 0, ESEWA: 0, KHALTI: 0 };
+    const paymentColors = { CASH: '#1a1d23', CARD: '#2563eb', ESEWA: '#4a4d55', KHALTI: '#6b7280' };
     
     filteredOrders.forEach(order => {
       if (order.paymentType && paymentCounts.hasOwnProperty(order.paymentType)) {

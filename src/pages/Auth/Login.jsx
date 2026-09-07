@@ -11,7 +11,6 @@ import { sanitizeInput, validateEmail } from "@/util/inputValidator";
 import { mapToBackendRole } from "@/util/roleMapper";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
-import { enforcePaymentRequirement } from "@/util/paymentValidator";
 import { syncFirstLoginPasswordState } from "@/util/firstLoginPassword";
 import api from "@/util/api";
 import { toast } from "sonner";
@@ -79,17 +78,6 @@ const Login = () => {
         password: formData.password,
       });
       
-      // Check payment requirement for store-related roles
-      const paymentCheck = enforcePaymentRequirement(role, {
-        storeId: result.payload?.storeId,
-        email: formData.email
-      });
-      
-      if (!paymentCheck.allowed && paymentCheck.redirectTo === '/payment-required') {
-        navigate('/payment-required');
-        return;
-      }
-      
       if (role === 'ROLE_BRANCH_CASHIER' || role === 'ROLE_BRANCH_MANAGER') {
         try {
           const shiftResult = await dispatch(startShift()).unwrap();
@@ -123,10 +111,13 @@ const Login = () => {
           navigate("/dashboard");
       }
     } else if (login.rejected.match(result)) {
-      // Handle suspension or access denied errors
       const error = result.payload;
       if (error && typeof error === 'object' && error.redirectTo) {
-        if (error.redirectTo === '/suspended') {
+        if (error.redirectTo === '/payment-required') {
+          // Store email so PaymentRequired page can check status
+          localStorage.setItem('pendingPaymentEmail', formData.email);
+          navigate('/payment-required');
+        } else if (error.redirectTo === '/suspended') {
           navigate('/suspended');
         } else {
           navigate(error.redirectTo);

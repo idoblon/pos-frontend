@@ -15,7 +15,9 @@ import {
   CreditCard,
   ChevronDown,
   Clock,
+  Activity,
   Settings,
+  Menu,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
@@ -29,6 +31,7 @@ import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLogin
 
 const navItems = [
   { path: "/store-admin", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/store-admin/employee-activity", label: "Employee Activity", icon: Activity },
   { path: "/store-admin/branches", label: "Branches", icon: GitBranch },
   { path: "/store-admin/products", label: "Products", icon: Package },
   { path: "/store-admin/inventory", label: "Inventory", icon: Warehouse },
@@ -37,7 +40,7 @@ const navItems = [
   { path: "/store-admin/employees", label: "Employees", icon: Users },
   { path: "/store-admin/categories", label: "Categories", icon: Tag },
   { path: "/store-admin/shift-summary", label: "Shift Summary", icon: Clock },
-  { path: "/store-admin/reports", label: "Reports", icon: BarChart2 },
+  { path: "/store-admin/reports", label: "Analytics", icon: BarChart2 },
   { path: "/store-admin/payment-settings", label: "Payment Settings", icon: Settings },
 ];
 
@@ -338,21 +341,35 @@ export default function StoreAdminLayout() {
             flexShrink: 0,
           }}
         >
-          <div>
-            <p
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button
+              className="lg-sidebar"
+              onClick={() => setSidebarOpen(true)}
               style={{
-                fontWeight: 700,
-                fontSize: 15,
-                margin: 0,
-                letterSpacing: "-0.2px",
-                color: "#1a1d23",
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                padding: 4,
               }}
             >
-              {storeName}
-            </p>
-            <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>
-              {formatDate()}
-            </p>
+              <Menu size={20} />
+            </button>
+            <div>
+              <p
+                style={{
+                  fontWeight: 700,
+                  fontSize: 15,
+                  margin: 0,
+                  letterSpacing: "-0.2px",
+                  color: "#1a1d23",
+                }}
+              >
+                {storeName}
+              </p>
+              <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>
+                {formatDate()}
+              </p>
+            </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

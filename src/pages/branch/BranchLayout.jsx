@@ -391,7 +391,7 @@ export default function BranchLayout() {
                 border: "none",
                 background: "none",
                 cursor: "pointer",
-                display: "none",
+                padding: 4,
               }}
             >
               <Menu size={20} />

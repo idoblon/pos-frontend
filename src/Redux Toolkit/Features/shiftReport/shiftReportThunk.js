@@ -102,6 +102,20 @@ export const getShiftsByCashier = createAsyncThunk(
   },
 );
 
+export const getShiftsByStore = createAsyncThunk(
+  "/shiftReport/getByStore",
+  async (storeId, { rejectWithValue }) => {
+    try {
+      const sanitizedParams = sanitizePathParams({ storeId });
+      const headers = getAuthHeaders();
+      const res = await api.get(`/api/shift-reports/store/${sanitizedParams.storeId}`, { headers });
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch store shifts");
+    }
+  },
+);
+
 export const getShiftsByBranch = createAsyncThunk(
   "/shiftReport/getByBranch",
   async (params, { rejectWithValue }) => {

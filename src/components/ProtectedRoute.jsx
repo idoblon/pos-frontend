@@ -3,25 +3,28 @@ import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { hasPermission, mapToBackendRole } from "@/util/roleMapper";
 import { validateUserAccess } from "@/util/storeStatusChecker";
+import { enforcePaymentRequirement } from "@/util/paymentValidator";
 import secureStorage from "@/util/secureStorage";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
   const [accessValidation, setAccessValidation] = useState({ loading: true, allowed: false });
-  
-  // Check authentication
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   // Validate store access for store/branch users
   useEffect(() => {
+    if (!isAuthenticated) return;
     const checkStoreAccess = async () => {
       const userData = secureStorage.getUserData();
       
       // Only validate for store/branch roles
       if (userData?.storeId && ['ROLE_STORE_ADMIN', 'ROLE_STORE_MANAGER', 'ROLE_BRANCH_MANAGER', 'ROLE_BRANCH_CASHIER'].includes(userData.role)) {
         try {
+          const paymentValidation = await enforcePaymentRequirement(userData.role, userData);
+          if (!paymentValidation.allowed) {
+            setAccessValidation({ loading: false, ...paymentValidation });
+            return;
+          }
+
           const validation = await validateUserAccess(userData);
           setAccessValidation({ loading: false, ...validation });
         } catch (error) {
@@ -40,7 +43,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     };
 
     checkStoreAccess();
-  }, [user]);
+  }, [user, isAuthenticated]);
+
+  // Check authentication
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   // Show loading while validating
   if (accessValidation.loading) {

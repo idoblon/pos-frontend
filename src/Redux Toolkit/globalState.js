@@ -13,6 +13,7 @@ import employeeReducer from "./Features/Employee/employeeSlice";
 import storeReducer from "./Features/Store/storeSlice";
 import cartReducer from "./Features/Cart/cartSlice";
 import restockReducer from "./Features/restock/restockSlice";
+import analyticsReducer from "./Features/analytics/analyticsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -30,6 +31,7 @@ export const store = configureStore({
     store: storeReducer,
     cart: cartReducer,
     restock: restockReducer,
+    analytics: analyticsReducer,
   },
 });
 

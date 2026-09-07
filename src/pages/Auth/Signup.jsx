@@ -6,6 +6,8 @@ import posLogo from "@/logo/pos.png";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
+import api from "@/util/api";
+import emailService from "@/services/emailService";
 
 const STORE_TYPES = [
   { value: "RETAIL", label: "Retail" },
@@ -79,10 +81,7 @@ const Signup = () => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8080/api/public/store-registration-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const response = await api.post("/api/public/store-registration-request", {
           ownerName: formData.fullName,
           email: formData.email,
           phone: formData.phone,
@@ -94,18 +93,28 @@ const Signup = () => {
           subscriptionPlan: formData.subscriptionPlan,
           estimatedBranches: formData.estimatedBranches,
           estimatedUsers: formData.estimatedUsers
-        })
       });
 
-      if (response.ok) {
-        toast.success("Registration request submitted! Admin will review and notify you via email.");
-        navigate("/login");
-      } else {
-        const error = await response.text();
-        setPasswordError(error || "Failed to submit registration request");
+      const registration = response.data || {};
+
+      // Some API deployments send this email as part of registration. For
+      // deployments that do not, send it explicitly so every registrant gets
+      // a usable checkout link immediately.
+      if (!registration.paymentLinkSent) {
+        await emailService.sendPaymentLinkEmail({
+          ...registration,
+          ownerName: formData.fullName,
+          email: formData.email,
+          storeName: formData.storeName,
+          subscriptionPlan: formData.subscriptionPlan,
+        });
       }
+
+      toast.success("Registration submitted. Your payment link has been sent to your email.");
+      navigate(`/payment-required?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
-      setPasswordError("Error submitting request. Please try again.");
+      const message = error.response?.data?.message || error.response?.data || error.message;
+      setPasswordError(message || "Unable to submit registration or send the payment link. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -133,7 +142,7 @@ const Signup = () => {
             Request Store Registration
           </h1>
           <p className="text-slate-500 mt-1.5 text-sm">
-            Submit your registration request for admin approval
+            Register your store and receive a secure payment link by email
           </p>
         </div>
 

@@ -19,27 +19,13 @@ const cartSlice = createSlice({
     addToCart: (state, action) => {
       const product = action.payload;
       const stock = product.stock || 0;
-      
-      // Prevent adding out of stock items
-      if (stock <= 0) {
-        return;
-      }
-      
-      const existingItem = state.items.find(
-        (item) => item.id === product.id,
-      );
+      if (stock <= 0) return;
+      const existingItem = state.items.find((item) => item.id === product.id);
       if (existingItem) {
-        // Check if we can add more (stock limit)
-        if (existingItem.quantity >= stock) {
-          return; // Cannot add more than available stock
-        }
+        if (existingItem.quantity >= stock) return;
         existingItem.quantity += 1;
       } else {
-        const productWithQuantity = {
-          ...product,
-          quantity: 1,
-        };
-        state.items.push(productWithQuantity);
+        state.items.push({ ...product, quantity: 1 });
       }
     },
     updateCartItemQuantity: (state, action) => {
@@ -50,18 +36,12 @@ const cartSlice = createSlice({
         const item = state.items.find((item) => item.id === id);
         if (item) {
           const stock = item.stock || 0;
-          // Prevent exceeding stock
-          if (quantity > stock) {
-            item.quantity = stock;
-          } else {
-            item.quantity = quantity;
-          }
+          item.quantity = quantity > stock ? stock : quantity;
         }
       }
     },
     removeFromCart: (state, action) => {
-      const productId = action.payload;
-      state.items = state.items.filter((item) => item.id !== productId);
+      state.items = state.items.filter((item) => item.id !== action.payload);
     },
     clearCart: (state) => {
       state.items = [];
@@ -143,16 +123,10 @@ export const selectSubtotal = (state) => {
   return state.cart.items.reduce((total, item) => total + (item.price || item.sellingPrice || 0) * item.quantity, 0);
 };
 
-export const selectTax = (state) => {
-  const subtotal = selectSubtotal(state);
-  return subtotal * (getAdminTaxRate() / 100);
-};
-
 export const selectDiscountAmount = (state) => {
   const subtotal = selectSubtotal(state);
   const discount = state.cart.discount;
   const value = Number(discount.value) || 0;
-
   if (discount.type === "percentage") {
     return subtotal * (Math.min(Math.max(value, 0), 100) / 100);
   } else {
@@ -160,12 +134,19 @@ export const selectDiscountAmount = (state) => {
   }
 };
 
+export const selectTax = (state) => {
+  const subtotal = selectSubtotal(state);
+  const discountAmount = selectDiscountAmount(state);
+  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
+  return discountedSubtotal * (getAdminTaxRate() / 100);
+};
+
 export const selectTotal = (state) => {
   const subtotal = selectSubtotal(state);
-  const tax = selectTax(state);
   const discountAmount = selectDiscountAmount(state);
-
-  return Math.max(0, subtotal + tax - discountAmount);
+  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
+  const tax = discountedSubtotal * (getAdminTaxRate() / 100);
+  return discountedSubtotal + tax;
 };
 
 export const {

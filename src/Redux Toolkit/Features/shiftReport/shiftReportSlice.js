@@ -7,6 +7,7 @@ import {
   getShiftsByCashier,
   getShiftById,
   getShiftsByBranch,
+  getShiftsByStore,
 } from "./shiftReportThunk";
 
 
@@ -16,6 +17,7 @@ const initialState = {
   selectedShift: null,
   shiftsByCashier: [],
   shiftsByBranch: [],
+  shiftsByStore: [],
   loading: false,
   endingShift: false,
   error: null,
@@ -136,6 +138,18 @@ const shiftReportSlice = createSlice({
         state.selectedShift = action.payload;
       })
       .addCase(getShiftById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // get shifts by store
+      .addCase(getShiftsByStore.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getShiftsByStore.fulfilled, (state, action) => {
+        state.loading = false;
+        state.shiftsByStore = action.payload;
+      })
+      .addCase(getShiftsByStore.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

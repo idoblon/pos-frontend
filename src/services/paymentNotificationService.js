@@ -208,10 +208,10 @@ class PaymentNotificationService {
 
     try {
       const api = await import('@/util/api');
-      const response = await api.default.get('/api/admin/subscription-upgrade-requests');
+      const response = await api.default.get('/api/admin/subscription-change-requests');
       requests = this.extractList(response.data);
     } catch (error) {
-      console.error('Failed to fetch subscription upgrade payment records:', error);
+      console.error('Failed to fetch subscription change payment records:', error);
     }
 
     const localRequests = this.getStoredList('subscriptionUpgradeRequests');
@@ -269,21 +269,12 @@ class PaymentNotificationService {
 
   // Get payment notifications from backend
   async getPaymentNotifications() {
-    let notifications = [];
-
-    try {
-      const api = await import('@/util/api');
-      const response = await api.default.get('/api/admin/payment-notifications');
-      notifications = this.extractList(response.data);
-    } catch (error) {
-      console.error('Failed to fetch payment notifications:', error);
-    }
-
     const registrationPayments = await this.getRegistrationPaymentNotifications();
     const upgradePayments = await this.getUpgradePaymentNotifications();
 
-    // Update local cache while preserving locally completed public payments.
-    this.notifications = this.mergeNotifications([...notifications, ...registrationPayments, ...upgradePayments]);
+    // The backend has no payment-notifications resource. Compose this view from
+    // payment-bearing registration/change requests and the local payment cache.
+    this.notifications = this.mergeNotifications([...registrationPayments, ...upgradePayments]);
     this.saveNotifications();
 
     return this.notifications;
@@ -306,12 +297,8 @@ class PaymentNotificationService {
     );
     this.saveNotifications();
 
-    try {
-      const api = await import('@/util/api');
-      await api.default.patch(`/api/admin/payment-notifications/${notificationId}/read`);
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
+    // Read state is intentionally local until the backend exposes a
+    // notification persistence endpoint.
   }
 
   // Mark all notifications as read via backend
@@ -319,12 +306,8 @@ class PaymentNotificationService {
     this.notifications = this.readCachedNotifications().map(n => ({ ...n, isRead: true }));
     this.saveNotifications();
 
-    try {
-      const api = await import('@/util/api');
-      await api.default.patch('/api/admin/payment-notifications/mark-all-read');
-    } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
-    }
+    // Read state is intentionally local until the backend exposes a
+    // notification persistence endpoint.
   }
 
   // Save notifications to localStorage (cache only)
@@ -334,13 +317,12 @@ class PaymentNotificationService {
 
   // Get payment statistics from backend
   async getPaymentStats() {
-    try {
-      const api = await import('@/util/api');
-      const response = await api.default.get('/api/admin/payment-stats');
-      return response.data?.data || response.data?.stats || response.data;
-    } catch {
-      return this.calculateLocalStats();
-    }
+    // The current API exposes payment records, but not a /payment-stats
+    // endpoint. Calling the non-existent endpoint on every polling cycle
+    // produces avoidable 404 errors, so derive this badge from the cached
+    // payment notifications instead.
+    this.notifications = this.readCachedNotifications();
+    return this.calculateLocalStats();
   }
 
   // Fallback local stats calculation

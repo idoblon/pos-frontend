@@ -150,6 +150,19 @@ export const getOrdersByCustomer = createAsyncThunk(
   },
 );
 
+export const getOrdersByStore = createAsyncThunk(
+  "order/getByStore",
+  async (storeId, { rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.get(`/api/orders/store/${storeId}`, { headers });
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error?.response?.data?.message || "Failed to fetch store orders");
+    }
+  },
+);
+
 export const getRecentOrdersByBranch = createAsyncThunk(
   "order/getRecentByBranch",
   async (id, { rejectWithValue }) => {

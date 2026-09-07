@@ -7,12 +7,14 @@ import {
   getTodayOrdersByBranch,
   getRecentOrdersByBranch,
   deleteOrder,
-  getOrdersByCustomer
+  getOrdersByCustomer,
+  getOrdersByStore
 } from "./orderThunk";
 import { createRefund, getRefundsByBranch, getRefundsByCashier } from "../refund/refundThunk";
 
 const initialState = {
   orders: [],
+  storeOrders: [],
   todayOrders:[],
   customerOrders:[],
   selectedOrder:null,
@@ -212,6 +214,18 @@ const orderSlice = createSlice({
         state.customerOrders = action.payload;
       })
       .addCase(getOrdersByCustomer.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // orders by store
+      .addCase(getOrdersByStore.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getOrdersByStore.fulfilled, (state, action) => {
+        state.loading = false;
+        state.storeOrders = action.payload;
+      })
+      .addCase(getOrdersByStore.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

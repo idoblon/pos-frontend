@@ -8,20 +8,14 @@ import { mergeRegistrationDataWithStores } from "@/util/registrationDataMerger";
 // Validate store data
 const validateStoreData = (data) => {
   const errors = {};
-  
   if (!data.brand || data.brand.trim().length < 2) {
     errors.brand = 'Store brand must be at least 2 characters';
   }
-  
-  // contact fields are optional — only validate email format if provided
-  if (data.contact?.email && !/\S+@\S+\.\S+/.test(data.contact.email)) {
-    errors.email = 'Invalid contact email format';
+  const email = data.email || data.contact?.email;
+  if (email && !/\S+@\S+\.\S+/.test(email)) {
+    errors.email = 'Invalid email format';
   }
-  
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
+  return { isValid: Object.keys(errors).length === 0, errors };
 };
 
 export const createStore = createAsyncThunk(

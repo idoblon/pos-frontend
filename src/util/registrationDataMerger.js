@@ -77,11 +77,6 @@ const mergeRegistrationDataWithStores = async (stores, headers) => {
           store.estimatedBranches ?? matchingRequest.estimatedBranches ?? 1,
         estimatedUsers:
           store.estimatedUsers ?? matchingRequest.estimatedUsers ?? 1,
-        fullName: store.fullName || matchingRequest.ownerName,
-        ownerName: store.ownerName || matchingRequest.ownerName,
-        storeAddress: store.storeAddress || matchingRequest.storeAddress,
-        email: store.email || matchingRequest.email,
-        phone: store.phone || matchingRequest.phone,
         subscriptionPurchaseDate:
           store.subscriptionPurchaseDate ||
           store.purchaseDate ||
@@ -153,6 +148,12 @@ const mergeRegistrationDataWithStores = async (stores, headers) => {
         storeAddress: request.storeAddress,
         email: request.email,
         phone: request.phone,
+        // contact object mirrors flat fields so normalize block reads consistently
+        contact: {
+          address: request.storeAddress || "",
+          email: request.email || "",
+          phone: request.phone || "",
+        },
         description: request.storeDescription,
         registrationRequestId: getId(request),
         paymentStatus: request.paymentStatus,
