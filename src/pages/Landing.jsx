@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import posLogo from "@/logo/pos.png";
@@ -14,9 +14,20 @@ import {
   TrendingUp,
   Clock,
   Star,
+  Menu,
+  X,
+  Mail,
+  Phone,
+  MessageCircle,
 } from "lucide-react";
 
 const Landing = () => {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const scrollTo = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    setMobileNavOpen(false);
+  };
   const features = [
     {
       icon: <ShoppingCart className="w-6 h-6" />,
@@ -84,22 +95,55 @@ const Landing = () => {
     },
   ];
 
+  const plans = [
+    {
+      name: "Basic",
+      price: "रु 3,500",
+      period: "/year",
+      description: "Perfect for small single-branch stores",
+      features: ["1 Store", "3 Branches", "10 Users", "5GB Storage", "Basic POS System", "Sales Reports", "Email Support"],
+    },
+    {
+      name: "Professional",
+      price: "रु 7,000",
+      period: "/year",
+      description: "For growing businesses with multiple locations",
+      features: ["1 Store", "10 Branches", "50 Users", "25GB Storage", "Advanced Analytics", "Priority Support", "API Access"],
+      highlight: true,
+    },
+    {
+      name: "Enterprise",
+      price: "रु 10,000",
+      period: "/year",
+      description: "Full-scale operations with maximum capacity",
+      features: ["Unlimited Stores", "25 Branches", "200 Users", "100GB Storage", "Custom Reports", "24/7 Dedicated Support", "White-label Options"],
+    },
+  ];
+
+  const faqs = [
+    { q: "How do I get started?", a: "Sign up for a free account, register your store, and our team will review and approve your request within 24 hours." },
+    { q: "Can I manage multiple branches?", a: "Yes. The Professional and Enterprise plans support multiple branches, each with their own cashiers and inventory." },
+    { q: "Is my data secure?", a: "All data is encrypted in transit and at rest. We use JWT-based authentication and role-based access control." },
+    { q: "What payment methods are supported?", a: "We support Cash, Card, eSewa, and Khalti out of the box. Payment methods can be toggled per store." },
+    { q: "How do I contact support?", a: "You can reach us via email at posproofficial@gmail.com or use the contact form below." },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-gray-100">
       {/* Header */}
       <header className="border-b border-gray-200 bg-white/90 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <Link to="/" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center space-x-3">
             <div className="bg-white p-2 rounded-xl shadow-md border border-gray-200">
               <img src={posLogo} alt="POS Pro" className="w-8 h-8" />
             </div>
             <span className="text-2xl font-bold text-neutral-950">POS Pro</span>
-          </div>
+          </Link>
           <nav className="hidden md:flex gap-8 text-sm font-semibold text-gray-700 absolute left-1/2 transform -translate-x-1/2">
-            <a href="#features" className="hover:text-black transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-black transition-colors">Pricing</a>
-            <a href="#testimonials" className="hover:text-black transition-colors">Testimonials</a>
-            <a href="#support" className="hover:text-black transition-colors">Support</a>
+            <button onClick={() => scrollTo("features")} className="hover:text-black transition-colors">Features</button>
+            <button onClick={() => scrollTo("pricing")} className="hover:text-black transition-colors">Pricing</button>
+            <button onClick={() => scrollTo("testimonials")} className="hover:text-black transition-colors">Testimonials</button>
+            <button onClick={() => scrollTo("support")} className="hover:text-black transition-colors">Support</button>
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login">
@@ -108,8 +152,20 @@ const Landing = () => {
             <Link to="/signup">
               <Button className="bg-neutral-950 hover:bg-neutral-800 text-white shadow-lg shadow-neutral-900/20 font-semibold">Get Started Free</Button>
             </Link>
+            <button className="md:hidden" onClick={() => setMobileNavOpen((o) => !o)}>
+              {mobileNavOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
         </div>
+        {/* Mobile Nav */}
+        {mobileNavOpen && (
+          <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 flex flex-col gap-4 text-sm font-semibold text-gray-700">
+            <button onClick={() => scrollTo("features")} className="text-left hover:text-black">Features</button>
+            <button onClick={() => scrollTo("pricing")} className="text-left hover:text-black">Pricing</button>
+            <button onClick={() => scrollTo("testimonials")} className="text-left hover:text-black">Testimonials</button>
+            <button onClick={() => scrollTo("support")} className="text-left hover:text-black">Support</button>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
@@ -135,11 +191,11 @@ const Landing = () => {
                   Start Free Trial <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Link to="/login">
+              <button onClick={() => scrollTo("features")}>
                 <Button size="lg" variant="outline" className="text-lg px-8 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto">
-                  Watch Demo
+                  See Features
                 </Button>
-              </Link>
+              </button>
             </div>
             <div className="flex items-center gap-6 pt-4 text-sm text-gray-600">
               <div className="flex items-center gap-2">
@@ -273,22 +329,139 @@ const Landing = () => {
                 Start Free Trial <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/login">
+            <button onClick={() => scrollTo("features")}>
               <Button size="lg" variant="outline" className="text-lg px-10 border-2 border-white text-white hover:bg-white/10">
-                View Demo
+                See Features
               </Button>
-            </Link>
+            </button>
           </div>
           <p className="text-white/80 text-sm mt-6">No credit card required • 30-day free trial • Cancel anytime</p>
         </div>
       </section>
 
+      {/* Pricing */}
+      <section id="pricing" className="container mx-auto px-4 py-20">
+        <div className="text-center mb-16">
+          <div className="inline-block px-4 py-2 bg-white border border-gray-300 rounded-full text-neutral-800 text-sm font-semibold mb-4 shadow-sm">
+            Pricing
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 text-neutral-950">Simple, Transparent Pricing</h2>
+          <p className="text-xl text-gray-600">Choose the plan that fits your business</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {plans.map((plan) => (
+            <div key={plan.name} className={`rounded-2xl p-8 border-2 flex flex-col ${
+              plan.highlight
+                ? "border-neutral-950 bg-neutral-950 text-white shadow-2xl scale-105"
+                : "border-gray-200 bg-white"
+            }`}>
+              <p className={`text-sm font-semibold mb-1 ${plan.highlight ? "text-gray-300" : "text-gray-500"}`}>{plan.name}</p>
+              <div className="flex items-end gap-1 mb-2">
+                <span className="text-4xl font-bold">{plan.price}</span>
+                <span className={`text-sm mb-1 ${plan.highlight ? "text-gray-300" : "text-gray-500"}`}>{plan.period}</span>
+              </div>
+              <p className={`text-sm mb-6 ${plan.highlight ? "text-gray-300" : "text-gray-500"}`}>{plan.description}</p>
+              <ul className="space-y-3 flex-1 mb-8">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 size={15} className={plan.highlight ? "text-white" : "text-neutral-900"} />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/signup">
+                <Button className={`w-full font-semibold ${
+                  plan.highlight
+                    ? "bg-white text-neutral-950 hover:bg-gray-100"
+                    : "bg-neutral-950 text-white hover:bg-neutral-800"
+                }`}>
+                  Get Started
+                </Button>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Support / FAQ */}
+      <section id="support" className="bg-gradient-to-br from-gray-50 to-gray-100 py-20">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="text-center mb-16">
+            <div className="inline-block px-4 py-2 bg-white border border-gray-300 rounded-full text-neutral-800 text-sm font-semibold mb-4 shadow-sm">
+              Support
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-neutral-950">Frequently Asked Questions</h2>
+            <p className="text-xl text-gray-600">Everything you need to know</p>
+          </div>
+          <div className="space-y-4 mb-16">
+            {faqs.map((faq) => (
+              <div key={faq.q} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                <p className="font-semibold text-neutral-950 mb-2">{faq.q}</p>
+                <p className="text-gray-600 text-sm leading-relaxed">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm text-center">
+            <h3 className="text-xl font-bold text-neutral-950 mb-2">Still have questions?</h3>
+            <p className="text-gray-600 text-sm mb-6">Our team is here to help you get started</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a href="mailto:posproofficial@gmail.com">
+                <Button className="bg-neutral-950 hover:bg-neutral-800 text-white gap-2">
+                  <Mail size={15} /> Email Us
+                </Button>
+              </a>
+              <a href="tel:+977-9800000000">
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50 gap-2">
+                  <Phone size={15} /> Call Us
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white py-8">
+      <footer className="border-t border-gray-200 bg-white py-12">
         <div className="container mx-auto px-4">
-          <p className="text-sm text-gray-600 text-center">
-            © 2024 POS Pro. All rights reserved.
-          </p>
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <Link to="/" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2 mb-3">
+                <img src={posLogo} alt="POS Pro" className="w-7 h-7" />
+                <span className="font-bold text-neutral-950">POS Pro</span>
+              </Link>
+              <p className="text-sm text-gray-500">All-in-one point of sale system for modern businesses.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-neutral-950 mb-3 text-sm">Product</p>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><button onClick={() => scrollTo("features")} className="hover:text-black">Features</button></li>
+                <li><button onClick={() => scrollTo("pricing")} className="hover:text-black">Pricing</button></li>
+                <li><Link to="/signup" className="hover:text-black">Get Started</Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-neutral-950 mb-3 text-sm">Company</p>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><button onClick={() => scrollTo("testimonials")} className="hover:text-black">Testimonials</button></li>
+                <li><button onClick={() => scrollTo("support")} className="hover:text-black">Support</button></li>
+                <li><button onClick={() => scrollTo("support")} className="hover:text-black">FAQ</button></li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-neutral-950 mb-3 text-sm">Contact</p>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li className="flex items-center gap-2"><Mail size={13} /><a href="mailto:posproofficial@gmail.com" className="hover:text-black">posproofficial@gmail.com</a></li>
+                <li className="flex items-center gap-2"><Phone size={13} /><a href="tel:+977-9800000000" className="hover:text-black">+977-9800000000</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-sm text-gray-500">© 2024 POS Pro. All rights reserved.</p>
+            <div className="flex gap-6 text-sm text-gray-500">
+              <span className="hover:text-black cursor-pointer">Privacy Policy</span>
+              <span className="hover:text-black cursor-pointer">Terms of Service</span>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

@@ -65,7 +65,7 @@ function App() {
         <Route
           path="/cashier/*"
           element={
-            <ProtectedRoute allowedRoles={["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER", "ROLE_STORE_ADMIN", "ROLE_STORE_MANAGER", "ROLE_ADMIN"]}>
+            <ProtectedRoute allowedRoles={["ROLE_BRANCH_CASHIER", "ROLE_STORE_ADMIN", "ROLE_STORE_MANAGER", "ROLE_ADMIN"]}>
               <CashierRoutes />
             </ProtectedRoute>
           }

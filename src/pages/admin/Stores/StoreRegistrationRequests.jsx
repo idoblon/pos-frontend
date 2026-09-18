@@ -24,7 +24,7 @@ const PLAN_PRICE = {
 const FILTERS = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
 export default function StoreRegistrationRequests() {
-  const [requests, setRequests] = useState([]);
+  const [allRequests, setAllRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
   const [filter, setFilter] = useState("PENDING");
@@ -36,8 +36,8 @@ export default function StoreRegistrationRequests() {
     setLoading(true);
     try {
       const res = await api.get("/api/admin/registration-requests");
-      const allRequests = Array.isArray(res.data) ? res.data : res.data?.content || [];
-      setRequests(filter === "ALL" ? allRequests : allRequests.filter((request) => request.status === filter));
+      const data = Array.isArray(res.data) ? res.data : res.data?.content || [];
+      setAllRequests(data);
     } catch {
       toast.error("Failed to load requests");
     } finally {
@@ -45,7 +45,11 @@ export default function StoreRegistrationRequests() {
     }
   };
 
-  useEffect(() => { fetchRequests(); }, [filter]);
+  useEffect(() => { fetchRequests(); }, []);
+
+  const requests = filter === "ALL" || filter === ""
+    ? allRequests
+    : allRequests.filter((r) => r.status === filter);
 
   const handleApprove = async (id) => {
     setActionLoading(id + "_approve");
@@ -106,11 +110,11 @@ export default function StoreRegistrationRequests() {
       {/* Filter Tabs */}
       <div className="flex gap-0 border-b border-gray-200">
         {FILTERS.map((s) => {
-          const active = s === "ALL" ? filter === "" : filter === s;
+          const active = filter === s;
           return (
             <button
               key={s}
-              onClick={() => setFilter(s === "ALL" ? "" : s)}
+              onClick={() => setFilter(s)}
               className={`px-5 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
                 active
                   ? "border-gray-900 text-gray-900"
@@ -130,7 +134,7 @@ export default function StoreRegistrationRequests() {
         <Card>
           <CardContent className="flex flex-col items-center py-12 gap-3">
             <Clock size={40} className="text-gray-200" />
-            <p className="text-sm text-gray-400">No {filter || ""} requests found</p>
+            <p className="text-sm text-gray-400">No {filter === "ALL" ? "" : filter} requests found</p>
           </CardContent>
         </Card>
       ) : (

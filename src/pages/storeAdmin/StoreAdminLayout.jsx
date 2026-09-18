@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Clock,
   Activity,
+  HeartPulse,
   Settings,
   Menu,
 } from "lucide-react";
@@ -32,6 +33,7 @@ import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLogin
 const navItems = [
   { path: "/store-admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/store-admin/employee-activity", label: "Employee Activity", icon: Activity },
+  { path: "/store-admin/operations", label: "Operations Center", icon: HeartPulse },
   { path: "/store-admin/branches", label: "Branches", icon: GitBranch },
   { path: "/store-admin/products", label: "Products", icon: Package },
   { path: "/store-admin/inventory", label: "Inventory", icon: Warehouse },

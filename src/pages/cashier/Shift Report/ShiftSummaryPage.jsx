@@ -8,6 +8,7 @@ import PaymentSummaryCard from "./PaymentSummaryCard";
 import TopSellingItems from "./TopSellingItems";
 import RecentOrdersTable from "./RecentOrdersTable";
 import RefundsTable from "./RefundsTable";
+import ShiftHandoverCard from "./ShiftHandoverCard";
 
 const ShiftSummaryPage = () => {
   const dispatch = useDispatch();
@@ -67,6 +68,8 @@ const ShiftSummaryPage = () => {
               <PaymentSummaryCard />
               <TopSellingItems />
             </div>
+
+            <ShiftHandoverCard key={currentShift.id || currentShift._id || currentShift.shiftReportId || "current"} shift={currentShift} />
 
             {/* Bottom Row - Recent Orders */}
             <div className="grid grid-cols-1 gap-4">

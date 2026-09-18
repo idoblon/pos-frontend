@@ -14,7 +14,6 @@ import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk"
 import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
 import { findStoreEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getCategoriesByStore } from "@/Redux Toolkit/Features/category/categoryThunk";
-import { getAllRefund } from "@/Redux Toolkit/Features/refund/refundThunk";
 import api from "@/util/api";
 import secureStorage from "@/util/secureStorage";
 
@@ -38,9 +37,7 @@ function CustomTooltip({ active, payload, label }) {
         fontSize: 12,
       }}
     >
-      <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#1a1d23" }}>
-        {label}
-      </p>
+      <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#1a1d23" }}>{label}</p>
       <p style={{ margin: 0, color: "#1a5c38", fontWeight: 700 }}>
         रु {payload[0].value?.toLocaleString("en-IN")}
       </p>
@@ -66,19 +63,13 @@ export default function StoreDashboard() {
 
   const [allOrders, setAllOrders] = useState([]);
 
-  // Fetch all orders from all branches into local state (avoids Redux overwrite).
-  // Refreshing also picks up payments completed by cashiers while this dashboard is open.
-  useEffect(() => {
-    if (!branches?.length) return;
-    const loadOrders = () => Promise.all(
-      branches.map(b => api.get(`/api/orders/branch/${b.id || b._id}`))
-    ).then(results => {
-      setAllOrders(results.flatMap(r => r.data || []));
-    }).catch(() => {});
-    loadOrders();
-    const interval = setInterval(loadOrders, 30000);
-    return () => clearInterval(interval);
-  }, [branches]);
+  // Start of current calendar month — resets naturally on the 1st
+  const monthStart = useMemo(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
   useEffect(() => {
     if (!storeId) return;
@@ -88,17 +79,34 @@ export default function StoreDashboard() {
     dispatch(getCategoriesByStore({ storeId }));
   }, [dispatch, storeId]);
 
-  // Calculate metrics
-  const activeBranches = branches?.filter(b => b.status === 'active')?.length ?? 0;
-  
+  // Fetch all orders from all branches, refresh every 30s
+  useEffect(() => {
+    if (!branches?.length) return;
+    const loadOrders = () =>
+      Promise.all(branches.map((b) => api.get(`/api/orders/branch/${b.id || b._id}`)))
+        .then((results) => setAllOrders(results.flatMap((r) => r.data || [])))
+        .catch(() => {});
+    loadOrders();
+    const interval = setInterval(loadOrders, 30000);
+    return () => clearInterval(interval);
+  }, [branches]);
+
+  // Scope all financial metrics to current month
+  const monthlyOrders = useMemo(
+    () => allOrders.filter((o) => o.createdAt && new Date(o.createdAt) >= monthStart),
+    [allOrders, monthStart]
+  );
+
+  const activeBranches = branches?.filter((b) => b.status === "active")?.length ?? 0;
+
   const trendData = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const label = date.toLocaleDateString('en-US', { weekday: 'short' });
+      const label = date.toLocaleDateString("en-US", { weekday: "short" });
       const dateStr = date.toISOString().slice(0, 10);
-      const dayOrders = allOrders.filter(o => {
+      const dayOrders = monthlyOrders.filter((o) => {
         const d = o.createdAt || o.orderDate || o.date || "";
         return d.slice(0, 10) === dateStr;
       });
@@ -109,34 +117,37 @@ export default function StoreDashboard() {
       });
     }
     return days;
-  }, [allOrders]);
+  }, [monthlyOrders]);
 
   const branchSales = useMemo(() => {
     if (!branches?.length) return [];
-    return branches.map(branch => {
-      const id = branch.id || branch._id;
-      const branchOrders = allOrders.filter(o => String(o.branchId) === String(id));
-      return {
-        name: branch.name || `Branch ${id}`,
-        address: branch.address || branch.location || 'No address',
-        revenue: branchOrders.reduce((sum, o) => sum + (o.totalAmount || o.total || 0), 0),
-        orders: branchOrders.length,
-      };
-    }).sort((a, b) => b.revenue - a.revenue).slice(0, 4);
-  }, [branches, allOrders]);
+    return branches
+      .map((branch) => {
+        const id = branch.id || branch._id;
+        const branchOrders = monthlyOrders.filter((o) => String(o.branchId) === String(id));
+        return {
+          name: branch.name || `Branch ${id}`,
+          address: branch.address || branch.location || "No address",
+          revenue: branchOrders.reduce((sum, o) => sum + (o.totalAmount || o.total || 0), 0),
+          orders: branchOrders.length,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 4);
+  }, [branches, monthlyOrders]);
 
-  const maxRevenue = Math.max(...branchSales.map(b => b.revenue), 1);
+  const maxRevenue = Math.max(...branchSales.map((b) => b.revenue), 1);
 
   const paymentBreakdown = useMemo(() => {
     const totals = { CASH: 0, CARD: 0, ESEWA: 0, KHALTI: 0 };
-    allOrders.forEach((order) => {
+    monthlyOrders.forEach((order) => {
       const method = String(order.paymentType || order.paymentMethod || "").toUpperCase();
       if (Object.hasOwn(totals, method)) {
         totals[method] += Number(order.totalAmount ?? order.total ?? 0) || 0;
       }
     });
     return totals;
-  }, [allOrders]);
+  }, [monthlyOrders]);
 
   const summaryStats = [
     {
@@ -148,7 +159,9 @@ export default function StoreDashboard() {
     },
     {
       label: "Total Products",
-      value: Array.isArray(products) ? products.length : (products?.content?.length ?? products?.totalElements ?? 0),
+      value: Array.isArray(products)
+        ? products.length
+        : (products?.content?.length ?? products?.totalElements ?? 0),
       sub: `${categories?.length ?? 0} categories`,
       icon: Package,
       iconColor: "#4a4d55",
@@ -169,6 +182,8 @@ export default function StoreDashboard() {
     },
   ];
 
+  const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
   return (
     <div
       style={{
@@ -184,64 +199,30 @@ export default function StoreDashboard() {
     >
       {/* Header */}
       <div>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 20,
-            fontWeight: 700,
-            letterSpacing: "-0.3px",
-            color: "#1a1d23",
-          }}
-        >
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px", color: "#1a1d23" }}>
           Dashboard
         </h1>
         <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>
-          Welcome back — here's what's happening in your store
+          {monthLabel} — month-to-date overview
         </p>
       </div>
 
       {/* Summary Stats */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 14,
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
         {summaryStats.map(({ label, value, sub, icon: Icon, iconColor }) => (
           <div
             key={label}
             style={{ ...card, transition: "box-shadow 0.15s" }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)")
-            }
+            onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)")}
             onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-              }}
-            >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
               <div>
-                <p style={{ margin: 0, fontSize: 12, color: "#8a909c" }}>
-                  {label}
-                </p>
-                <p
-                  style={{
-                    margin: "6px 0 2px",
-                    fontSize: 28,
-                    fontWeight: 800,
-                    color: "#1a1d23",
-                    letterSpacing: "-1px",
-                  }}
-                >
+                <p style={{ margin: 0, fontSize: 12, color: "#8a909c" }}>{label}</p>
+                <p style={{ margin: "6px 0 2px", fontSize: 28, fontWeight: 800, color: "#1a1d23", letterSpacing: "-1px" }}>
                   {value}
                 </p>
-                <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>
-                  {sub}
-                </p>
+                <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>{sub}</p>
               </div>
               <Icon size={20} color={iconColor} />
             </div>
@@ -249,9 +230,12 @@ export default function StoreDashboard() {
         ))}
       </div>
 
+      {/* Payments by Method */}
       <div style={card}>
         <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700 }}>Payments by Method</p>
-        <p style={{ margin: "0 0 16px", fontSize: 11, color: "#8a909c" }}>All recorded sales across your branches</p>
+        <p style={{ margin: "0 0 16px", fontSize: 11, color: "#8a909c" }}>
+          This month's sales across your branches
+        </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
           {[
             { type: "CASH", label: "Cash", icon: Banknote, color: "#059669", bg: "#f0fdf4" },
@@ -272,47 +256,27 @@ export default function StoreDashboard() {
         </div>
       </div>
 
-      {/* Two panels — Sales Trend + Recent Sales */}
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}
-      >
+      {/* Sales Trend + Branch Sales */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
         {/* Sales Trend Chart */}
         <div style={{ ...card, padding: "20px 20px 12px" }}>
           <div style={{ marginBottom: 20 }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
-              Sales Trend
-            </p>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Sales Trend</p>
             <p style={{ margin: "3px 0 0", fontSize: 11, color: "#8a909c" }}>
-              Total sales over the last 7 days
+              Last 7 days · {monthLabel}
             </p>
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart
-              data={trendData}
-              margin={{ top: 4, right: 4, left: -10, bottom: 0 }}
-            >
+            <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f0f0f0"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 10, fill: "#8a909c" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "#8a909c" }}
-                axisLine={false}
-                tickLine={false}
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#8a909c" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "#8a909c" }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
               <Area
                 type="monotone"
@@ -328,124 +292,48 @@ export default function StoreDashboard() {
         </div>
 
         {/* Branch Sales */}
-        <div
-          style={{
-            ...card,
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        <div style={{ ...card, padding: "20px", display: "flex", flexDirection: "column" }}>
           <div style={{ marginBottom: 16 }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
-              Top Branches by Sales
-            </p>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Top Branches by Sales</p>
             <p style={{ margin: "3px 0 0", fontSize: 11, color: "#8a909c" }}>
-              Ranked by total revenue
+              This month · ranked by revenue
             </p>
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-              flex: 1,
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
             {branchSales.length > 0 ? (
               branchSales.map((b, i) => {
                 const pct = Math.round((b.revenue / maxRevenue) * 100);
                 return (
                   <div key={b.name}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div
                           style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: "50%",
-                            background:
-                              i === 0
-                                ? "linear-gradient(135deg,#1a1d23,#4a4d55)"
-                                : "#f5f5f5",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
+                            width: 22, height: 22, borderRadius: "50%",
+                            background: i === 0 ? "linear-gradient(135deg,#1a1d23,#4a4d55)" : "#f5f5f5",
+                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                           }}
                         >
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: i === 0 ? "white" : "#8a909c",
-                            }}
-                          >
+                          <span style={{ fontSize: 10, fontWeight: 700, color: i === 0 ? "white" : "#8a909c" }}>
                             {i + 1}
                           </span>
                         </div>
                         <div>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: "#1a1d23",
-                            }}
-                          >
-                            {b.name}
-                          </p>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: 10,
-                              color: "#8a909c",
-                            }}
-                          >
+                          <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#1a1d23" }}>{b.name}</p>
+                          <p style={{ margin: 0, fontSize: 10, color: "#8a909c" }}>
                             {b.address} · {b.orders} orders
                           </p>
                         </div>
                       </div>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: "#1a1d23",
-                        }}
-                      >
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1a1d23" }}>
                         रु {b.revenue.toLocaleString("en-IN")}
                       </p>
                     </div>
-                    <div
-                      style={{
-                        height: 4,
-                        borderRadius: 4,
-                        background: "#e5e7eb",
-                      }}
-                    >
+                    <div style={{ height: 4, borderRadius: 4, background: "#e5e7eb" }}>
                       <div
                         style={{
-                          height: "100%",
-                          borderRadius: 4,
-                          width: `${pct}%`,
-                          background:
-                            i === 0
-                              ? "linear-gradient(90deg,#1a1d23,#4a4d55)"
-                              : "#9ca3af",
+                          height: "100%", borderRadius: 4, width: `${pct}%`,
+                          background: i === 0 ? "linear-gradient(90deg,#1a1d23,#4a4d55)" : "#9ca3af",
                           transition: "width 0.4s ease",
                         }}
                       />
@@ -454,16 +342,8 @@ export default function StoreDashboard() {
                 );
               })
             ) : (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "20px 0",
-                  color: "#6b7280",
-                }}
-              >
-                <p style={{ margin: 0, fontSize: 12 }}>
-                  No branch sales data available
-                </p>
+              <div style={{ textAlign: "center", padding: "20px 0", color: "#6b7280" }}>
+                <p style={{ margin: 0, fontSize: 12 }}>No branch sales data available</p>
               </div>
             )}
           </div>

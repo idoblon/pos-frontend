@@ -175,7 +175,7 @@ export default function StoreReports() {
   // Payment methods data based on filtered orders
   const paymentMethodsData = useMemo(() => {
     const paymentCounts = { CASH: 0, CARD: 0, ESEWA: 0, KHALTI: 0 };
-    const paymentColors = { CASH: '#1a1d23', CARD: '#2563eb', ESEWA: '#4a4d55', KHALTI: '#6b7280' };
+    const paymentColors = { CASH: '#1a1d23', CARD: '#4a4d55', ESEWA: '#6b7280', KHALTI: '#9ca3af' };
     
     filteredOrders.forEach(order => {
       if (order.paymentType && paymentCounts.hasOwnProperty(order.paymentType)) {
@@ -651,10 +651,8 @@ export default function StoreReports() {
                         fontWeight: 600,
                         padding: "2px 6px",
                         borderRadius: 12,
-                        background: transaction.paymentMethod === 'CASH' ? '#f3f4f6' : 
-                                   transaction.paymentMethod === 'ESEWA' ? '#fef3c7' : '#e0f2fe',
-                        color: transaction.paymentMethod === 'CASH' ? '#374151' : 
-                               transaction.paymentMethod === 'ESEWA' ? '#92400e' : '#0369a1'
+                        background: "#f3f4f6",
+                        color: "#1a1d23",
                       }}>
                         {transaction.paymentMethod}
                       </span>

@@ -40,6 +40,7 @@ import secureStorage from "@/util/secureStorage";
 import { getAdminTaxRate, getLowStockThreshold } from "@/util/adminSystemSettings";
 import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
 import "./cashier-styles.css";
+import OfflineOrderSync from "@/components/OfflineOrderSync";
 
 export default function CashierDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -364,6 +365,7 @@ const initials = fullName
         onSuccess={handlePasswordChangeSuccess}
         onClose={() => setPasswordDialogOpen(false)} 
       />
+      <OfflineOrderSync />
     </div>
   );
 }

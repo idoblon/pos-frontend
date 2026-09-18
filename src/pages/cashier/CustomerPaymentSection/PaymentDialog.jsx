@@ -14,6 +14,7 @@ import {
   selectDiscount, selectCartNote, selectTax,
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
 import { formatMoney } from "@/util/currency";
+import { queueOfflineOrder } from "@/util/offlineOrderQueue";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const checkoutKey = () => globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -218,15 +219,16 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
     if (cartItems.length === 0) { setError("Please add items to the cart first."); return; }
     const hasInvalid = cartItems.some((item) => { const pid = Number(item.id ?? item._id); return !Number.isSafeInteger(pid) || pid <= 0; });
     if (hasInvalid) { setError("Cannot process order with invalid products."); return; }
+    const orderPayload = {
+      customerId: customer?.id || customer?._id || null,
+      items: cartItems.map((item) => ({ productId: Number(item.id || item._id), quantity: item.quantity || 1, price: item.price || item.sellingPrice })),
+      discount: discount.value || 0, discountType: discount.type || "percentage",
+      note: note || "", paymentMethod, amountReceived: paymentMethod === "CASH" ? parseFloat(amountReceived) : total,
+      transactionId, paymentReference: transactionId, tax, total,
+    };
     try {
       setLoading(true);
-      const orderItems = cartItems.map((item) => ({ productId: Number(item.id || item._id), quantity: item.quantity || 1, price: item.price || item.sellingPrice }));
-      const response = await api.post("/api/orders", {
-        customerId: customer?.id || customer?._id || null,
-        items: orderItems, discount: discount.value || 0, discountType: discount.type || "percentage",
-        note: note || "", paymentMethod, amountReceived: paymentMethod === "CASH" ? parseFloat(amountReceived) : total,
-        transactionId, paymentReference: transactionId, tax, total,
-      }, { headers: { "Idempotency-Key": idempotencyKey } });
+      const response = await api.post("/api/orders", orderPayload, { headers: { "Idempotency-Key": idempotencyKey } });
       setCompletedOrder(response.data);
       setSuccess(true);
       dispatch(patchOrder({
@@ -238,6 +240,16 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
       onOrderComplete?.();
       setIdempotencyKey(checkoutKey());
     } catch (err) {
+      // Only cash is safe to queue: card and wallet payments need live verification.
+      if (!err.response && paymentMethod === "CASH") {
+        const queued = queueOfflineOrder({ order: orderPayload, idempotencyKey });
+        setCompletedOrder({ id: queued.id, totalAmount: total });
+        setSuccess(true);
+        setReceiptMessage("Saved securely on this device and will sync automatically when online.");
+        onOrderComplete?.();
+        setIdempotencyKey(checkoutKey());
+        return;
+      }
       const msg = err.response?.data?.message || "Payment failed. Please try again.";
       setError(msg.includes("not found in branch inventory") || msg.includes("Product not found")
         ? "Some products are not available in your branch inventory." : msg);

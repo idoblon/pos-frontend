@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import {
   LayoutDashboard, Store, Users, BarChart3, Settings,
-  LogOut, ChevronDown, Bell, FileText, CreditCard, Clock
+  LogOut, Bell, FileText, CreditCard, Clock, X, Menu,
 } from "lucide-react";
 import posLogo from "@/logo/pos.png";
 import api from "@/util/api";
@@ -26,8 +26,60 @@ const sidebarItems = [
   { icon: Settings, label: "System Settings", path: "/admin/settings" },
 ];
 
+function formatDate() {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+}
+
+function NavLinks({ onClose, pendingRequests, unreadPayments, isActive }) {
+  return sidebarItems.map((item) => {
+    const Icon = item.icon;
+    const active = isActive(item.path, item.exact);
+    const showBadge = item.path === "/admin/registration-requests" && pendingRequests > 0;
+    const showPaymentBadge = item.paymentBadge && unreadPayments > 0;
+
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={onClose}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 12px",
+          borderRadius: 8,
+          textDecoration: "none",
+          fontSize: 13,
+          background: active ? "#1a1d23" : "transparent",
+          color: active ? "white" : "#4b5563",
+          fontWeight: active ? 600 : 500,
+          position: "relative",
+          transition: "background 0.15s, color 0.15s",
+        }}
+        onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "#f3f4f6"; e.currentTarget.style.color = "#1a1d23"; } }}
+        onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#4b5563"; } }}
+      >
+        <Icon size={17} />
+        <span style={{ flex: 1 }}>{item.label}</span>
+        {showBadge && (
+          <span style={{ background: "#e53e3e", color: "white", borderRadius: 12, padding: "2px 6px", fontSize: 10, fontWeight: 700, minWidth: 18, textAlign: "center" }}>
+            {pendingRequests}
+          </span>
+        )}
+        {showPaymentBadge && (
+          <span style={{ background: "#059669", color: "white", borderRadius: 12, padding: "2px 6px", fontSize: 10, fontWeight: 700, minWidth: 18, textAlign: "center" }}>
+            {unreadPayments}
+          </span>
+        )}
+      </Link>
+    );
+  });
+}
+
 export default function AdminLayout({ children }) {
-  const [profileDropdown, setProfileDropdown] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -40,33 +92,23 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => subscribeAdminSystemSettings(setAdminSettings), []);
 
-  // Fetch pending requests count
   useEffect(() => {
     const fetchPendingCount = async () => {
       try {
-        // Fetch all requests and count both PENDING and PAYMENT_PENDING
         const listRes = await api.get("/api/admin/registration-requests");
         const allRequests = Array.isArray(listRes.data) ? listRes.data : [];
-        const pendingRequests = allRequests.filter(req =>
-          req.status === "PENDING" || req.status === "PAYMENT_PENDING"
-        );
-        const count = pendingRequests.length;
-        setPendingRequests(count);
-        setNotifications(pendingRequests.slice(0, 5));
+        const pending = allRequests.filter(req => req.status === "PENDING" || req.status === "PAYMENT_PENDING");
+        setPendingRequests(pending.length);
+        setNotifications(pending.slice(0, 5));
       } catch (error) {
-        console.error("Failed to fetch pending requests", error.response?.status, error.response?.data);
+        console.error("Failed to fetch pending requests", error.response?.status);
       }
     };
-
     fetchPendingCount();
-    const interval = setInterval(
-      fetchPendingCount,
-      secondsToMilliseconds(adminSettings.registrationRefreshSeconds, 30, 10),
-    );
+    const interval = setInterval(fetchPendingCount, secondsToMilliseconds(adminSettings.registrationRefreshSeconds, 30, 10));
     return () => clearInterval(interval);
   }, [adminSettings.registrationRefreshSeconds]);
 
-  // Poll unread payment notifications (local only)
   useEffect(() => {
     let mounted = true;
     const loadPaymentBadge = async () => {
@@ -75,287 +117,138 @@ export default function AdminLayout({ children }) {
       setUnreadPayments(stats?.unreadCount || 0);
     };
     loadPaymentBadge();
-    const interval = setInterval(
-      loadPaymentBadge,
-      secondsToMilliseconds(adminSettings.paymentPollingSeconds, 10, 5),
-    );
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
+    const interval = setInterval(loadPaymentBadge, secondsToMilliseconds(adminSettings.paymentPollingSeconds, 10, 5));
+    return () => { mounted = false; clearInterval(interval); };
   }, [adminSettings.paymentPollingSeconds]);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login");
-  };
+  const handleLogout = () => { dispatch(logout()); navigate("/login"); };
 
-  const isActive = (path, exact = false) => {
-    if (exact) return location.pathname === path;
-    return location.pathname.startsWith(path);
-  };
+  const isActive = (path, exact = false) =>
+    exact ? location.pathname === path : location.pathname.startsWith(path);
 
-  return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f5f5f5", overflow: "hidden" }}>
-      {/* Sidebar */}
-      <div style={{
-        position: "fixed",
-        top: 0,
-        bottom: 0,
-        left: 0,
-        width: "240px",
-        background: "white",
-        borderRight: "1px solid #e5e7eb",
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0,
-        boxShadow: "2px 0 12px rgba(0,0,0,0.06)",
-        zIndex: 10
-      }}>
-        {/* Logo */}
-        <div style={{
-          padding: "14px 20px",
-          borderBottom: "1px solid #e5e7eb",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px"
-        }}>
-          <div style={{
-            width: 30,
-            height: 30,
-            background: "white",
-            borderRadius: "6px",
-            padding: "4px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <img
-              src={posLogo}
-              alt="POS"
-              style={{ width: "100%", height: "100%", objectFit: "contain" }}
-            />
-          </div>
-          <span style={{
-            color: "#1a1d23",
-            fontSize: "15px",
-            fontWeight: "700",
-            letterSpacing: "-0.2px"
-          }}>
-            POS SYSTEM
-          </span>
+  const initials = user?.email?.charAt(0).toUpperCase() || "A";
+
+  const SidebarInner = ({ showClose }) => (
+    <>
+      <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img src={posLogo} alt="POS" style={{ width: 30, height: 30, objectFit: "contain" }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>POS SYSTEM</span>
         </div>
-
-        {/* Navigation */}
-        <nav style={{ padding: "12px", flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
-          {sidebarItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path, item.exact);
-            const showBadge = item.path === "/admin/registration-requests" && pendingRequests > 0;
-            const showPaymentBadge = item.paymentBadge && unreadPayments > 0;
-            
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "10px 12px",
-                  borderRadius: "8px",
-                  textDecoration: "none",
-                  fontSize: "13px",
-                  background: active ? "#1a1d23" : "transparent",
-                  color: active ? "white" : "#4b5563",
-                  fontWeight: active ? 600 : 500,
-                  transition: "all 0.2s ease",
-                  position: "relative"
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = "#f3f4f6";
-                    e.currentTarget.style.color = "#1a1d23";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#4b5563";
-                  }
-                }}
-              >
-                <Icon size={17} />
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {showBadge && (
-                  <span style={{
-                    background: "#e53e3e",
-                    color: "white",
-                    borderRadius: "12px",
-                    padding: "2px 6px",
-                    fontSize: "10px",
-                    fontWeight: "700",
-                    minWidth: "18px",
-                    textAlign: "center"
-                  }}>
-                    {pendingRequests}
-                  </span>
-                )}
-                {showPaymentBadge && (
-                  <span style={{
-                    background: "#059669",
-                    color: "white",
-                    borderRadius: "12px",
-                    padding: "2px 6px",
-                    fontSize: "10px",
-                    fontWeight: "700",
-                    minWidth: "18px",
-                    textAlign: "center"
-                  }}>
-                    {unreadPayments}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Logout */}
-        <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
-          <button
-            onClick={handleLogout}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: "8px",
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              color: "#e53e3e",
-              fontFamily: "inherit",
-              fontSize: "13px",
-              fontWeight: 600,
-              transition: "background 0.2s ease"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-          >
-            <LogOut size={17} />
-            Logout
+        {showClose && (
+          <button onClick={() => setSidebarOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#8a909c", display: "flex", alignItems: "center" }}>
+            <X size={18} />
           </button>
-        </div>
+        )}
       </div>
 
-      {/* Main Content */}
-      <div style={{
-        marginLeft: "240px",
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        minWidth: 0,
-        height: "100vh",
-        overflow: "hidden"
-      }}>
+      <nav style={{ flex: 1, padding: "12px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+        <NavLinks
+          onClose={showClose ? () => setSidebarOpen(false) : undefined}
+          pendingRequests={pendingRequests}
+          unreadPayments={unreadPayments}
+          isActive={isActive}
+        />
+      </nav>
+
+      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
+        <button
+          onClick={handleLogout}
+          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", background: "none", cursor: "pointer", color: "#e53e3e", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+        >
+          <LogOut size={17} />
+          Logout
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <div style={{ display: "flex", height: "100vh", background: "#f5f5f5", overflow: "hidden", fontFamily: "'DM Sans','Inter',sans-serif", fontSize: 13, color: "#1a1d23" }}>
+
+      {/* Backdrop */}
+      {sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 20 }} />
+      )}
+
+      {/* Mobile sidebar */}
+      <aside
+        className="lg-sidebar"
+        style={{
+          position: "fixed", top: 0, bottom: 0, left: 0, zIndex: 30,
+          width: 240, background: "white", borderRight: "1px solid #e5e7eb",
+          display: "flex", flexDirection: "column",
+          transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.3s ease",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+        }}
+      >
+        <SidebarInner showClose={true} />
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside
+        className="hidden-mobile"
+        style={{
+          width: 240, background: "white", borderRight: "1px solid #e5e7eb",
+          display: "flex", flexDirection: "column", flexShrink: 0,
+          boxShadow: "2px 0 12px rgba(0,0,0,0.06)",
+        }}
+      >
+        <SidebarInner showClose={false} />
+      </aside>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+
         {/* Header */}
-        <header style={{
-          background: "white",
-          padding: "0 20px",
-          height: "70px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid #e5e7eb",
-          flexShrink: 0
-        }}>
-          <div>
-            <h1 style={{
-              margin: 0,
-              fontSize: "15px",
-              fontWeight: "700",
-              color: "#1a1d23",
-              letterSpacing: "-0.2px"
-            }}>
-              System Administration
-            </h1>
+        <header style={{ background: "white", padding: "0 20px", height: 70, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button
+              className="lg-sidebar"
+              onClick={() => setSidebarOpen(true)}
+              style={{ border: "none", background: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}
+            >
+              <Menu size={20} />
+            </button>
+            <div>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#1a1d23", letterSpacing: "-0.2px" }}>
+                System Administration
+              </p>
+              <p style={{ margin: 0, fontSize: 11, color: "#6b7280" }}>{formatDate()}</p>
+            </div>
           </div>
 
-          {/* Notifications + User Profile */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* Bell */}
             <div style={{ position: "relative" }}>
               <button
-                onClick={() => { setShowNotifications(!showNotifications); setProfileDropdown(false); }}
-                style={{
-                  position: "relative",
-                  width: 36,
-                  height: 36,
-                  border: "none",
-                  background: "#1a1d23",
-                  borderRadius: 8,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
+                onClick={() => { setShowNotifications(!showNotifications); }}
+                style={{ position: "relative", width: 36, height: 36, border: "none", background: "#1a1d23", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
                 title={`${pendingRequests} pending registration requests`}
               >
                 <Bell size={16} color="#fff" />
                 {pendingRequests > 0 && (
-                  <span style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 6,
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: "#e53e3e",
-                    border: "1.5px solid white",
-                  }} />
+                  <span style={{ position: "absolute", top: 6, right: 6, width: 8, height: 8, borderRadius: "50%", background: "#e53e3e", border: "1.5px solid white" }} />
                 )}
               </button>
 
               {showNotifications && (
                 <>
-                  <div
-                    style={{ position: "fixed", inset: 0, zIndex: 10 }}
-                    onClick={() => setShowNotifications(false)}
-                  />
-                  <div style={{
-                    position: "absolute",
-                    top: "100%",
-                    right: 0,
-                    marginTop: 8,
-                    width: 320,
-                    maxHeight: 400,
-                    background: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 10,
-                    boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-                    zIndex: 20,
-                    overflow: "hidden",
-                  }}>
-                    {/* Header */}
+                  <div style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setShowNotifications(false)} />
+                  <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 8, width: 320, maxHeight: 400, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 10px 40px rgba(0,0,0,0.15)", zIndex: 20, overflow: "hidden" }}>
                     <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1a1d23" }}>
-                          Registration Requests
-                        </h3>
+                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1a1d23" }}>Registration Requests</h3>
                         {pendingRequests > 0 && (
-                          <button
-                            onClick={() => { navigate("/admin/registration-requests"); setShowNotifications(false); }}
-                            style={{ fontSize: 12, color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}
-                          >
+                          <button onClick={() => { navigate("/admin/registration-requests"); setShowNotifications(false); }} style={{ fontSize: 12, color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
                             View All ({pendingRequests})
                           </button>
                         )}
                       </div>
                     </div>
-
-                    {/* Items */}
                     <div style={{ maxHeight: 300, overflowY: "auto" }}>
                       {notifications.length === 0 ? (
                         <div style={{ padding: "20px 16px", textAlign: "center", color: "#6b7280" }}>
@@ -367,11 +260,7 @@ export default function AdminLayout({ children }) {
                           <div
                             key={notif.id || i}
                             onClick={() => { navigate("/admin/registration-requests"); setShowNotifications(false); }}
-                            style={{
-                              padding: "12px 16px",
-                              borderBottom: i < notifications.length - 1 ? "1px solid #f3f4f6" : "none",
-                              cursor: "pointer",
-                            }}
+                            style={{ padding: "12px 16px", borderBottom: i < notifications.length - 1 ? "1px solid #f3f4f6" : "none", cursor: "pointer" }}
                             onMouseEnter={(e) => e.currentTarget.style.background = "#f9fafb"}
                             onMouseLeave={(e) => e.currentTarget.style.background = "white"}
                           >
@@ -380,9 +269,7 @@ export default function AdminLayout({ children }) {
                                 <Clock size={12} color="#d97706" />
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1d23" }}>
-                                  New Store Registration
-                                </p>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1a1d23" }}>New Store Registration</p>
                                 <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {notif.storeName} — {notif.ownerName}
                                 </p>
@@ -395,13 +282,9 @@ export default function AdminLayout({ children }) {
                         ))
                       )}
                     </div>
-
                     {pendingRequests > 5 && (
                       <div style={{ padding: "8px 16px", background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
-                        <button
-                          onClick={() => { navigate("/admin/registration-requests"); setShowNotifications(false); }}
-                          style={{ fontSize: 12, color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: 600, width: "100%", textAlign: "center" }}
-                        >
+                        <button onClick={() => { navigate("/admin/registration-requests"); setShowNotifications(false); }} style={{ fontSize: 12, color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: 600, width: "100%", textAlign: "center" }}>
                           View {pendingRequests - 5} more requests
                         </button>
                       </div>
@@ -411,69 +294,32 @@ export default function AdminLayout({ children }) {
               )}
             </div>
 
-            {/* User Profile */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "8px 12px",
-              border: "1px solid #e2e8f0",
-              borderRadius: "8px"
-            }}>
-              <div style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                background: "#1a1d23",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: "11px",
-                fontWeight: "700"
-              }}>
-                {user?.email?.charAt(0).toUpperCase() || "A"}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px" }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1a1d23", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                {initials}
               </div>
               <div style={{ textAlign: "left" }}>
-                <p style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  color: "#1a202c"
-                }}>
-                  {user?.email || "Admin"}
-                </p>
-                <p style={{
-                  margin: 0,
-                  fontSize: "12px",
-                  color: "#718096"
-                }}>
-                  Super Admin
-                </p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#1a1d23", lineHeight: 1.3 }}>Super Admin</p>
+                <p style={{ margin: 0, fontSize: 11, color: "#6b7280", lineHeight: 1.3 }}>{user?.email || "Admin"}</p>
               </div>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "24px",
-          background: "#f5f5f5"
-        }}>
-          {children}
+        <main style={{ flex: 1, overflowY: "auto", background: "#f5f5f5" }}>
+          {children || <Outlet />}
         </main>
       </div>
 
-      {/* Click outside to close dropdown */}
-      {profileDropdown && (
-        <div
-          onClick={() => { setProfileDropdown(false); setShowNotifications(false); }}
-          style={{ position: "fixed", inset: 0, zIndex: 40 }}
-        />
-      )}
+      <style>{`
+        .hidden-mobile { display: flex; }
+        .lg-sidebar { display: none !important; }
+        @media (max-width: 1024px) {
+          .hidden-mobile { display: none !important; }
+          .lg-sidebar { display: flex !important; }
+        }
+      `}</style>
     </div>
   );
 }
-

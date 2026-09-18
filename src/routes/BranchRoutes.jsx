@@ -12,9 +12,13 @@ import BranchSettings from "@/pages/branch/BranchSettings";
 import BranchRestockRequests from "@/pages/branch/BranchRestockRequests";
 import ShiftSummaryPage from "@/pages/cashier/Shift Report/ShiftSummaryPage";
 import BranchShiftSummaryPage from "@/pages/cashier/Shift Report/BranchShiftSummaryPage";
+import BranchRegister from "@/pages/branch/BranchRegister";
 
 const BranchRoutes = () => (
   <Routes>
+    {/* Full-screen register — no BranchLayout wrapper */}
+    <Route path="register" element={<BranchRegister />} />
+
     <Route element={<BranchLayout />}>
       <Route index                    element={<BranchDashboard />} />
       <Route path="orders"            element={<BranchOrders />} />
