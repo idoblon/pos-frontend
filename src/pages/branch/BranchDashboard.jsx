@@ -18,6 +18,7 @@ import {
 } from "@/Redux Toolkit/Features/order/orderThunk";
 import { findBranchEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
+import BranchSalesTargetCard from "@/components/branch/BranchSalesTargetCard";
 import secureStorage from "@/util/secureStorage";
 
 const card = {
@@ -277,6 +278,8 @@ export default function BranchDashboard() {
         ))}
       </div>
 
+      <BranchSalesTargetCard />
+
       {/* Financial Breakdown */}
       <div style={card}>
         <p style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700 }}>Financial Breakdown</p>
@@ -324,10 +327,6 @@ export default function BranchDashboard() {
               <Area type="monotone" dataKey="revenue" stroke="#1a1d23" strokeWidth={2} fill="url(#branchGrad)" dot={false} activeDot={{ r: 4, fill: "#1a1d23" }} />
             </AreaChart>
           </ResponsiveContainer>
-          <div style={{ marginTop: 12, padding: "8px 12px", background: "#f5f5f5", borderRadius: 6, fontSize: 12, color: "#1a1d23", textAlign: "center" }}>
-            Monthly Target: रु 450,000 · Current: रु {monthlyRevenue.toLocaleString("en-IN")} ·{" "}
-            {monthlyRevenue >= 450000 ? "✅ Target Achieved!" : `रु ${(450000 - monthlyRevenue).toLocaleString("en-IN")} to go`}
-          </div>
         </div>
 
         <div style={{ ...card, display: "flex", flexDirection: "column" }}>

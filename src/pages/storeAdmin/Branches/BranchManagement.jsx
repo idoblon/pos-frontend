@@ -36,6 +36,7 @@ const EMPTY_FORM = {
   address: "",
   phone: "",
   email: "",
+  monthlySalesTarget: "",
   openTime: "",
   openPeriod: "AM",
   closeTime: "",
@@ -151,6 +152,8 @@ export default function BranchManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [targetDrafts, setTargetDrafts] = useState({});
+  const [savingTargetId, setSavingTargetId] = useState(null);
 
   const toggleWorkingDay = (day) => {
     setForm((f) => ({
@@ -237,6 +240,7 @@ export default function BranchManagement() {
       address: b.address ?? "",
       phone: b.phone ?? "",
       email: b.email ?? "",
+      monthlySalesTarget: b.monthlySalesTarget ?? "",
       openTime,
       openPeriod,
       closeTime,
@@ -246,12 +250,52 @@ export default function BranchManagement() {
     setDialogOpen(true);
   };
 
+  const saveMonthlyTarget = async (branch) => {
+    const id = branch.id || branch._id;
+    const rawTarget = targetDrafts[id] ?? branch.monthlySalesTarget ?? "";
+    const monthlySalesTarget = rawTarget === "" ? 0 : Number(rawTarget);
+    if (!Number.isFinite(monthlySalesTarget) || monthlySalesTarget < 0) {
+      toast.error("Monthly sales target must be zero or greater.");
+      return;
+    }
+
+    setSavingTargetId(id);
+    const branchStoreId = branch.storeId ?? branch.store?.id ?? storeId;
+    const dto = {
+      name: branch.name,
+      address: branch.address,
+      phone: branch.phone ?? "",
+      email: branch.email ?? "",
+      openTime: branch.openTime ?? "",
+      closeTime: branch.closeTime ?? "",
+      workingDays: branch.workingDays ?? [],
+      monthlySalesTarget,
+      storeId: branchStoreId,
+      store: branchStoreId ? { id: Number(branchStoreId) } : undefined,
+    };
+    const result = await dispatch(updateBranch({ id, dto }));
+    setSavingTargetId(null);
+    if (result.type === "branch/update/fulfilled") {
+      setTargetDrafts((drafts) => ({ ...drafts, [id]: monthlySalesTarget }));
+      toast.success(`Monthly target saved for ${branch.name}`);
+      dispatch(getBranchesByStore(storeId));
+    } else {
+      toast.error(result.payload || "Failed to save monthly target");
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     if (!storeId) {
       toast.error("Store ID not found. Please log in again.");
       console.error("No storeId found in localStorage");
+      return;
+    }
+
+    const monthlySalesTarget = form.monthlySalesTarget === "" ? 0 : Number(form.monthlySalesTarget);
+    if (!Number.isFinite(monthlySalesTarget) || monthlySalesTarget < 0) {
+      toast.error("Monthly sales target must be zero or greater, or left blank.");
       return;
     }
 
@@ -273,6 +317,7 @@ export default function BranchManagement() {
       openTime: convert12to24(form.openTime, form.openPeriod),
       closeTime: convert12to24(form.closeTime, form.closePeriod),
       workingDays: form.workingDays,
+      monthlySalesTarget,
     };
 
     const payload = {
@@ -480,6 +525,40 @@ export default function BranchManagement() {
                       <Mail size={12} /> {b.email}
                     </div>
                   )}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                      color: "#8a909c",
+                    }}
+                  >
+                    Monthly target: {Number(b.monthlySalesTarget) > 0
+                      ? `Rs ${Number(b.monthlySalesTarget).toLocaleString()}`
+                      : "Not set"}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "end", gap: 6, marginTop: 4 }}>
+                    <label style={{ flex: 1, fontSize: 11, color: "#6b7280" }}>
+                      Set monthly target (Rs)
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={targetDrafts[b.id || b._id] ?? b.monthlySalesTarget ?? ""}
+                        onChange={(e) => setTargetDrafts((drafts) => ({ ...drafts, [b.id || b._id]: e.target.value }))}
+                        style={{ width: "100%", marginTop: 3, border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px", fontSize: 12 }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => saveMonthlyTarget(b)}
+                      disabled={savingTargetId === (b.id || b._id)}
+                      style={{ border: "none", borderRadius: 6, padding: "7px 10px", background: "#1a1d23", color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                    >
+                      {savingTargetId === (b.id || b._id) ? "Saving..." : "Save"}
+                    </button>
+                  </div>
                   {(b.openTime || b.closeTime) && (
                     <div
                       style={{
@@ -533,12 +612,15 @@ export default function BranchManagement() {
               { id: "address", label: "Address", required: true },
               { id: "phone", label: "Phone", type: "tel", required: false },
               { id: "email", label: "Email", type: "email", required: false },
+              { id: "monthlySalesTarget", label: "Monthly Sales Target (Rs)", type: "number", required: false },
             ].map(({ id, label, type = "text", required = false }) => (
               <div key={id} className="space-y-1.5">
                 <Label htmlFor={id}>{label}</Label>
                 <Input
                   id={id}
                   type={type}
+                  min={id === "monthlySalesTarget" ? "0" : undefined}
+                  step={id === "monthlySalesTarget" ? "1" : undefined}
                   value={form[id]}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, [id]: e.target.value }))

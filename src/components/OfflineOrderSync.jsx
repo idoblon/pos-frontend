@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CloudOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/util/api";
@@ -7,28 +7,34 @@ import { pendingOfflineOrders, syncOfflineOrders } from "@/util/offlineOrderQueu
 export default function OfflineOrderSync() {
   const [pending, setPending] = useState(() => pendingOfflineOrders().length);
   const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
 
-  const sync = async () => {
-    if (!navigator.onLine || syncing || pendingOfflineOrders().length === 0) return;
+  const refresh = useCallback(() => setPending(pendingOfflineOrders().length), []);
+
+  const sync = useCallback(async () => {
+    if (!navigator.onLine || syncingRef.current || pendingOfflineOrders().length === 0) return;
+    syncingRef.current = true;
     setSyncing(true);
     const result = await syncOfflineOrders((order, idempotencyKey) =>
       api.post("/api/orders", order, { headers: { "Idempotency-Key": idempotencyKey } }),
     );
     setPending(result.remaining);
+    syncingRef.current = false;
     setSyncing(false);
     if (result.synced) toast.success(`${result.synced} offline sale${result.synced === 1 ? "" : "s"} synced.`);
-  };
+  }, []);
 
   useEffect(() => {
     const onOnline = () => sync();
-    const refresh = () => setPending(pendingOfflineOrders().length);
     window.addEventListener("online", onOnline);
     window.addEventListener("storage", refresh);
+    window.addEventListener("offline-order-queue-change", refresh);
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("storage", refresh);
+      window.removeEventListener("offline-order-queue-change", refresh);
     };
-  });
+  }, [refresh, sync]);
 
   if (navigator.onLine && pending === 0) return null;
   return (

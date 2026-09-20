@@ -21,7 +21,7 @@ const sidebarItems = [
   { icon: Store, label: "Store Management", path: "/admin/stores" },
   { icon: CreditCard, label: "Subscriptions", path: "/admin/subscriptions" },
   { icon: Users, label: "User Management", path: "/admin/users" },
-  { icon: BarChart3, label: "System Reports", path: "/admin/reports" },
+  { icon: BarChart3, label: "System Analytics", path: "/admin/reports" },
   { icon: () => <span style={{ fontSize: 15, fontWeight: 700, color: "inherit" }}>रु</span>, label: "Payments", path: "/admin/payments", paymentBadge: true },
   { icon: Settings, label: "System Settings", path: "/admin/settings" },
 ];

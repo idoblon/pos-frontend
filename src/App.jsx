@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { restoreAuth } from "./Redux Toolkit/Features/auth/authSlice";
-import { mapToBackendRole, getAllowedRoutes } from "./util/roleMapper";
+import { mapToBackendRole } from "./util/roleMapper";
 import { Toaster } from "sonner";
 import "./App.css";
 import CashierRoutes from "./routes/CashierRoutes";
@@ -29,7 +29,6 @@ function App() {
 
   // Get user's backend role
   const userBackendRole = user?.role ? mapToBackendRole(user.role) : null;
-  const allowedRoutes = userBackendRole ? getAllowedRoutes(userBackendRole) : [];
 
   return (
     <>
@@ -65,7 +64,7 @@ function App() {
         <Route
           path="/cashier/*"
           element={
-            <ProtectedRoute allowedRoles={["ROLE_BRANCH_CASHIER", "ROLE_STORE_ADMIN", "ROLE_STORE_MANAGER", "ROLE_ADMIN"]}>
+            <ProtectedRoute allowedRoles={["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER", "ROLE_STORE_ADMIN", "ROLE_STORE_MANAGER", "ROLE_ADMIN"]}>
               <CashierRoutes />
             </ProtectedRoute>
           }

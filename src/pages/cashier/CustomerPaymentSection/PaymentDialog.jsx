@@ -242,10 +242,21 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
     } catch (err) {
       // Only cash is safe to queue: card and wallet payments need live verification.
       if (!err.response && paymentMethod === "CASH") {
-        const queued = queueOfflineOrder({ order: orderPayload, idempotencyKey });
+        let queued;
+        try {
+          queued = queueOfflineOrder({ order: orderPayload, idempotencyKey });
+        } catch (queueError) {
+          setError(queueError.message || "Unable to save this offline sale.");
+          return;
+        }
         setCompletedOrder({ id: queued.id, totalAmount: total });
         setSuccess(true);
         setReceiptMessage("Saved securely on this device and will sync automatically when online.");
+        dispatch(patchOrder({
+          id: queued.id, totalAmount: total, items: orderPayload.items,
+          status: "PENDING_SYNC", paymentMethod: "CASH", createdAt: queued.createdAt,
+          offlinePending: true,
+        }));
         onOrderComplete?.();
         setIdempotencyKey(checkoutKey());
         return;

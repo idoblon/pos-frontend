@@ -31,6 +31,13 @@ const paymentBadge = (type) => {
 const getCollection = (value) => Array.isArray(value) ? value : value?.content || value?.data || [];
 const getId = (value) => value === undefined || value === null ? "" : String(value);
 const getEmployeeId = (employee) => getId(employee?.id ?? employee?._id ?? employee?.userId);
+const hasLoggedIn = (employee) => {
+  const lastLogin = new Date(employee?.lastLogin || 0);
+  const createdAt = new Date(employee?.createdAt || 0);
+  if (Number.isNaN(lastLogin.getTime()) || lastLogin.getTime() === 0) return false;
+  // Older registrations incorrectly stored a login time before persistence.
+  return Number.isNaN(createdAt.getTime()) || createdAt.getTime() === 0 || lastLogin > createdAt;
+};
 const getActivityEmployeeId = (activity) => getId(
   activity?.cashierId ?? activity?.employeeId ?? activity?.userId ??
   activity?.cashier?.id ?? activity?.cashier?._id ??
@@ -163,7 +170,7 @@ export default function EmployeeActivityPage() {
                   <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{selected.fullName}</p>
                   <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280" }}>
                     {selected.email} · {roleLabel[selected.role]} ·{" "}
-                    {selected.status === "active"
+                    {hasLoggedIn(selected)
                       ? badge("Active", "#f0fdf4", "#16a34a")
                       : badge("Inactive", "#f3f4f6", "#6b7280")}
                   </p>

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import ShiftReportHeader from "./ShiftReportHeader";
@@ -9,10 +9,13 @@ import TopSellingItems from "./TopSellingItems";
 import RecentOrdersTable from "./RecentOrdersTable";
 import RefundsTable from "./RefundsTable";
 import ShiftHandoverCard from "./ShiftHandoverCard";
+import BranchSalesTargetCard from "@/components/branch/BranchSalesTargetCard";
+import api from "@/util/api";
 
 const ShiftSummaryPage = () => {
   const dispatch = useDispatch();
   const { currentShift, loading } = useSelector((s) => s.shiftReport);
+  const [previousHandover, setPreviousHandover] = useState(null);
 
   useEffect(() => {
     dispatch(getCurrentShiftProgress());
@@ -24,6 +27,14 @@ const ShiftSummaryPage = () => {
     
     return () => clearInterval(interval);
   }, [dispatch]);
+
+  useEffect(() => {
+    api.get("/api/shift-reports/latest-handover")
+      .then((response) => setPreviousHandover(response.data))
+      .catch((error) => {
+        if (error.response?.status !== 204) setPreviousHandover(null);
+      });
+  }, []);
 
   if (loading && !currentShift) {
     return (
@@ -63,12 +74,21 @@ const ShiftSummaryPage = () => {
               </div>
             </div>
 
+            <BranchSalesTargetCard />
+
             {/* Middle Row - Payment Summary and Top Selling */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <PaymentSummaryCard />
               <TopSellingItems />
             </div>
 
+            {previousHandover?.id !== currentShift.id && previousHandover?.handoverSavedAt && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+                <p className="font-semibold">Previous shift handover</p>
+                {previousHandover.handoverNotes && <p className="mt-1">{previousHandover.handoverNotes}</p>}
+                {previousHandover.handoverNextTasks && <p className="mt-1"><span className="font-medium">Next tasks:</span> {previousHandover.handoverNextTasks}</p>}
+              </div>
+            )}
             <ShiftHandoverCard key={currentShift.id || currentShift._id || currentShift.shiftReportId || "current"} shift={currentShift} />
 
             {/* Bottom Row - Recent Orders */}

@@ -32,7 +32,7 @@ function getStoreName(store) { return store?.brand || store?.name || store?.stor
 function getOrderAmount(order) {
   return toNumber(order.totalAmount ?? order.total ?? order.amount ?? order.grandTotal ?? order.netAmount);
 }
-function formatMoney(amount) { return `NPR ${toNumber(amount).toLocaleString("en-IN")}`; }
+function formatMoney(amount) { return `रु ${toNumber(amount).toLocaleString("en-IN")}`; }
 
 function StatCard({ title, value, subtitle, icon, loading }) {
   return (
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
   const totalStores = realStores.length;
 
   const activeStores = useMemo(
-    () => realStores.filter((s) => String(s.status || "").toUpperCase() === "ACTIVE").length,
+    () => realStores.filter((s) => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE").length,
     [realStores],
   );
 
@@ -168,6 +168,14 @@ export default function AdminDashboard() {
     const PRICES = { BASIC: 3500, PROFESSIONAL: 7000, ENTERPRISE: 10000 };
     return realStores.reduce((sum, s) => sum + (PRICES[s.subscriptionPlan] || 0), 0);
   }, [subscriptionStats, realStores]);
+
+  const hasReportedSubscriptionRevenue = toNumber(subscriptionStats?.totalRevenue) > 0;
+  const subscriptionValueTitle = hasReportedSubscriptionRevenue
+    ? "Subscription Revenue"
+    : "Annual Plan Value";
+  const subscriptionValueNote = hasReportedSubscriptionRevenue
+    ? "Reported subscription revenue"
+    : "Estimated from current store plans";
 
   const expiringCount = subscriptionStats?.expiringCount ?? expiringSubscriptions;
 
@@ -284,10 +292,10 @@ export default function AdminDashboard() {
           loading={statsLoading}
         />
         <StatCard
-          title="Subscription Revenue"
-          value={subscriptionRevenue > 0 ? formatMoney(subscriptionRevenue) : "NPR 0"}
-          subtitle="Annual plan total"
-          icon={() => <span style={{ fontSize: 16, fontWeight: 700, color: "white" }}>NPR</span>}
+          title={subscriptionValueTitle}
+          value={formatMoney(subscriptionRevenue)}
+          subtitle={subscriptionValueNote}
+          icon={() => <span style={{ fontSize: 20, fontWeight: 700, color: "white" }}>रु</span>}
           loading={statsLoading}
         />
       </div>

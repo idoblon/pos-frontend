@@ -1,295 +1,59 @@
-import React, { useState } from "react";
-import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
-} from "recharts";
-import {
-  Download, Calendar, TrendingUp, Users, Store,
-  ShoppingCart, BarChart3, FileText
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CreditCard, ReceiptText, Store, TrendingUp, Users } from "lucide-react";
+import { getAllStores } from "@/Redux Toolkit/Features/Store/storeThunk";
+import { getAllUsers } from "@/Redux Toolkit/Features/user/userThunk";
+import { getAllOrders } from "@/Redux Toolkit/Features/order/orderThunk";
+import { getAllRefund } from "@/Redux Toolkit/Features/refund/refundThunk";
+import { getDaysRemaining, getSubscriptionExpiryDate, getSubscriptionPurchaseDate } from "@/util/subscriptionUtils";
 
-const COLORS = ['#1a1d23', '#667eea', '#f093fb', '#4facfe', '#43e97b'];
+const list = (value) => Array.isArray(value) ? value : value?.content || value?.data || [];
+const id = (item) => String(item?.id ?? item?._id ?? "");
+const money = (value) => `Rs ${Math.round(value || 0).toLocaleString()}`;
+const amount = (item) => Number(item?.totalAmount ?? item?.grandTotal ?? item?.amount ?? item?.refundAmount ?? 0) || 0;
+const storeId = (item) => String(item?.storeId ?? item?.store?.id ?? item?.branch?.storeId ?? item?.branch?.store?.id ?? "");
+const date = (item) => new Date(item?.createdAt || item?.orderDate || item?.date || 0);
+
+function Metric({ label, value, note, icon: Icon, color = "text-slate-900" }) {
+  return <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex justify-between gap-3"><div><p className="text-xs font-medium text-slate-500">{label}</p><p className={`mt-2 text-2xl font-bold ${color}`}>{value}</p><p className="mt-1 text-xs text-slate-500">{note}</p></div><Icon size={19} className="text-slate-500" /></div></div>;
+}
 
 export default function SystemReports() {
-  const [dateRange, setDateRange] = useState("This Year");
-  const [reportType, setReportType] = useState("overview");
+  const dispatch = useDispatch();
+  const { stores, loading } = useSelector((state) => state.store);
+  const { users } = useSelector((state) => state.user);
+  const { allOrders } = useSelector((state) => state.order);
+  const { refunds } = useSelector((state) => state.refund);
+  const [range, setRange] = useState("30");
 
-  // Mock data
-  const systemOverviewData = [
-    { month: 'Jan', revenue: 450000, orders: 2340, users: 12, stores: 8 },
-    { month: 'Feb', revenue: 520000, orders: 2670, users: 15, stores: 9 },
-    { month: 'Mar', revenue: 480000, orders: 2450, users: 18, stores: 10 },
-    { month: 'Apr', revenue: 610000, orders: 3120, users: 22, stores: 11 },
-    { month: 'May', revenue: 550000, orders: 2870, users: 25, stores: 12 },
-    { month: 'Jun', revenue: 670000, orders: 3420, users: 28, stores: 12 }
-  ];
+  useEffect(() => { dispatch(getAllStores()); dispatch(getAllUsers()); dispatch(getAllOrders()); dispatch(getAllRefund()); }, [dispatch]);
 
-  const storeComparisonData = [
-    { name: 'Store A', revenue: 1250000, orders: 6450, growth: 15.2 },
-    { name: 'Store B', revenue: 980000, orders: 5230, growth: 8.7 },
-    { name: 'Store C', revenue: 870000, orders: 4670, growth: 12.1 },
-    { name: 'Store D', revenue: 760000, orders: 3980, growth: -2.3 },
-    { name: 'Store E', revenue: 650000, orders: 3340, growth: 22.8 }
-  ];
+  const data = useMemo(() => {
+    const allStores = list(stores); const days = Number(range);
+    const from = new Date(); from.setHours(0, 0, 0, 0); from.setDate(from.getDate() - days + 1);
+    const inRange = (item) => { const itemDate = date(item); return !Number.isNaN(itemDate.getTime()) && itemDate >= from; };
+    const orders = list(allOrders).filter(inRange); const refundsInRange = list(refunds).filter(inRange);
+    const sales = orders.reduce((sum, item) => sum + amount(item), 0); const refunded = refundsInRange.reduce((sum, item) => sum + amount(item), 0);
+    const active = allStores.filter((store) => String(store?.status || "ACTIVE").toUpperCase() === "ACTIVE");
+    const subscription = allStores.map((store) => { const purchase = getSubscriptionPurchaseDate(store); const expiry = getSubscriptionExpiryDate(store, purchase); return { store, daysLeft: expiry ? getDaysRemaining(expiry) : null }; });
+    const expiring = subscription.filter((item) => item.daysLeft !== null && item.daysLeft >= 0 && item.daysLeft <= 30);
+    const expired = subscription.filter((item) => item.daysLeft !== null && item.daysLeft < 0);
+    const inactive = allStores.filter((store) => String(store?.status || "ACTIVE").toUpperCase() !== "ACTIVE");
+    const topStores = allStores.map((store) => { const rows = orders.filter((order) => storeId(order) === id(store)); return { name: store?.brand || store?.name || `Store ${id(store)}`, sales: rows.reduce((sum, order) => sum + amount(order), 0) }; }).sort((a, b) => b.sales - a.sales);
+    const trendDays = Math.min(days, 14); const trend = Array.from({ length: trendDays }, (_, index) => { const day = new Date(); day.setHours(0, 0, 0, 0); day.setDate(day.getDate() - trendDays + index + 1); const key = day.toDateString(); return { label: day.toLocaleDateString("en-US", { month: "short", day: "numeric" }), sales: orders.filter((order) => date(order).toDateString() === key).reduce((sum, order) => sum + amount(order), 0) }; });
+    return { allStores, orders, sales, refunded, active, expiring, expired, inactive, topStores, trend };
+  }, [allOrders, range, refunds, stores]);
 
-  const userActivityData = [
-    { name: 'Active Daily', value: 85, color: '#1a1d23' },
-    { name: 'Active Weekly', value: 12, color: '#4a4d55' },
-    { name: 'Inactive', value: 3, color: '#6b7280' }
-  ];
+  const alerts = [
+    ...data.expired.map(({ store }) => ({ text: `${store?.brand || store?.name || "Store"} subscription expired`, tone: "border-slate-300 bg-slate-100 text-slate-900" })),
+    ...data.expiring.map(({ store, daysLeft }) => ({ text: `${store?.brand || store?.name || "Store"} expires in ${daysLeft} days`, tone: "border-slate-300 bg-slate-100 text-slate-900" })),
+    ...data.inactive.map((store) => ({ text: `${store?.brand || store?.name || "Store"} is ${String(store?.status).toLowerCase()}`, tone: "border-slate-200 bg-slate-50 text-slate-700" })),
+  ].slice(0, 6);
 
-  const handleExport = () => {
-    // Implement export functionality
-    console.log("Exporting system reports...");
-  };
-
-  return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "24px",
-      fontFamily: "'Inter', sans-serif"
-    }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <h1 style={{
-            margin: 0,
-            fontSize: "28px",
-            fontWeight: "700",
-            color: "#1a202c",
-            letterSpacing: "-0.5px"
-          }}>
-            System Reports
-          </h1>
-          <p style={{
-            margin: "4px 0 0",
-            fontSize: "16px",
-            color: "#718096"
-          }}>
-            Comprehensive analytics across all stores and users
-          </p>
-        </div>
-        
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            style={{
-              padding: "10px 12px",
-              border: "1px solid #e2e8f0",
-              borderRadius: "8px",
-              fontSize: "14px",
-              background: "white",
-              cursor: "pointer",
-              outline: "none"
-            }}
-          >
-            <option value="This Month">This Month</option>
-            <option value="Last 3 Months">Last 3 Months</option>
-            <option value="Last 6 Months">Last 6 Months</option>
-            <option value="This Year">This Year</option>
-          </select>
-          
-          <button
-            onClick={handleExport}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              background: "#1a1d23",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              padding: "10px 16px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer"
-            }}
-          >
-            <Download size={16} color="white" />
-            Export Report
-          </button>
-        </div>
-      </div>
-
-      {/* Report Type Tabs */}
-      <div style={{
-        background: "white",
-        border: "1px solid #e2e8f0",
-        borderRadius: "12px",
-        padding: "20px"
-      }}>
-        <div style={{ display: "flex", gap: "4px", marginBottom: "20px" }}>
-          {[
-            { key: "overview", label: "System Overview", icon: BarChart3 },
-            { key: "stores", label: "Store Performance", icon: Store },
-            { key: "users", label: "User Analytics", icon: Users },
-            { key: "financial", label: "Financial Summary", icon: () => <span style={{ fontSize: 15, fontWeight: 700 }}>रु</span> }
-          ].map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setReportType(key)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "10px 16px",
-                background: reportType === key ? "#1a1d23" : "transparent",
-                color: reportType === key ? "white" : "#718096",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "500",
-                cursor: "pointer",
-                transition: "all 0.2s ease"
-              }}
-            >
-              <Icon size={16} color={reportType === key ? "white" : "#1a1d23"} />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* System Overview */}
-        {reportType === "overview" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            <div>
-              <h3 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "#1a202c" }}>
-                System Growth Trends
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={systemOverviewData}>
-                  <defs>
-                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#718096" }} />
-                  <YAxis tick={{ fontSize: 12, fill: "#718096" }} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="revenue" stroke="#1a1d23" fill="url(#revenueGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {/* Store Performance */}
-        {reportType === "stores" && (
-          <div>
-            <h3 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "#1a202c" }}>
-              Store Revenue Comparison
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={storeComparisonData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#718096" }} />
-                <YAxis tick={{ fontSize: 12, fill: "#718096" }} />
-                <Tooltip />
-                <Bar dataKey="revenue" fill="#1a1d23" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* User Analytics */}
-        {reportType === "users" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-            <div>
-              <h3 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "#1a202c" }}>
-                User Activity Distribution
-              </h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={userActivityData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {userActivityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div>
-              <h3 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "#1a202c" }}>
-                User Growth
-              </h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={systemOverviewData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#718096" }} />
-                  <YAxis tick={{ fontSize: 12, fill: "#718096" }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="users" stroke="#1a1d23" strokeWidth={3} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {/* Financial Summary */}
-        {reportType === "financial" && (
-          <div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
-              {[
-                { label: "Total Revenue", value: "रु 32,50,000", trend: "+15.2%", color: "#1a1d23" },
-                { label: "Total Orders", value: "18,670", trend: "+12.8%", color: "#1a1d23" },
-                { label: "Avg Order Value", value: "रु 1,740", trend: "+8.4%", color: "#1a1d23" },
-                { label: "Active Stores", value: "12", trend: "+20%", color: "#1a1d23" }
-              ].map((metric, index) => (
-                <div key={index} style={{
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "10px",
-                  padding: "16px",
-                  textAlign: "center"
-                }}>
-                  <p style={{ margin: 0, fontSize: "24px", fontWeight: "700", color: "#1a202c" }}>
-                    {metric.value}
-                  </p>
-                  <p style={{ margin: "4px 0", fontSize: "12px", color: "#718096" }}>
-                    {metric.label}
-                  </p>
-                  <p style={{ margin: 0, fontSize: "12px", color: metric.color, fontWeight: "600" }}>
-                    {metric.trend}
-                  </p>
-                </div>
-              ))}
-            </div>
-            
-            <h3 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "#1a202c" }}>
-              Revenue Trend
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={systemOverviewData}>
-                <defs>
-                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1a1d23" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#1a1d23" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#718096" }} />
-                <YAxis tick={{ fontSize: 12, fill: "#718096" }} />
-                <Tooltip />
-                <Area type="monotone" dataKey="revenue" stroke="#1a1d23" fill="url(#revenueGradient)" strokeWidth={3} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <div className="space-y-5 p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-xl font-bold text-slate-950">System Analytics</h1><p className="mt-1 text-sm text-slate-500">Platform health across all stores, subscriptions, users, and transactions.</p></div><label className="text-sm font-medium text-slate-700">Period <select className="ml-2 rounded-md border border-slate-300 bg-white px-3 py-2" value={range} onChange={(event) => setRange(event.target.value)}><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></label></div>
+    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Platform sales" value={money(data.sales)} note={`${data.orders.length} orders in period`} icon={TrendingUp} /><Metric label="Active stores" value={data.active.length} note={`${data.allStores.length} total stores`} icon={Store} /><Metric label="Platform users" value={list(users).length} note="All registered roles" icon={Users} /><Metric label="Subscription action" value={data.expiring.length + data.expired.length} note={`${data.expired.length} expired · ${data.expiring.length} expiring`} icon={CreditCard} /></section>
+    <section className="grid grid-cols-1 gap-5 xl:grid-cols-3"><div className="rounded-xl border border-slate-200 bg-white p-5 xl:col-span-2"><h2 className="font-semibold text-slate-900">Sales trend</h2><p className="mb-4 text-xs text-slate-500">Daily platform sales</p><ResponsiveContainer width="100%" height={270}><AreaChart data={data.trend}><defs><linearGradient id="sales" x1="0" x2="0" y1="0" y2="1"><stop offset="5%" stopColor="#1a1d23" stopOpacity={0.22} /><stop offset="95%" stopColor="#1a1d23" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="3 3" /><XAxis dataKey="label" tick={{ fontSize: 11 }} /><YAxis width={60} tick={{ fontSize: 11 }} /><Tooltip formatter={(value) => money(value)} /><Area dataKey="sales" type="monotone" stroke="#1a1d23" strokeWidth={2} fill="url(#sales)" /></AreaChart></ResponsiveContainer></div><div className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="font-semibold text-slate-900">Operational alerts</h2><p className="mt-1 text-xs text-slate-500">Items needing POS-admin attention</p><div className="mt-4 space-y-3">{alerts.length ? alerts.map((alert, index) => <p key={`${alert.text}-${index}`} className={`rounded-lg border p-3 text-sm font-medium ${alert.tone}`}>{alert.text}</p>) : <p className="py-12 text-center text-sm text-slate-500">No platform alerts.</p>}</div></div></section>
+    <section className="grid grid-cols-1 gap-5 xl:grid-cols-3"><div className="rounded-xl border border-slate-200 bg-white p-5 xl:col-span-2"><h2 className="font-semibold text-slate-900">Top stores by sales</h2><p className="mb-4 text-xs text-slate-500">Selected-period transaction total</p>{data.topStores.some((store) => store.sales) ? <ResponsiveContainer width="100%" height={260}><BarChart data={data.topStores.slice(0, 8)} layout="vertical" margin={{ left: 16 }}><CartesianGrid horizontal={false} stroke="#e2e8f0" /><XAxis type="number" tick={{ fontSize: 11 }} /><YAxis type="category" dataKey="name" width={115} tick={{ fontSize: 11 }} /><Tooltip formatter={(value) => money(value)} /><Bar dataKey="sales" fill="#1e293b" radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer> : <p className="py-20 text-center text-sm text-slate-500">No orders recorded in this period.</p>}</div><div className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="font-semibold text-slate-900">Platform quality</h2><div className="mt-5 space-y-4"><div className="flex justify-between"><span className="text-sm text-slate-600">Refund value</span><span className="font-semibold text-red-700">{money(data.refunded)}</span></div><div className="flex justify-between"><span className="text-sm text-slate-600">Refund rate</span><span className="font-semibold">{data.sales ? `${((data.refunded / data.sales) * 100).toFixed(1)}%` : "0%"}</span></div><div className="flex justify-between"><span className="text-sm text-slate-600">Average order</span><span className="font-semibold">{money(data.orders.length ? data.sales / data.orders.length : 0)}</span></div><div className="flex justify-between"><span className="text-sm text-slate-600">Inactive stores</span><span className="font-semibold">{data.inactive.length}</span></div></div></div></section>
+    {loading && <p className="flex items-center gap-2 text-sm text-slate-500"><ReceiptText size={16} /> Loading system data…</p>}</div>;
 }

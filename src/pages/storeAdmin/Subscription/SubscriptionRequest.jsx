@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { AlertTriangle, CheckCircle, Clock, CreditCard, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, CreditCard, X } from "lucide-react";
 import { toast } from "sonner";
 import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getAuthHeaders } from "@/util/getAuthHeader";
@@ -203,54 +203,19 @@ export default function SubscriptionRequest() {
     }
   };
 
-  const refresh = async () => {
-    await dispatch(getStoreByAdmin());
-    const updatedRequests = readRequests().map(normalizeRequest);
-    setRequests(updatedRequests);
-    toast.success("Subscription status refreshed");
-    const activeReq = updatedRequests.find(
-      (request) => request.storeId === storeId && !["APPROVED", "REJECTED"].includes(request.status),
-    );
-    if (!activeReq) {
-      setShowModal(false);
-    }
-  };
-
   return (
-    <div style={{ padding: "24px", fontFamily: "'DM Sans','Inter',sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
-      <div style={{ maxWidth: 600 }}>
+    <div style={{ padding: "24px", boxSizing: "border-box", fontFamily: "'DM Sans','Inter',sans-serif", backgroundColor: "#f5f5f5", minHeight: "100%" }}>
+      <div style={{ width: "100%", maxWidth: 1080, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div style={{ marginBottom: 20 }}>
           <div>
             <h1 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>Subscription</h1>
             <p style={{ margin: "0", fontSize: 12, color: "#8a909c" }}>Manage your plan and request changes</p>
           </div>
-          <button
-            onClick={refresh}
-            style={{
-              padding: "8px 12px",
-              border: "1px solid #e2e5e9",
-              background: "white",
-              borderRadius: 8,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12,
-              fontWeight: 700,
-              color: "#1a1d23",
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => (e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)")}
-            onMouseLeave={(e) => (e.target.style.boxShadow = "none")}
-          >
-            <RefreshCw size={13} />
-            Refresh
-          </button>
         </div>
 
         {/* Current Plan Card */}
-        <div style={{ background: "white", border: "1px solid #e2e5e9", borderRadius: 10, padding: "20px" }}>
+        <div style={{ background: "white", border: "1px solid #e2e5e9", borderRadius: 10, padding: "24px", boxSizing: "border-box" }}>
           <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 700, color: "#8a909c", textTransform: "uppercase" }}>Current Store</p>
           <h2 style={{ margin: "0 0 18px", fontSize: 18, fontWeight: 800, color: "#1a1d23" }}>{storeName}</h2>
 
@@ -262,7 +227,7 @@ export default function SubscriptionRequest() {
           </div>
 
           {/* Subscription Dates */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 20 }}>
             <div style={{ padding: 12, backgroundColor: "#f5f5f5", borderRadius: 8, border: "1px solid #e2e5e9" }}>
               <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 800, color: "#8a909c", textTransform: "uppercase" }}>
                 Purchase Date
@@ -289,7 +254,7 @@ export default function SubscriptionRequest() {
           {/* Plan Features */}
           <div style={{ marginBottom: 18 }}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#1a1d23" }}>Includes:</p>
-            <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
               {SUBSCRIPTION_PLANS[currentPlan]?.features.map((feature) => (
                 <div key={feature} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#1a1d23" }} />

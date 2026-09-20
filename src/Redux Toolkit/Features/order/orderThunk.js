@@ -46,6 +46,19 @@ export const getOrderById = createAsyncThunk(
   },
 );
 
+export const getAllOrders = createAsyncThunk(
+  "order/getAll",
+  async (_, { rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.get("/api/orders", { headers });
+      return Array.isArray(res.data) ? res.data : res.data?.content || res.data?.data || [];
+    } catch (error) {
+      return rejectWithValue(error?.response?.data?.message || "Failed to fetch all orders");
+    }
+  },
+);
+
 export const getOrdersByBranch = createAsyncThunk(
   "order/getOrderByBranch",
   async (

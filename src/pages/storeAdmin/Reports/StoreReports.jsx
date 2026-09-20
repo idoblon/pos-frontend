@@ -17,6 +17,11 @@ import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 import secureStorage from "@/util/secureStorage";
 
 const RANGES = ["This Month", "Last 3 Months", "Last 6 Months", "This Year"];
+// Java returns `items`; the optional Node order service also exposes the older
+// `orderItems` name. Keep reports compatible with both API contracts.
+const orderItems = (order) => Array.isArray(order?.items)
+  ? order.items
+  : Array.isArray(order?.orderItems) ? order.orderItems : [];
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 const card = { background: "white", border: "1px solid #e5e7eb", borderRadius: 10, padding: "18px 20px" };
@@ -197,8 +202,7 @@ export default function StoreReports() {
     const productSales = {};
     
     filteredOrders.forEach(order => {
-      if (order.orderItems && Array.isArray(order.orderItems)) {
-        order.orderItems.forEach(item => {
+      orderItems(order).forEach(item => {
           if (item && (item.product?.name || item.productName)) {
             const productName = item.product?.name || item.productName || 'Unknown Product';
             const quantity = item.quantity || 0;
@@ -209,8 +213,7 @@ export default function StoreReports() {
               productSales[productName] = quantity;
             }
           }
-        });
-      }
+      });
     });
 
     return Object.entries(productSales)
@@ -251,7 +254,7 @@ export default function StoreReports() {
           transactionId: order.transactionId || order.paymentReference || '—',
           branch: branch?.name || 'Unknown Branch',
           time: order.createdAt,
-          items: Array.isArray(order.orderItems) ? order.orderItems.length : 0,
+          items: orderItems(order).reduce((total, item) => total + (Number(item?.quantity) || 0), 0),
         };
       });
   }, [filteredOrders, branches]);
@@ -289,7 +292,7 @@ export default function StoreReports() {
             branch: branch?.name || 'Unknown Branch',
             date: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'Unknown Date',
             time: order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : 'Unknown Time',
-            itemCount: order.orderItems?.length || 0
+            itemCount: orderItems(order).reduce((total, item) => total + (Number(item?.quantity) || 0), 0)
           };
         }),
         branchPerformance: branchPerformanceData,

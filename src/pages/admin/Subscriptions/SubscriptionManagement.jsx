@@ -116,12 +116,15 @@ function StoreSubscriptionCard({ store, onMarkPaid, onApprove }) {
         border: pendingRequest ? "1px solid #f59e0b" : "1px solid #e5e7eb",
         borderRadius: 10,
         padding: 20,
+        boxSizing: "border-box",
+        minWidth: 0,
+        height: "100%",
         transition: "all 0.2s ease",
       }}
       onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)")}
       onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <div
           style={{
             width: 48,
@@ -294,7 +297,7 @@ function StoreSubscriptionCard({ store, onMarkPaid, onApprove }) {
       )}
       
       {/* Debug: Manual subscription update button */}
-      {process.env.NODE_ENV === 'development' && (
+      {false && (
         <button
           onClick={async () => {
             try {
@@ -605,7 +608,7 @@ export default function SubscriptionManagement() {
           </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
           {filtered.map((store) => (
             <StoreSubscriptionCard
               key={store.id}

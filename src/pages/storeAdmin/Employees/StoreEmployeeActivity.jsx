@@ -4,9 +4,15 @@ import { findStoreEmployee } from "@/Redux Toolkit/Features/Employee/employeeThu
 import secureStorage from "@/util/secureStorage";
 
 const roleLabel = { 0: "Super Admin", 1: "Store Admin", 2: "Branch Manager", 3: "Cashier", 4: "Inventory Manager", 5: "Employee" };
+const hasLoggedIn = (employee) => {
+  const lastLogin = new Date(employee?.lastLogin || 0);
+  const createdAt = new Date(employee?.createdAt || 0);
+  if (Number.isNaN(lastLogin.getTime()) || lastLogin.getTime() === 0) return false;
+  return Number.isNaN(createdAt.getTime()) || createdAt.getTime() === 0 || lastLogin > createdAt;
+};
 
-const statusBadge = (status) => {
-  const active = String(status || "").toLowerCase() === "active";
+const statusBadge = (employee) => {
+  const active = hasLoggedIn(employee);
   return (
     <span style={{ padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: active ? "#f0fdf4" : "#f3f4f6", color: active ? "#16a34a" : "#6b7280" }}>
       {active ? "Active" : "Inactive"}
@@ -37,9 +43,9 @@ export default function StoreEmployeeActivity() {
     return matchRole && matchSearch;
   });
 
-  const neverLoggedIn = filtered.filter((e) => !e.lastLogin).length;
+  const neverLoggedIn = filtered.filter((e) => !hasLoggedIn(e)).length;
   const loggedInToday = filtered.filter((e) => {
-    if (!e.lastLogin) return false;
+    if (!hasLoggedIn(e)) return false;
     return new Date(e.lastLogin).toDateString() === new Date().toDateString();
   }).length;
 
@@ -110,9 +116,9 @@ export default function StoreEmployeeActivity() {
                     <td style={{ padding: "10px 14px", color: "#4b5563" }}>{e.email || "—"}</td>
                     <td style={{ padding: "10px 14px", color: "#4b5563" }}>{e.phone || "—"}</td>
                     <td style={{ padding: "10px 14px", color: "#4b5563" }}>{roleLabel[e.role] || `Role ${e.role}`}</td>
-                    <td style={{ padding: "10px 14px" }}>{statusBadge(e.status)}</td>
-                    <td style={{ padding: "10px 14px", color: e.lastLogin ? "#1a1d23" : "#9ca3af", whiteSpace: "nowrap" }}>
-                      {e.lastLogin
+                    <td style={{ padding: "10px 14px" }}>{statusBadge(e)}</td>
+                    <td style={{ padding: "10px 14px", color: hasLoggedIn(e) ? "#1a1d23" : "#9ca3af", whiteSpace: "nowrap" }}>
+                      {hasLoggedIn(e)
                         ? new Date(e.lastLogin).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
                         : "Never"}
                     </td>

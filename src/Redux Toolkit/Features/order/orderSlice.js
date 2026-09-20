@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import { 
   createOrder, 
   getOrderById,
+  getAllOrders,
   getOrdersByBranch, 
   getOrdersByCashier,
   getTodayOrdersByBranch,
@@ -15,6 +16,7 @@ import { createRefund, getRefundsByBranch, getRefundsByCashier } from "../refund
 const initialState = {
   orders: [],
   storeOrders: [],
+  allOrders: [],
   todayOrders:[],
   customerOrders:[],
   selectedOrder:null,
@@ -99,6 +101,17 @@ const orderSlice = createSlice({
         state.selectedOrder = action.payload;
       })
       .addCase(getOrderById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(getAllOrders.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getAllOrders.fulfilled, (state, action) => {
+        state.loading = false;
+        state.allOrders = action.payload;
+      })
+      .addCase(getAllOrders.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
