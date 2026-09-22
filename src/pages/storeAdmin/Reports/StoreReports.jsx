@@ -66,9 +66,6 @@ export default function StoreReports() {
     localStorage.getItem("storeId");
 
   const { branches } = useSelector((s) => s.branch);
-  const { products } = useSelector((s) => s.product);
-  const { employees } = useSelector((s) => s.employee);
-  const { categories } = useSelector((s) => s.category);
 
   // Collect all branch orders locally to avoid Redux state overwrite conflicts
   const [allOrders, setAllOrders] = useState([]);
@@ -86,21 +83,23 @@ export default function StoreReports() {
   // Fetch orders and refunds from all branches
   useEffect(() => {
     if (!branches?.length) return;
-    setAllOrders([]);
-    setAllRefunds([]);
-    branches.forEach(branch => {
-      const branchId = branch._id || branch.id;
-      if (!branchId) return;
-      dispatch(getOrdersByBranch({ branchId })).unwrap()
-        .then(data => setAllOrders(prev => {
-          const existingIds = new Set(prev.map(o => o.id));
-          return [...prev, ...data.filter(o => !existingIds.has(o.id))];
-        })).catch(() => {});
-      dispatch(getRefundsByBranch(branchId)).unwrap()
-        .then(data => setAllRefunds(prev => {
-          const existingIds = new Set(prev.map(r => r.id));
-          return [...prev, ...data.filter(r => !existingIds.has(r.id))];
-        })).catch(() => {});
+    queueMicrotask(() => {
+      setAllOrders([]);
+      setAllRefunds([]);
+      branches.forEach(branch => {
+        const branchId = branch._id || branch.id;
+        if (!branchId) return;
+        dispatch(getOrdersByBranch({ branchId })).unwrap()
+          .then(data => setAllOrders(prev => {
+            const existingIds = new Set(prev.map(o => o.id));
+            return [...prev, ...data.filter(o => !existingIds.has(o.id))];
+          })).catch(() => {});
+        dispatch(getRefundsByBranch(branchId)).unwrap()
+          .then(data => setAllRefunds(prev => {
+            const existingIds = new Set(prev.map(r => r.id));
+            return [...prev, ...data.filter(r => !existingIds.has(r.id))];
+          })).catch(() => {});
+      });
     });
   }, [dispatch, branches]);
 
@@ -183,13 +182,13 @@ export default function StoreReports() {
     const paymentColors = { CASH: '#1a1d23', CARD: '#4a4d55', ESEWA: '#6b7280', KHALTI: '#9ca3af' };
     
     filteredOrders.forEach(order => {
-      if (order.paymentType && paymentCounts.hasOwnProperty(order.paymentType)) {
+      if (order.paymentType && Object.hasOwn(paymentCounts, order.paymentType)) {
         paymentCounts[order.paymentType]++;
       }
     });
 
     return Object.entries(paymentCounts)
-      .filter(([_, count]) => count > 0)
+      .filter(([, count]) => count > 0)
       .map(([method, count]) => ({
         name: method,
         value: count,
@@ -335,7 +334,6 @@ export default function StoreReports() {
       csvLink.setAttribute('download', csvFileName);
       csvLink.click();
       
-      console.log(`Exported report for ${range}:`, exportData.summary);
     } catch (error) {
       console.error('Export failed:', error);
       alert('Export failed. Please try again.');

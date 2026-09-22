@@ -8,10 +8,6 @@ export default function DatabaseStoreStatus() {
   const { stores, loading, error } = useSelector((s) => s.store);
   const [connectionStatus, setConnectionStatus] = useState("checking");
 
-  useEffect(() => {
-    checkDatabaseConnection();
-  }, []);
-
   const checkDatabaseConnection = async () => {
     try {
       setConnectionStatus("checking");
@@ -22,6 +18,10 @@ export default function DatabaseStoreStatus() {
       setConnectionStatus("disconnected");
     }
   };
+
+  useEffect(() => {
+    queueMicrotask(() => { checkDatabaseConnection(); });
+  }, []);
 
   const getConnectionStatusDisplay = () => {
     switch (connectionStatus) {

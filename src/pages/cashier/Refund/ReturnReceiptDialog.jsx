@@ -21,6 +21,7 @@ const ReturnReceiptDialog = ({
   showReturnReciptDialog,
   setShowReturnReciptDialog,
   selectedOrder,
+  receiptMeta,
 }) => {
   // Memoize the print handler to prevent re-creation on every render
   const handlePrint = useCallback(() => {
@@ -39,13 +40,13 @@ const ReturnReceiptDialog = ({
     if (!selectedOrder) return null;
     
     return {
-      returnNumber: `RTN-${Date.now().toString().substring(8)}`,
+      returnNumber: receiptMeta.returnNumber,
       orderId: selectedOrder.id,
-      date: new Date().toLocaleDateString(),
+      date: receiptMeta.date,
       customerName: selectedOrder.customer?.fullName || "Walk-in",
       totalAmount: selectedOrder.totalAmount?.toFixed(2) || "0.00"
     };
-  }, [selectedOrder]);
+  }, [selectedOrder, receiptMeta]);
 
   if (!selectedOrder) {
     return null;

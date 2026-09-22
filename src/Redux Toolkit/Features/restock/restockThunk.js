@@ -2,19 +2,14 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/util/api";
 import { getAuthHeaders } from "@/util/getAuthHeader";
 import { sanitizePathParams } from "@/util/urlValidator";
-import secureStorage from "@/util/secureStorage";
 
 export const createRestockRequest = createAsyncThunk(
   "restock/createRestockRequest",
   async (requestData, { rejectWithValue }) => {
     try {
-      console.log("🚀 Creating restock request:", requestData);
       const headers = getAuthHeaders();
-      console.log("📡 Headers:", headers);
-      console.log("📡 API Base URL:", import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080');
       
       const res = await api.post("/api/restock-requests", requestData, { headers });
-      console.log("✅ Restock request created successfully:", res.data);
       return res.data;
     } catch (error) {
       console.error("❌ Restock request failed - Full error:", error);
@@ -118,36 +113,17 @@ export const fulfillRestockRequest = createAsyncThunk(
   "restock/fulfillRestockRequest",
   async ({ requestId, receivedQuantity }, { rejectWithValue }) => {
     try {
-      console.log("🔍 FRONTEND DEBUG - Fulfilling restock request:", { requestId, receivedQuantity });
       
       const sanitizedParams = sanitizePathParams({ requestId });
       const headers = getAuthHeaders();
       const body = receivedQuantity ? { receivedQuantity } : {};
-      
-      // Check if we have a valid token
-      const token = secureStorage.getToken();
-      console.log("🔍 FRONTEND DEBUG - JWT Token exists:", !!token);
-      console.log("🔍 FRONTEND DEBUG - JWT Token length:", token?.length || 0);
-      console.log("🔍 FRONTEND DEBUG - JWT Token preview:", token ? token.substring(0, 20) + '...' : 'null');
-      
-      const fullUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api/restock-requests/${sanitizedParams.requestId}/fulfill`;
-      
-      console.log("🔍 FRONTEND DEBUG - Request details:", {
-        fullUrl,
-        body,
-        headers,
-        baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      });
-      
+
       const res = await api.patch(
         `/api/restock-requests/${sanitizedParams.requestId}/fulfill`,
         body,
         { headers }
       );
       
-      console.log("✅ FRONTEND DEBUG - Fulfill request successful:", res.data);
-      console.log("🔍 FRONTEND DEBUG - Response status:", res.status);
-      console.log("🔍 FRONTEND DEBUG - Response headers:", res.headers);
       
       return res.data;
     } catch (error) {

@@ -37,10 +37,12 @@ const Sidebar = ({ onClose }) => {
           setBranchAddress("No address configured");
         });
     } else {
-      // No branch ID, use fallback
-      const storeName = userData?.storeName || localStorage.getItem("storeName") || "Branch";
-      setBranchName(storeName);
-      setBranchAddress("No address configured");
+      // No branch ID, use fallback (deferred so the effect stays async)
+      queueMicrotask(() => {
+        const storeName = userData?.storeName || localStorage.getItem("storeName") || "Branch";
+        setBranchName(storeName);
+        setBranchAddress("No address configured");
+      });
     }
   }, [dispatch, userProfile, user, userData]);
   

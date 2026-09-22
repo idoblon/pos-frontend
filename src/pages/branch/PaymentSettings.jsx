@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { CreditCard, Smartphone, Banknote, ToggleLeft, ToggleRight, Save, Info } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { CreditCard, Smartphone, Banknote, ToggleLeft, ToggleRight, Info } from "lucide-react";
 import api from "@/util/api";
 import { getAuthHeaders } from "@/util/getAuthHeader";
 
@@ -14,7 +12,6 @@ const METHOD_META = {
 
 export default function PaymentSettings() {
   const [configs, setConfigs] = useState([]);
-  const [toggling, setToggling] = useState(null);
 
   const load = async () => {
     try {
@@ -27,13 +24,11 @@ export default function PaymentSettings() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    queueMicrotask(() => { load(); });
+  }, []);
 
   const getConfig = (type) => configs.find(c => c.paymentType === type);
-
-  const handleToggle = async (type) => {
-    toast.info("Payment method settings are managed by your store administrator. Please contact them to enable/disable payment methods.");
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

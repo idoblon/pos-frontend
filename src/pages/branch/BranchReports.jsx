@@ -39,11 +39,9 @@ export default function BranchReports() {
   const { shiftsByBranch } = useSelector((s) => s.shiftReport);
   const { orders } = useSelector((s) => s.order);
   const { refunds } = useSelector((s) => s.refund);
-  const { branch } = useSelector((s) => s.branch);
   const { employees } = useSelector((s) => s.employee);
 
   // Fixed black/grey/white color scheme
-  const primaryColor = "#1a1d23";
   const textColor = "#1a1d23";
   const fontFamily = "'DM Sans','Inter',sans-serif";
 
@@ -108,13 +106,11 @@ export default function BranchReports() {
 
   // Helper function to format shift duration with 10-hour limit
   const getShiftDuration = (shift) => {
-    console.log('🔍 DEBUG - Duration calculation for shift:', shift);
     
     // Try multiple possible start time fields
     const startTimeValue = shift.startTime || shift.createdAt || shift.loginTime || shift.shiftStart;
     
     if (!startTimeValue) {
-      console.log('❌ DEBUG - No start time found for duration');
       return "No data";
     }
     
@@ -128,7 +124,6 @@ export default function BranchReports() {
     const maxHours = 10;
     const isOvertime = hours >= maxHours;
     
-    console.log('✅ DEBUG - Duration calculated:', { hours, minutes, isOvertime });
     
     if (isOvertime && !shift.endTime) {
       return `${maxHours}h+ (Overtime!)`;
@@ -504,15 +499,11 @@ export default function BranchReports() {
                           <Clock size={12} color="#6b7280" />
                           <span style={{ fontSize: 12, fontWeight: 600, color: textColor }}>
                             {(() => {
-                              console.log('🔍 DEBUG - Shift data:', shift);
-                              console.log('🔍 DEBUG - Start time:', shift.startTime);
-                              console.log('🔍 DEBUG - Created at:', shift.createdAt);
                               
                               // Try multiple possible time fields
                               const timeValue = shift.startTime || shift.createdAt || shift.loginTime || shift.shiftStart;
                               
                               if (timeValue) {
-                                console.log('✅ DEBUG - Using time value:', timeValue);
                                 return new Date(timeValue).toLocaleString("en-US", {
                                   month: "short",
                                   day: "numeric",
@@ -520,7 +511,6 @@ export default function BranchReports() {
                                   minute: "2-digit",
                                 });
                               } else {
-                                console.log('❌ DEBUG - No time value found');
                                 return "No login time";
                               }
                             })()

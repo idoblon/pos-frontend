@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "lucide-react";
@@ -13,7 +13,6 @@ const CustomerPaymentSection = ({ onOrderComplete }) => {
   const selectedCustomer = useSelector(selectSelectedCustomer);
 
   const handleSelectCustomer = (customer) => {
-    console.log("🎯 CustomerPaymentSection - Customer selected:", customer);
     dispatch(setSelectedCustomer(customer));
   };
 

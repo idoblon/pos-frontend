@@ -31,7 +31,6 @@ export const createStore = createAsyncThunk(
       const sanitizedData = sanitizeFormData(storeData);
       const headers = getAuthHeaders();
       const res = await api.post(`/api/stores`, sanitizedData, { headers });
-      console.log("create store success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to create store");
@@ -46,7 +45,6 @@ export const getStoreById = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
       const res = await api.get(`/api/stores/${sanitizedParams.id}`, { headers });
-      console.log("get store success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch store");
@@ -74,7 +72,6 @@ export const getAllStores = createAsyncThunk(
         headers,
         params: Object.keys(params).length > 0 ? params : undefined,
       });
-      console.log("get all stores success", res.data);
       const mergedStores = await mergeRegistrationDataWithStores(res.data, headers);
       return mergedStores;
     } catch (error) {
@@ -97,7 +94,6 @@ export const updateStore = createAsyncThunk(
       const sanitizedData = sanitizeFormData(storeData);
       const headers = getAuthHeaders();
       const res = await api.put(`/api/stores/${sanitizedParams.id}`, sanitizedData, { headers });
-      console.log("update store success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to update store");
@@ -112,7 +108,6 @@ export const deleteStore = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
       const res = await api.delete(`/api/stores/${sanitizedParams.id}`, { headers });
-      console.log("delete store success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to delete store");
@@ -126,7 +121,6 @@ export const getStoreByAdmin = createAsyncThunk(
     try {
       const headers = getAuthHeaders();
       const res = await api.get(`/api/stores/admin`, { headers });
-      console.log("get admin store success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch admin store");
@@ -140,7 +134,6 @@ export const getStoreByEmployee = createAsyncThunk(
     try {
       const headers = getAuthHeaders();
       const res = await api.get(`/api/stores/employee`, { headers });
-      console.log("get employee store success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch employee store");
@@ -150,12 +143,12 @@ export const getStoreByEmployee = createAsyncThunk(
 
 export const getEnabledPaymentMethods = createAsyncThunk(
   "/store/getEnabledPaymentMethods",
-  async (_, { rejectWithValue }) => {
+  async () => {
     try {
       const headers = getAuthHeaders();
       const res = await api.get(`/api/payment-config/store/enabled`, { headers });
       return res.data;
-    } catch (error) {
+    } catch {
       // If no config exists yet, return all methods as enabled
       return [];
     }
@@ -181,7 +174,6 @@ export const moderateStore = createAsyncThunk(
         {},
         { headers, params: { action: sanitizedAction } },
       );
-      console.log("moderate store success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to moderate store");

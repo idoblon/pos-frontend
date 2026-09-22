@@ -107,18 +107,4 @@ export const updateStoreSubscription = createAsyncThunk(
   }
 );
 
-export const validateStoreSubscription = createAsyncThunk(
-  "/subscription/validateStoreSubscription", 
-  async ({ storeId }, { rejectWithValue }) => {
-    try {
-      const headers = getAuthHeaders();
-      
-      // Validate subscription status and payment
-      const res = await api.get(`/api/stores/${storeId}/subscription/validate`, { headers });
-      
-      return res.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to validate subscription");
-    }
-  }
-);
+

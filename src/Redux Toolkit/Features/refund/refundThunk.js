@@ -45,7 +45,6 @@ export const createRefund = createAsyncThunk(
       const sanitizedData = sanitizeFormData(refundDTO);
       const headers = getAuthHeaders();
       const res = await api.post("/api/refunds", sanitizedData, { headers });
-      console.log("create refund success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(
@@ -61,7 +60,6 @@ export const getAllRefund = createAsyncThunk(
     try {
       const headers = getAuthHeaders();
       const res = await api.get("/api/refunds", { headers });
-      console.log("get All refund success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(
@@ -78,7 +76,6 @@ export const getRefundsByCashier = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ cashierId });
       const headers = getAuthHeaders();
       const res = await api.get(`/api/refunds/cashier/${sanitizedParams.cashierId}`, { headers });
-      console.log("get refund by cashier success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(
@@ -92,19 +89,12 @@ export const getRefundsByBranch = createAsyncThunk(
   "refund/getByBranch",
   async (branchId, { rejectWithValue }) => {
     try {
-      console.log("🔄 getRefundsByBranch called with branchId:", branchId);
       const sanitizedParams = sanitizePathParams({ branchId });
-      console.log("🔄 Sanitized params:", sanitizedParams);
       const headers = getAuthHeaders();
-      console.log("🔄 Auth headers:", headers);
       const url = `/api/refunds/branch/${sanitizedParams.branchId}`;
-      console.log("🔄 Making request to:", url);
       const res = await api.get(url, { headers });
-      console.log("get refund by branch success", res.data);
       return res.data;
     } catch (error) {
-      console.log("❌ getRefundsByBranch error:", error);
-      console.log("❌ Error response:", error.response?.data);
       return rejectWithValue(
         error.response?.data?.message || "Failed to get refunds by branch",
       );
@@ -133,7 +123,6 @@ export const getRefundsByShift = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ shiftReportId });
       const headers = getAuthHeaders();
       const res = await api.get(`/api/refunds/shift/${sanitizedParams.shiftReportId}`, { headers });
-      console.log("get refund by shift success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(
@@ -169,7 +158,6 @@ export const getRefundByCashierAndDateRange = createAsyncThunk(
         `/api/refunds/cashier/${sanitizedParams.cashierId}/range?from=${formattedFrom}&to=${formattedTo}`,
         { headers },
       );
-      console.log("get by date range refund success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(
@@ -186,32 +174,9 @@ export const getRefundById = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ refundId });
       const headers = getAuthHeaders();
       const res = await api.get(`/api/refunds/${sanitizedParams.refundId}`, { headers });
-      console.log("get refund by id success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to get refund by id");
-    }
-  }
-);
-
-export const updateRefund = createAsyncThunk(
-  "refund/update",
-  async ({ id, refundData }, { rejectWithValue }) => {
-    try {
-      // Validate refund data
-      const validation = validateRefundData(refundData);
-      if (!validation.isValid) {
-        return rejectWithValue(`Validation failed: ${Object.values(validation.errors).join(', ')}`);
-      }
-
-      const sanitizedParams = sanitizePathParams({ id });
-      const sanitizedData = sanitizeFormData(refundData);
-      const headers = getAuthHeaders();
-      const res = await api.put(`/api/refunds/${sanitizedParams.id}`, sanitizedData, { headers });
-      console.log("update refund success", res.data);
-      return res.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to update refund");
     }
   }
 );
@@ -223,7 +188,6 @@ export const deleteRefund = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
       const res = await api.delete(`/api/refunds/${sanitizedParams.id}`, { headers });
-      console.log("delete refund success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to delete refund");

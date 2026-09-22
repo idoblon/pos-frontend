@@ -79,17 +79,19 @@ export default function StoreDashboard() {
     dispatch(getCategoriesByStore({ storeId }));
   }, [dispatch, storeId]);
 
-  // Fetch all orders from all branches, refresh every 30s
+  // Fetch this store's monthly orders in one call (previously one call per
+  // branch), refresh every 30s
   useEffect(() => {
-    if (!branches?.length) return;
+    if (!storeId) return;
     const loadOrders = () =>
-      Promise.all(branches.map((b) => api.get(`/api/orders/branch/${b.id || b._id}`)))
-        .then((results) => setAllOrders(results.flatMap((r) => r.data || [])))
+      api
+        .get(`/api/orders/monthly/store/${storeId}`)
+        .then((res) => setAllOrders(Array.isArray(res.data) ? res.data : []))
         .catch(() => {});
     loadOrders();
     const interval = setInterval(loadOrders, 30000);
     return () => clearInterval(interval);
-  }, [branches]);
+  }, [storeId]);
 
   // Scope all financial metrics to current month
   const monthlyOrders = useMemo(
@@ -238,12 +240,12 @@ export default function StoreDashboard() {
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
           {[
-            { type: "CASH", label: "Cash", icon: Banknote, color: "#059669", bg: "#f0fdf4" },
-            { type: "CARD", label: "Card", icon: CreditCard, color: "#2563eb", bg: "#eff6ff" },
-            { type: "ESEWA", label: "eSewa", icon: Smartphone, color: "#65a30d", bg: "#f7fee7" },
-            { type: "KHALTI", label: "Khalti", icon: Smartphone, color: "#7c3aed", bg: "#f5f3ff" },
+            { type: "CASH", label: "Cash", icon: Banknote, color: "#1a1d23", bg: "#f3f4f6" },
+            { type: "CARD", label: "Card", icon: CreditCard, color: "#4a4d55", bg: "#f3f4f6" },
+            { type: "ESEWA", label: "eSewa", icon: Smartphone, color: "#6b7280", bg: "#f3f4f6" },
+            { type: "KHALTI", label: "Khalti", icon: Smartphone, color: "#9ca3af", bg: "#f3f4f6" },
           ].map(({ type, label, icon: Icon, color, bg }) => (
-            <div key={type} style={{ padding: 14, borderRadius: 8, background: bg, border: `1px solid ${color}22` }}>
+            <div key={type} style={{ padding: 14, borderRadius: 8, background: bg, border: "1px solid #e2e5e9" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color }}>{label}</span>
                 <Icon size={17} color={color} />

@@ -82,15 +82,9 @@ const OrderTable = ({ handleSelectOrder }) => {
   const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    console.log("User:", user);
-    console.log("Orders:", orders);
     if (user?.branchId) {
-      console.log("Fetching orders for branch:", user.branchId);
       dispatch(getOrdersByBranch({ branchId: user.branchId }));
-      console.log("🔄 Fetching refunds for branch:", user.branchId);
       dispatch(getRefundsByBranch(user.branchId));
-    } else {
-      console.log("No branchId found in user - using mock data");
     }
   }, [dispatch, user?.branchId]);
 
@@ -113,7 +107,6 @@ const OrderTable = ({ handleSelectOrder }) => {
     // Use mock data if no real orders and no user logged in
     const orderList =
       orders && orders.length > 0 ? orders : !user ? mockOrders : [];
-    console.log("Order list:", orderList);
     
     // Show both COMPLETED and REFUNDED orders for refund management
     return orderList.filter((o) => {
@@ -122,7 +115,6 @@ const OrderTable = ({ handleSelectOrder }) => {
     });
   }, [orders, user]);
 
-  console.log("Refundable orders:", refundableOrders);
 
   if (loading) {
     return <div className="p-4 text-center">Loading orders...</div>;

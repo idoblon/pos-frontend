@@ -126,6 +126,85 @@ function NavLinks({ onClose, notificationCount }) {
   });
 }
 
+function SidebarInner({ showClose, onClose, notificationCount, onLogout }) {
+  return (
+    <>
+      <div
+        style={{
+          padding: "14px 20px",
+          borderBottom: "1px solid #e5e7eb",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img
+            src={posLogo}
+            alt="POS"
+            style={{ width: 30, height: 30, objectFit: "contain" }}
+          />
+          <span style={{ fontSize: 15, fontWeight: 700 }}>POS SYSTEM</span>
+        </div>
+        {showClose && (
+          <button
+            onClick={onClose}
+            style={{
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              color: "#8a909c",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <X size={18} />
+          </button>
+        )}
+      </div>
+      <nav
+        style={{
+          flex: 1,
+          padding: "12px",
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+        }}
+      >
+        <NavLinks
+          onClose={showClose ? onClose : undefined}
+          notificationCount={notificationCount}
+        />
+      </nav>
+      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
+        <button
+          onClick={onLogout}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            color: "#e53e3e",
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          <LogOut size={17} color="#e53e3e" />
+          Logout
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function BranchLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -148,10 +227,12 @@ export default function BranchLayout() {
   }, [dispatch, userProfile, branchId]);
 
   useEffect(() => {
-    const userId = secureStorage.getUserData()?.userId;
-    if (isPasswordChangeRequired(userId)) {
-      setShowChangePassword(true);
-    }
+    queueMicrotask(() => {
+      const userId = secureStorage.getUserData()?.userId;
+      if (isPasswordChangeRequired(userId)) {
+        setShowChangePassword(true);
+      }
+    });
   }, []);
 
   const handlePasswordChangeSuccess = () => {
@@ -222,83 +303,6 @@ export default function BranchLayout() {
   const displayName = fullName || "Branch Manager";
   const displayEmail = email || "";
 
-  const SidebarInner = ({ showClose }) => (
-    <>
-      <div
-        style={{
-          padding: "14px 20px",
-          borderBottom: "1px solid #e5e7eb",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <img
-            src={posLogo}
-            alt="POS"
-            style={{ width: 30, height: 30, objectFit: "contain" }}
-          />
-          <span style={{ fontSize: 15, fontWeight: 700 }}>POS SYSTEM</span>
-        </div>
-        {showClose && (
-          <button
-            onClick={() => setSidebarOpen(false)}
-            style={{
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              color: "#8a909c",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <X size={18} />
-          </button>
-        )}
-      </div>
-      <nav
-        style={{
-          flex: 1,
-          padding: "12px",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-        }}
-      >
-        <NavLinks
-          onClose={showClose ? () => setSidebarOpen(false) : undefined}
-          notificationCount={notificationCount}
-        />
-      </nav>
-      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
-        <button
-          onClick={handleLogout}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            color: "#e53e3e",
-            fontFamily: "inherit",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          <LogOut size={17} color="#e53e3e" />
-          Logout
-        </button>
-      </div>
-    </>
-  );
-
   return (
     <div
       style={{
@@ -342,7 +346,12 @@ export default function BranchLayout() {
         }}
         className="lg-sidebar"
       >
-        <SidebarInner showClose={true} />
+        <SidebarInner
+          showClose={true}
+          onClose={() => setSidebarOpen(false)}
+          notificationCount={notificationCount}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Desktop sidebar */}
@@ -358,7 +367,12 @@ export default function BranchLayout() {
         }}
         className="hidden-mobile"
       >
-        <SidebarInner showClose={false} />
+        <SidebarInner
+          showClose={false}
+          onClose={() => setSidebarOpen(false)}
+          notificationCount={notificationCount}
+          onLogout={handleLogout}
+        />
       </aside>
 
       <div

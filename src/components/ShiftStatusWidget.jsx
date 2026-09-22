@@ -4,14 +4,12 @@ import shiftManager from "@/util/shiftManager";
 
 const ShiftStatusWidget = ({ style = {} }) => {
   const [shiftStatus, setShiftStatus] = useState(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     // Update shift status every minute
     const updateStatus = () => {
       const status = shiftManager.getCurrentShiftStatus();
       setShiftStatus(status);
-      setCurrentTime(new Date());
     };
 
     // Initial update
@@ -19,10 +17,9 @@ const ShiftStatusWidget = ({ style = {} }) => {
 
     // Set up intervals
     const statusInterval = setInterval(updateStatus, 60000); // Every minute
-    const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000); // Every second
 
     // Listen for overtime events
-    const handleOvertime = (event) => {
+    const handleOvertime = () => {
       updateStatus();
     };
 
@@ -30,7 +27,6 @@ const ShiftStatusWidget = ({ style = {} }) => {
 
     return () => {
       clearInterval(statusInterval);
-      clearInterval(timeInterval);
       window.removeEventListener('shiftOvertime', handleOvertime);
     };
   }, []);
@@ -39,7 +35,6 @@ const ShiftStatusWidget = ({ style = {} }) => {
     return null;
   }
 
-  const startTime = new Date(shiftStatus.startTime);
   const hoursWorked = parseFloat(shiftStatus.hoursWorked);
   const isOvertime = shiftStatus.isOvertime;
   const remainingHours = parseFloat(shiftStatus.remainingHours);
@@ -50,13 +45,6 @@ const ShiftStatusWidget = ({ style = {} }) => {
     return "#059669"; // Green for normal
   };
 
-  const getStatusIcon = () => {
-    if (isOvertime) return AlertTriangle;
-    if (hoursWorked >= 8) return Clock;
-    return CheckCircle;
-  };
-
-  const StatusIcon = getStatusIcon();
   const statusColor = getStatusColor();
 
   return (
@@ -75,7 +63,13 @@ const ShiftStatusWidget = ({ style = {} }) => {
         ...style
       }}
     >
-      <StatusIcon size={14} />
+      {isOvertime ? (
+        <AlertTriangle size={14} />
+      ) : hoursWorked >= 8 ? (
+        <Clock size={14} />
+      ) : (
+        <CheckCircle size={14} />
+      )}
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span>Shift: {hoursWorked}h worked</span>

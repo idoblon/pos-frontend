@@ -50,7 +50,7 @@ export default function BranchRefunds() {
   const dispatch = useDispatch();
   const userData = secureStorage.getUserData();
   const branchId = userData?.branchId;
-  const { refundsByBranch: refunds, loading, error } = useSelector((s) => s.refund);
+  const { refundsByBranch: refunds, loading } = useSelector((s) => s.refund);
   const [search, setSearch] = useState("");
 
 

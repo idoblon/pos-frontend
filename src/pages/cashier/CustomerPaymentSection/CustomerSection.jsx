@@ -46,8 +46,6 @@ const CustomerSection = ({ selectedCustomer, onSelectCustomer }) => {
         open={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         onSelectCustomer={(customer) => {
-          console.log("🎯 Customer selection confirmed in CustomerSection:", customer);
-          console.log("📡 Passing customer data to parent component - no API call needed");
           onSelectCustomer(customer);
           setIsDialogOpen(false);
         }}

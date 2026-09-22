@@ -21,28 +21,32 @@ export default function StoreModal({
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (store) {
-      setFormData({
-        name: store.name || "",
-        address: store.address || "",
-        phone: store.phone || "",
-        email: store.email || "",
-        status: store.status || "active",
-        managerName: store.managerName || "",
-        managerEmail: store.managerEmail || ""
-      });
-    } else {
-      setFormData({
-        name: "",
-        address: "",
-        phone: "",
-        email: "",
-        status: "active",
-        managerName: "",
-        managerEmail: ""
-      });
-    }
-    setErrors({});
+    // Reset asynchronously (before paint) so the effect doesn't trigger a
+    // synchronous cascading re-render.
+    queueMicrotask(() => {
+      if (store) {
+        setFormData({
+          name: store.name || "",
+          address: store.address || "",
+          phone: store.phone || "",
+          email: store.email || "",
+          status: store.status || "active",
+          managerName: store.managerName || "",
+          managerEmail: store.managerEmail || ""
+        });
+      } else {
+        setFormData({
+          name: "",
+          address: "",
+          phone: "",
+          email: "",
+          status: "active",
+          managerName: "",
+          managerEmail: ""
+        });
+      }
+      setErrors({});
+    });
   }, [store, isOpen]);
 
   const validateForm = () => {

@@ -36,24 +36,12 @@ export default function BranchOrders() {
 
   useEffect(() => {
     if (branchId) {
-      console.log("🔄 BranchOrders - Fetching orders and refunds for branch:", branchId);
       dispatch(getOrdersByBranch({ branchId }));
       
       // Test if getRefundsByBranch is available
-      console.log("🔄 getRefundsByBranch function:", getRefundsByBranch);
       
       // Also fetch existing refunds to mark orders as refunded
-      console.log("🔄 About to dispatch getRefundsByBranch...");
-      const refundPromise = dispatch(getRefundsByBranch(branchId));
-      console.log("🔄 Refund promise:", refundPromise);
-      
-      refundPromise
-        .then((result) => {
-          console.log("🔄 BranchOrders - Refunds fetch result:", result);
-        })
-        .catch((error) => {
-          console.log("❌ BranchOrders - Refunds fetch error:", error);
-        });
+      dispatch(getRefundsByBranch(branchId));
     }
   }, [dispatch, branchId]);
 
@@ -75,9 +63,6 @@ export default function BranchOrders() {
   });
 
   // Debug: Log current orders to see their statuses
-  console.log("🔄 Current orders with statuses:", orders?.map(o => ({ id: o.id, status: o.status })));
-
-
 
   return (
     <div style={s.page}>

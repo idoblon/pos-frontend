@@ -583,7 +583,6 @@ export default function UserManagement() {
 
   // Fetch all users and all stores on component mount
   useEffect(() => {
-    console.log('🔍 Fetching platform users and stores...');
     dispatch(getAllUsers());
     dispatch(getAllStores());
   }, [dispatch]);
@@ -755,7 +754,6 @@ export default function UserManagement() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 12px"
             }}>
               {React.createElement(roleIcons[role], { size: 20, color: roleColors[role] })}
             </div>

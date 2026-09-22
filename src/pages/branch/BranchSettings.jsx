@@ -25,15 +25,17 @@ export default function BranchSettings() {
     dispatch(getUserProfile());
   }, [dispatch]);
 
-  // Update form when userProfile changes
+  // Update form when userProfile changes (deferred so the effect stays async)
   useEffect(() => {
-    if (userProfile) {
-      setProfileForm({
-        fullName: userProfile.fullName || "",
-        email: userProfile.email || "",
-        phone: userProfile.phone || "",
-      });
-    }
+    queueMicrotask(() => {
+      if (userProfile) {
+        setProfileForm({
+          fullName: userProfile.fullName || "",
+          email: userProfile.email || "",
+          phone: userProfile.phone || "",
+        });
+      }
+    });
   }, [userProfile]);
 
   const handleProfileSave = async (e) => {

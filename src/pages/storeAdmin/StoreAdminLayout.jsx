@@ -107,6 +107,85 @@ function NavLinks({ onClose, pendingCount }) {
   });
 }
 
+function SidebarInner({ showClose, onClose, pendingCount, onLogout }) {
+  return (
+    <>
+      <div
+        style={{
+          padding: "14px 20px",
+          borderBottom: "1px solid #e5e7eb",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img
+            src={posLogo}
+            alt="POS"
+            style={{ width: 30, height: 30, objectFit: "contain" }}
+          />
+          <span style={{ fontSize: 15, fontWeight: 700 }}>POS SYSTEM</span>
+        </div>
+        {showClose && (
+          <button
+            onClick={onClose}
+            style={{
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              color: "#8a909c",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <X size={18} />
+          </button>
+        )}
+      </div>
+      <nav
+        style={{
+          flex: 1,
+          padding: "12px",
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+        }}
+      >
+        <NavLinks
+          onClose={showClose ? onClose : undefined}
+          pendingCount={pendingCount}
+        />
+      </nav>
+      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
+        <button
+          onClick={onLogout}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            color: "#e53e3e",
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          <LogOut size={17} />
+          Logout
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function StoreAdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -131,12 +210,14 @@ export default function StoreAdminLayout() {
 
   // Auto-open change password for employees logging in with the default password.
   useEffect(() => {
-    const userData = secureStorage.getUserData();
-    const userId = userData?.userId;
-    if (!userId) return;
-    if (isPasswordChangeRequired(userId)) {
-      setShowChangePassword(true);
-    }
+    queueMicrotask(() => {
+      const userData = secureStorage.getUserData();
+      const userId = userData?.userId;
+      if (!userId) return;
+      if (isPasswordChangeRequired(userId)) {
+        setShowChangePassword(true);
+      }
+    });
   }, []);
 
   // Auto-refresh restock requests every 30 seconds
@@ -151,11 +232,6 @@ export default function StoreAdminLayout() {
   // Real pending restock requests from API
   const pendingRequests = restockRequests?.filter(r => r.status === "PENDING") || [];
   const pendingCount = pendingRequests.length;
-
-  const markAllAsRead = () => {
-    navigate("/store-admin/restock-requests");
-    setNotificationOpen(false);
-  };
 
   const handlePasswordChangeSuccess = () => {
     const ud = secureStorage.getUserData();
@@ -181,83 +257,6 @@ export default function StoreAdminLayout() {
     : "SA";
   const displayName = fullName || "Store Admin";
   const displayEmail = email || "admin@store.com";
-
-  const SidebarInner = ({ showClose }) => (
-    <>
-      <div
-        style={{
-          padding: "14px 20px",
-          borderBottom: "1px solid #e5e7eb",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <img
-            src={posLogo}
-            alt="POS"
-            style={{ width: 30, height: 30, objectFit: "contain" }}
-          />
-          <span style={{ fontSize: 15, fontWeight: 700 }}>POS SYSTEM</span>
-        </div>
-        {showClose && (
-          <button
-            onClick={() => setSidebarOpen(false)}
-            style={{
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              color: "#8a909c",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <X size={18} />
-          </button>
-        )}
-      </div>
-      <nav
-        style={{
-          flex: 1,
-          padding: "12px",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-        }}
-      >
-        <NavLinks
-          onClose={showClose ? () => setSidebarOpen(false) : undefined}
-          pendingCount={pendingCount}
-        />
-      </nav>
-      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
-        <button
-          onClick={handleLogout}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            color: "#e53e3e",
-            fontFamily: "inherit",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          <LogOut size={17} />
-          Logout
-        </button>
-      </div>
-    </>
-  );
 
   return (
     <div
@@ -302,7 +301,12 @@ export default function StoreAdminLayout() {
         }}
         className="lg-sidebar"
       >
-        <SidebarInner showClose={true} />
+        <SidebarInner
+          showClose={true}
+          onClose={() => setSidebarOpen(false)}
+          pendingCount={pendingCount}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Desktop sidebar */}
@@ -318,7 +322,12 @@ export default function StoreAdminLayout() {
         }}
         className="hidden-mobile"
       >
-        <SidebarInner showClose={false} />
+        <SidebarInner
+          showClose={false}
+          onClose={() => setSidebarOpen(false)}
+          pendingCount={pendingCount}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Main */}

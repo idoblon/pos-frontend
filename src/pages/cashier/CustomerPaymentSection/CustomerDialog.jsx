@@ -14,9 +14,9 @@ import CustomerForm from "./CustomerForm";
 
 const CustomerDialog = ({ open, onClose, onSelectCustomer }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [customers, setCustomers] = useState([]);
+  const [, setCustomers] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -29,15 +29,11 @@ const CustomerDialog = ({ open, onClose, onSelectCustomer }) => {
 
     try {
       setSearching(true);
-      console.log("🔍 Searching customers for:", query);
       const headers = getAuthHeaders();
       const response = await api.get(`/api/customers/search?q=${encodeURIComponent(query.trim())}`, { headers });
-      console.log("✅ Search results:", response.data);
-      console.log("🔍 First customer structure:", response.data[0]);
       setSearchResults(response.data);
     } catch (error) {
       console.error("❌ Search failed:", error);
-      console.log("📡 This indicates the backend search API may not be working properly");
       setSearchResults([]);
     } finally {
       setSearching(false);
@@ -63,8 +59,6 @@ const CustomerDialog = ({ open, onClose, onSelectCustomer }) => {
 
   // Display customers: only show search results, no initial customer list
   const displayCustomers = searchQuery.trim().length >= 2 ? searchResults : [];
-
-
 
   const handleWalkIn = () => {
     onSelectCustomer({
@@ -109,7 +103,6 @@ const CustomerDialog = ({ open, onClose, onSelectCustomer }) => {
               variant="outline"
               className="w-full"
               onClick={() => {
-                console.log("👤 Walk-in customer selected - no API call needed");
                 handleWalkIn();
               }}
             >
@@ -136,14 +129,6 @@ const CustomerDialog = ({ open, onClose, onSelectCustomer }) => {
                       key={customer.id}
                       className="p-4 hover:bg-gray-50 cursor-pointer transition"
                       onClick={() => {
-                        console.log("🔍 Customer selected from list:", customer);
-                        console.log("📡 No additional API call needed - customer data already available");
-                        console.log("📋 Customer details:", {
-                          id: customer.id,
-                          name: customer.fullName,
-                          phone: customer.phone,
-                          email: customer.email
-                        });
                         onSelectCustomer(customer);
                       }}
                     >
@@ -165,8 +150,6 @@ const CustomerDialog = ({ open, onClose, onSelectCustomer }) => {
         ) : (
           <CustomerForm
             onSuccess={(newCustomer) => {
-              console.log("✅ New customer created successfully:", newCustomer);
-              console.log("🔍 Selecting newly created customer:", newCustomer);
               setShowAddForm(false);
               // Don't refresh customer list - we only show search results
               onSelectCustomer(newCustomer);

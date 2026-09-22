@@ -136,17 +136,17 @@ export const selectDiscountAmount = (state) => {
 
 export const selectTax = (state) => {
   const subtotal = selectSubtotal(state);
-  const discountAmount = selectDiscountAmount(state);
-  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
-  return discountedSubtotal * (getAdminTaxRate() / 100);
+  // Matches backend OrderTotals: VAT is computed on the full subtotal,
+  // the discount is subtracted separately in selectTotal.
+  const rate = Number(getAdminTaxRate());
+  return Number.isFinite(rate) ? Math.round((subtotal * (rate / 100)) * 100) / 100 : 0;
 };
 
 export const selectTotal = (state) => {
   const subtotal = selectSubtotal(state);
   const discountAmount = selectDiscountAmount(state);
-  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
-  const tax = discountedSubtotal * (getAdminTaxRate() / 100);
-  return discountedSubtotal + tax;
+  const tax = selectTax(state);
+  return Math.max(0, subtotal + tax - discountAmount);
 };
 
 export const {

@@ -127,9 +127,9 @@ export const createSecureDeleteThunk = (name, endpoint) => {
  * Example usage:
  * 
  * // GET with path params
- * export const getProductById = createSecureGetThunk(
- *   'product/getById',
- *   '/api/products/{id}'
+ * export const fetchSomethingById = createSecureGetThunk(
+ *   'resource/getById',
+ *   '/api/resources/{id}'
  * );
  * 
  * // POST with validation

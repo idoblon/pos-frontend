@@ -259,7 +259,6 @@ export default function ProductManagement() {
       return;
     }
 
-    console.log("📝 Form data before submit:", form);
 
     const dto = {
       ...form,
@@ -270,18 +269,15 @@ export default function ProductManagement() {
       store: { id: parseInt(storeId) },
     };
 
-    console.log("📦 DTO before image:", dto);
 
     if (imageFile) {
       if (typeof imageFile === "string") {
         dto.image = imageFile;
-        console.log("📦 DTO with compressed image (length):", dto.image?.length);
         submitProduct(dto);
       } else {
         const reader = new FileReader();
         reader.onloadend = () => {
           dto.image = reader.result;
-          console.log("📦 DTO with image (length):", dto.image?.length);
           submitProduct(dto);
         };
         reader.readAsDataURL(imageFile);
@@ -292,14 +288,12 @@ export default function ProductManagement() {
   };
 
   const submitProduct = (dto) => {
-    console.log("🚀 Submitting product:", editing ? "UPDATE" : "CREATE", dto);
 
     const initialStock = form.initialStock ? Number(form.initialStock) : 0;
 
     if (editing) {
       const productId = editing.id || editing._id;
       dispatch(updateProduct({ id: productId, dto })).then((result) => {
-        console.log("✅ Update result:", result);
         if (result.type.includes("fulfilled")) {
           toast.success("Product updated successfully");
           dispatch(getProductsByStore(storeId));
@@ -319,7 +313,6 @@ export default function ProductManagement() {
       });
     } else {
       dispatch(createProduct(dto)).then((result) => {
-        console.log("✅ Create result:", result);
         if (result.type.includes("fulfilled")) {
           const createdProduct = result.payload;
           const productId = createdProduct?.id || createdProduct?._id;

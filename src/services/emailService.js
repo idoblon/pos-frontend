@@ -33,7 +33,6 @@ class EmailService {
 
     try {
       const res = await api.post('/api/email/store-approval', payload);
-      console.log(`✅ Approval email sent to ${requestData.email}`);
       return res.data;
     } catch (error) {
       console.error('Approval email failed:', error.response?.data || error.message);
@@ -60,7 +59,6 @@ class EmailService {
 
     try {
       const res = await api.post('/api/email/store-credentials', payload);
-      console.log(`✅ Login credentials sent to ${storeData.email}`);
       return res.data;
     } catch (error) {
       console.error('Credentials email failed:', error.response?.data || error.message);
@@ -77,7 +75,6 @@ class EmailService {
 
     try {
       const res = await api.post('/api/email/store-rejection', payload);
-      console.log(`✅ Rejection email sent to ${requestData.email}`);
       return res.data;
     } catch (error) {
       console.error('Rejection email failed:', error.response?.data || error.message);

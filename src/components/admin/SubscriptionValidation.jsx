@@ -3,11 +3,6 @@ import { AlertCircle, CheckCircle, Clock, CreditCard, Mail } from "lucide-react"
 
 export default function SubscriptionValidation({ request, onValidation }) {
   const [subscriptionStatus, setSubscriptionStatus] = useState("checking");
-  const [validationStep, setValidationStep] = useState("initial");
-
-  useEffect(() => {
-    validateSubscription();
-  }, [request]);
 
   const validateSubscription = async () => {
     try {
@@ -17,14 +12,16 @@ export default function SubscriptionValidation({ request, onValidation }) {
       // For demo purposes, always mark as valid for approval
       // Payment will be handled after approval
       setSubscriptionStatus("ready_for_approval");
-      setValidationStep("validated");
       onValidation(true);
-    } catch (error) {
+    } catch {
       setSubscriptionStatus("error");
-      setValidationStep("error");
       onValidation(false);
     }
   };
+
+  useEffect(() => {
+    queueMicrotask(() => { validateSubscription(); });
+  }, [request]);
 
   const getStatusDisplay = () => {
     switch (subscriptionStatus) {

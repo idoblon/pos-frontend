@@ -40,10 +40,10 @@ export const createBranch = createAsyncThunk(
       const sanitizedData = sanitizeFormData(dto);
       const headers = getAuthHeaders();
       const res = await api.post(`/api/branches`, sanitizedData, { headers });
-      console.log("branch created successfully", res.data);
+
       return res.data;
     } catch (error) {
-      console.log("error", error);
+
       return rejectWithValue(
         error.response?.data.message || "Failed to create branch",
       );
@@ -58,10 +58,10 @@ export const getBranchById = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
       const res = await api.get(`/api/branches/${sanitizedParams.id}`, { headers });
-      console.log("get branch successfully", res.data);
+
       return res.data;
     } catch (error) {
-      console.log("error", error);
+
       return rejectWithValue(
         error.response?.data.message || "Failed to get branch",
       );
@@ -76,10 +76,10 @@ export const getBranchesByStore = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
       const res = await api.get(`/api/branches/store/${sanitizedParams.id}`, { headers });
-      console.log("get store branches successfully", res.data);
+
       return res.data;
     } catch (error) {
-      console.log("error", error);
+
       return rejectWithValue(
         error.response?.data.message || "Failed to fetch store branches",
       );
@@ -101,10 +101,10 @@ export const updateBranch = createAsyncThunk(
       const sanitizedData = sanitizeFormData(dto);
       const headers = getAuthHeaders();
       const res = await api.put(`/api/branches/${sanitizedParams.id}`, sanitizedData, { headers });
-      console.log("update branch successfully", res.data);
+
       return res.data;
     } catch (error) {
-      console.log("error", error);
+
       return rejectWithValue(
         error.response?.data.message || "Failed to update the branch",
       );
@@ -119,10 +119,10 @@ export const deleteBranch = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
       const res = await api.delete(`/api/branches/${sanitizedParams.id}`, { headers });
-      console.log("delete branch successfully", res.data);
+
       return res.data;
     } catch (error) {
-      console.log("error", error);
+
       return rejectWithValue(
         error.response?.data.message || "Failed to delete branch",
       );

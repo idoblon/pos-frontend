@@ -36,30 +36,34 @@ export default function UserModal({
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        fullName: user.fullName || user.name || "",
-        email: user.email || "",
-        password: "",
-        confirmPassword: "",
-        role: user.role || "ROLE_USER",
-        status: user.status || "active",
-        storeId: user.storeId || "",
-        branchId: user.branchId || ""
-      });
-    } else {
-      setFormData({
-        fullName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        role: "ROLE_USER",
-        status: "active",
-        storeId: "",
-        branchId: ""
-      });
-    }
-    setErrors({});
+    // Reset asynchronously (before paint) so the effect doesn't trigger a
+    // synchronous cascading re-render.
+    queueMicrotask(() => {
+      if (user) {
+        setFormData({
+          fullName: user.fullName || user.name || "",
+          email: user.email || "",
+          password: "",
+          confirmPassword: "",
+          role: user.role || "ROLE_USER",
+          status: user.status || "active",
+          storeId: user.storeId || "",
+          branchId: user.branchId || ""
+        });
+      } else {
+        setFormData({
+          fullName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          role: "ROLE_USER",
+          status: "active",
+          storeId: "",
+          branchId: ""
+        });
+      }
+      setErrors({});
+    });
   }, [user, isOpen]);
 
   // Dynamically fetch branches when store selection changes

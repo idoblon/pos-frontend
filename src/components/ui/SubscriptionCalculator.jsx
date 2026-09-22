@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Calculator, Info, Check, ArrowRight } from "lucide-react";
 import { SUBSCRIPTION_PLANS, calculateSubscriptionCost, getRecommendedPlan } from "@/util/subscriptionLogic";
 
@@ -9,21 +9,16 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
     storage: 1
   });
   
-  const [calculations, setCalculations] = useState({});
-  const [recommendedPlan, setRecommendedPlan] = useState("BASIC");
-
-  useEffect(() => {
-    // Calculate costs for all plans
-    const newCalculations = {};
+  // Derived from usage — computed during render instead of via a setState effect.
+  const calculations = useMemo(() => {
+    const out = {};
     Object.keys(SUBSCRIPTION_PLANS).forEach(plan => {
-      newCalculations[plan] = calculateSubscriptionCost(plan, usage);
+      out[plan] = calculateSubscriptionCost(plan, usage);
     });
-    setCalculations(newCalculations);
-    
-    // Get recommended plan
-    const recommended = getRecommendedPlan(usage);
-    setRecommendedPlan(recommended);
+    return out;
   }, [usage]);
+
+  const recommendedPlan = useMemo(() => getRecommendedPlan(usage), [usage]);
 
   const handleUsageChange = (field, value) => {
     setUsage(prev => ({ ...prev, [field]: parseInt(value) || 0 }));

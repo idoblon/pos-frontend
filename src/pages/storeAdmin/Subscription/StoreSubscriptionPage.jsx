@@ -11,8 +11,6 @@ const StoreSubscriptionPage = () => {
   const navigate = useNavigate();
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showRenewModal, setShowRenewModal] = useState(false);
 
   useEffect(() => {
     loadSubscription();
@@ -32,11 +30,13 @@ const StoreSubscriptionPage = () => {
   };
 
   const handleRenewClick = () => {
-    setShowRenewModal(true);
+    const planType = subscription?.subscriptionPlan || Object.keys(SUBSCRIPTION_PLANS)[0];
+    handlePlanSelect(planType, true);
   };
 
   const handleUpgradeClick = () => {
-    setShowUpgradeModal(true);
+    const planType = subscription?.subscriptionPlan || Object.keys(SUBSCRIPTION_PLANS)[0];
+    handlePlanSelect(planType, false);
   };
 
   const handlePlanSelect = async (planType, isRenewal = false) => {

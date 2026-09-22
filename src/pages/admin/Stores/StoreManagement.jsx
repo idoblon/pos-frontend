@@ -109,27 +109,6 @@ function getOrderAmount(order) {
   );
 }
 
-function getStoreAddress(store) {
-  const directAddress =
-    store.storeAddress ??
-    store.contact?.address ??
-    store.address ??
-    store.location?.address ??
-    store.streetAddress ??
-    store.addressLine1 ??
-    store.addressLine;
-
-  if (directAddress) return directAddress;
-
-  return [
-    store.city,
-    store.district,
-    store.state,
-    store.province,
-    store.country,
-  ].filter(Boolean).join(", ");
-}
-
 function getStoreId(store) {
   return store?._id || store?.id || store?.createdStoreId;
 }
@@ -143,7 +122,6 @@ function getMetricKey(store) {
 function StoreCard({ store, onEdit, onView, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
-  const colors = getStatusColor(store.status);
 
   useEffect(() => {
     function handler(e) {
@@ -232,19 +210,21 @@ function ViewDetailsModal({ store, onClose }) {
 
   useEffect(() => {
     if (!store) return;
-    // Fetch branches for this store
-    setLoadingBranches(true);
-    api.get(`/api/branches/store/${store.id}`, { headers: getAuthHeaders() })
-      .then(r => setBranches(getCollection(r.data)))
-      .catch(() => setBranches([]))
-      .finally(() => setLoadingBranches(false));
+    queueMicrotask(() => {
+      // Fetch branches for this store
+      setLoadingBranches(true);
+      api.get(`/api/branches/store/${store.id}`, { headers: getAuthHeaders() })
+        .then(r => setBranches(getCollection(r.data)))
+        .catch(() => setBranches([]))
+        .finally(() => setLoadingBranches(false));
 
-    // Fetch employees for this store
-    setLoadingEmployees(true);
-    api.get(`/api/employees/store/${store.id}`, { headers: getAuthHeaders() })
-      .then(r => setEmployees(getCollection(r.data)))
-      .catch(() => setEmployees([]))
-      .finally(() => setLoadingEmployees(false));
+      // Fetch employees for this store
+      setLoadingEmployees(true);
+      api.get(`/api/employees/store/${store.id}`, { headers: getAuthHeaders() })
+        .then(r => setEmployees(getCollection(r.data)))
+        .catch(() => setEmployees([]))
+        .finally(() => setLoadingEmployees(false));
+    });
   }, [store]);
 
   if (!store) return null;
@@ -488,17 +468,19 @@ function EditStoreModal({ store, onClose, onSave, saving }) {
 
   useEffect(() => {
     if (store) {
-      setForm({
-        name: store.name || "",
-        address: store.address || "",
-        phone: store.phone || "",
-        email: store.email || "",
-        status: store.status || "active",
-        description: store.description || "",
-        type: store.type || "",
+      queueMicrotask(() => {
+        setForm({
+          name: store.name || "",
+          address: store.address || "",
+          phone: store.phone || "",
+          email: store.email || "",
+          status: store.status || "active",
+          description: store.description || "",
+          type: store.type || "",
+        });
+        setErrors({});
       });
     }
-    setErrors({});
   }, [store]);
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }

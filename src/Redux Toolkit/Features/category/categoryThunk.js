@@ -8,7 +8,6 @@ export const createCategory = createAsyncThunk(
     try {
       const headers = getAuthHeaders();
       const res = await api.post("/api/categories", dto, { headers });
-      console.log("create category success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message);
@@ -22,7 +21,6 @@ export const getCategoriesByStore = createAsyncThunk(
     try {
       const headers = getAuthHeaders();
       const res = await api.get(`/api/categories/store/${storeId}`, { headers });
-      console.log("get category success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message);
@@ -36,7 +34,6 @@ export const updateCategory = createAsyncThunk(
     try {
       const headers = getAuthHeaders();
       const res = await api.put(`/api/categories/${id}`, dto, { headers });
-      console.log("update category success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message);
@@ -50,7 +47,6 @@ export const deleteCategory = createAsyncThunk(
     try {
       const headers = getAuthHeaders();
       const res = await api.delete(`/api/categories/${id}`, { headers });
-      console.log("delete category success", res.data);
       return res.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message);

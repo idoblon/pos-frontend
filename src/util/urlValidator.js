@@ -56,7 +56,7 @@ export const sanitizePathParams = (params) => {
   const sanitized = {};
   for (const [key, value] of Object.entries(params)) {
     // Remove any path traversal attempts
-    sanitized[key] = String(value).replace(/\.\./g, '').replace(/[\/\\]/g, '');
+    sanitized[key] = String(value).replace(/\.\./g, '').replace(/[/\\]/g, '');
   }
   return sanitized;
 };

@@ -67,19 +67,11 @@ export const validateUserAccess = async (userData) => {
   }
 
   try {
-    console.log(`🔍 Validating access for store ID: ${userData.storeId}`);
     const storeStatus = await checkStoreStatus(userData.storeId);
     
     if (!storeStatus) {
-      console.log(`⚠️ No store status found for ${userData.storeId}, creating default ACTIVE entry`);
-      // Create default ACTIVE status for stores not in suspension data
-      const defaultStatus = {
-        id: userData.storeId,
-        status: 'ACTIVE',
-        suspendedAt: null,
-        suspensionReason: null
-      };
-      
+      // Store not in suspension data — treat as active (defaultStatus object
+      // below was never used and has been removed).
       // Add this to localStorage for future reference
       const subscriptionData = localStorage.getItem('subscriptionData');
       if (subscriptionData) {
@@ -102,11 +94,9 @@ export const validateUserAccess = async (userData) => {
       return { allowed: true, reason: 'Default ACTIVE status assigned' };
     }
 
-    console.log(`📊 Store status for ${userData.storeId}:`, storeStatus);
 
     if (isStoreSuspended(storeStatus)) {
       const suspensionDetails = getSuspensionDetails(storeStatus);
-      console.log(`🚫 Store ${userData.storeId} is suspended:`, suspensionDetails);
       return {
         allowed: false,
         reason: 'Store is suspended',
@@ -116,7 +106,6 @@ export const validateUserAccess = async (userData) => {
     }
 
     if (!isStoreActive(storeStatus)) {
-      console.log(`🚫 Store ${userData.storeId} is not active:`, storeStatus.status);
       return {
         allowed: false,
         reason: 'Store is not active',
@@ -124,7 +113,6 @@ export const validateUserAccess = async (userData) => {
       };
     }
 
-    console.log(`✅ Access granted for store ${userData.storeId}`);
     return { allowed: true, reason: 'Access granted' };
   } catch (error) {
     console.error('Store status validation error:', error);
@@ -149,7 +137,6 @@ const checkStoreStatus = async (storeId) => {
         sub.storeId === storeId || sub.id === storeId
       );
       if (storeSubscription) {
-        console.log(`Found subscription data for store ${storeId}:`, storeSubscription);
         
         // If store is ACTIVE, don't return suspension data even if it exists
         if (storeSubscription.status === 'ACTIVE') {
@@ -184,7 +171,6 @@ const checkStoreStatus = async (storeId) => {
     // return response.data;
     
     // Mock response for demonstration - Default to ACTIVE unless specifically suspended
-    console.log(`No subscription data found for store ${storeId}, defaulting to ACTIVE`);
     return {
       id: storeId,
       status: 'ACTIVE', // Default to active if no suspension data found
@@ -202,7 +188,6 @@ const checkStoreStatus = async (storeId) => {
  */
 export const updateBranchStatus = (storeId, status) => {
   // In real implementation, this would update branch status in database
-  console.log(`Updating all branches for store ${storeId} to status: ${status}`);
   
   // Update local storage for demo purposes
   const branchData = localStorage.getItem('branchData');

@@ -74,7 +74,7 @@ const ShiftInformation = () => {
 
   // Recalculate every minute so duration stays live
   useEffect(() => {
-    calculateMetrics();
+    queueMicrotask(() => calculateMetrics());
     const interval = setInterval(calculateMetrics, 60000);
     return () => clearInterval(interval);
   }, [shiftData]);

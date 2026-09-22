@@ -13,17 +13,19 @@ const CustomerInformation = ({ selectedOrder }) => {
   const isRealCustomer = customer?.id;
 
   useEffect(() => {
-    // If we already have a real customer object, no need to fetch
-    if (isRealCustomer || !customerId) {
-      setFetchedCustomer(null);
-      return;
-    }
-    // Fetch customer by ID since backend didn't return it in the order
-    setLoading(true);
-    api.get(`/api/customers/${customerId}`, { headers: getAuthHeaders() })
-      .then(res => setFetchedCustomer(res.data))
-      .catch(() => setFetchedCustomer(null))
-      .finally(() => setLoading(false));
+    queueMicrotask(() => {
+      // If we already have a real customer object, no need to fetch
+      if (isRealCustomer || !customerId) {
+        setFetchedCustomer(null);
+        return;
+      }
+      // Fetch customer by ID since backend didn't return it in the order
+      setLoading(true);
+      api.get(`/api/customers/${customerId}`, { headers: getAuthHeaders() })
+        .then(res => setFetchedCustomer(res.data))
+        .catch(() => setFetchedCustomer(null))
+        .finally(() => setLoading(false));
+    });
   }, [customerId, isRealCustomer]);
 
   if (!selectedOrder) return null;

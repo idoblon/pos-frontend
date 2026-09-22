@@ -39,16 +39,10 @@ const OrderHistory = () => {
       const userData = secureStorage.getUserData();
       const cashierId = action.payload?.id || user?.id || userData?.userId;
       if (cashierId) {
-        console.log("🔄 Fetching orders and refunds for cashier:", cashierId);
+
         dispatch(getOrdersByCashier(cashierId));
         // Also fetch existing refunds to mark orders as refunded
-        dispatch(getRefundsByCashier(cashierId))
-          .then((result) => {
-            console.log("🔄 Cashier refunds fetch result:", result);
-          })
-          .catch((error) => {
-            console.log("❌ Cashier refunds fetch error:", error);
-          });
+        dispatch(getRefundsByCashier(cashierId));
       }
     });
   }, [dispatch]);

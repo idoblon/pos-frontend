@@ -183,14 +183,8 @@ const mergeRegistrationDataWithStores = async (stores, headers) => {
 
 export const resolveSubscriptionPlan = (store) => {
   const directPlan = normalizePlan(store?.subscriptionPlan);
-  console.log("[PLAN RESOLVER] Store:", store?.brand || store?._id, 
-    "| subscriptionPlan field:", store?.subscriptionPlan, 
-    "| normalized:", directPlan,
-    "| branches:", store?.estimatedBranches ?? store?.branches?.length,
-    "| users:", store?.estimatedUsers ?? store?.employees?.length);
   
   if (directPlan) {
-    console.log("[PLAN RESOLVER] Using direct plan:", directPlan);
     return directPlan;
   }
 
@@ -206,7 +200,6 @@ export const resolveSubscriptionPlan = (store) => {
     resolvedPlan = "BASIC";
   }
   
-  console.log("[PLAN RESOLVER] Using heuristic, resolved to:", resolvedPlan);
   return resolvedPlan;
 };
 

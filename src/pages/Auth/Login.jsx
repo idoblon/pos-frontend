@@ -80,13 +80,11 @@ const Login = () => {
       
       if (role === 'ROLE_BRANCH_CASHIER' || role === 'ROLE_BRANCH_MANAGER') {
         try {
-          const shiftResult = await dispatch(startShift()).unwrap();
-          console.log('✅ Shift started successfully:', shiftResult);
+          await dispatch(startShift()).unwrap();
         } catch (error) {
           console.warn("Start shift failed, fetching current shift:", error);
           try {
-            const currentShiftResult = await dispatch(getCurrentShiftProgress()).unwrap();
-            console.log('✅ Current shift fetched:', currentShiftResult);
+            await dispatch(getCurrentShiftProgress()).unwrap();
           } catch (getCurrentError) {
             console.error('❌ Failed to get current shift:', getCurrentError);
           }

@@ -240,7 +240,6 @@ class PaymentNotificationService {
         }
       });
 
-      console.log(`💰 Payment processed: ${storeData.storeName} - ₹${paymentDetails.amount.toLocaleString('en-IN')}`);
       
       // Update local notification cache
       const paymentNotification = {

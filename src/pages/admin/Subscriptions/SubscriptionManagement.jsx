@@ -296,41 +296,6 @@ function StoreSubscriptionCard({ store, onMarkPaid, onApprove }) {
         </div>
       )}
       
-      {/* Debug: Manual subscription update button */}
-      {false && (
-        <button
-          onClick={async () => {
-            try {
-              const headers = getAuthHeaders();
-              console.log('[DEBUG] Manually updating store subscription to ENTERPRISE');
-              const res = await api.put(`/api/admin/stores/${store.id}/subscription`, 
-                { subscriptionPlan: 'ENTERPRISE' },
-                { headers }
-              );
-              console.log('[DEBUG] Update response:', res.data);
-              toast.success('Manually updated to Enterprise');
-              onApprove({ id: 'manual', storeId: store.id, requestedPlan: 'ENTERPRISE', status: 'APPROVED' });
-            } catch (error) {
-              console.error('[DEBUG] Manual update failed:', error.response?.data || error.message);
-              toast.error('Manual update failed: ' + (error.response?.data?.message || error.message));
-            }
-          }}
-          style={{
-            width: '100%',
-            marginTop: 14,
-            padding: 8,
-            border: '1px solid #f59e0b',
-            borderRadius: 6,
-            background: '#fffbeb',
-            color: '#92400e',
-            cursor: 'pointer',
-            fontSize: 11,
-            fontWeight: 700,
-          }}
-        >
-          🔧 DEBUG: Force Update to Enterprise
-        </button>
-      )}
     </div>
   );
 }
@@ -456,37 +421,28 @@ export default function SubscriptionManagement() {
 
     try {
       const headers = getAuthHeaders();
-      console.log("[UPGRADE] Starting approval for store:", request.storeId, "to plan:", request.requestedPlan);
       
       // Approve the request
-      console.log("[UPGRADE] Step 1: Approving request...");
       const res = await api.post(`/api/admin/subscription-upgrade-requests/${request.id}/approve`, {}, { headers });
-      console.log("[UPGRADE] Step 1: Request approved", res.data);
       
       // Update the store's subscription plan
-      console.log("[UPGRADE] Step 2: Updating store subscription plan in database...");
-      const storeUpdateRes = await api.put(`/api/admin/stores/${request.storeId}/subscription`, 
+      await api.put(`/api/admin/stores/${request.storeId}/subscription`, 
         { subscriptionPlan: request.requestedPlan },
         { headers }
       );
-      console.log("[UPGRADE] Step 2: Store subscription updated", storeUpdateRes.data);
       
       replaceRequest(res.data || updated);
       toast.success("Subscription upgraded successfully");
       
       // Update local override
-      console.log("[UPGRADE] Step 3: Updating localStorage override...");
       setPlanOverrides((current) => {
         const next = { ...current, [String(request.storeId)]: request.requestedPlan };
         saveJson(STORAGE_KEYS.overrides, next);
-        console.log("[UPGRADE] localStorage updated:", next);
         return next;
       });
       
       // Refresh stores to show updated plan
-      console.log("[UPGRADE] Step 4: Refreshing stores list...");
       await dispatch(getAllStores());
-      console.log("[UPGRADE] All steps completed successfully!");
     } catch (error) {
       console.error("[UPGRADE] Failed to approve upgrade:", error);
       console.error("[UPGRADE] Error details:", error.response?.data || error.message);
@@ -608,7 +564,14 @@ export default function SubscriptionManagement() {
           </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+        <div
+          style={{
+            display: "grid",
+            // Expand the available cards to fill a row; add columns only when space permits.
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 16,
+          }}
+        >
           {filtered.map((store) => (
             <StoreSubscriptionCard
               key={store.id}

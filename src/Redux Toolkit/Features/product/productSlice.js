@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { createProduct, getProductById, updateProduct, deleteProduct, getProductsByStore, getProductsByBranch, searchProducts} from "./productThunk";
+import { createProduct, updateProduct, deleteProduct, getProductsByStore, searchProducts} from "./productThunk";
 
 const initialState = {
   products: [],
@@ -28,19 +28,6 @@ const productSlice = createSlice({
         }
       })
       .addCase(createProduct.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // Get product by Id
-      .addCase(getProductById.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(getProductById.fulfilled, (state, action) => {
-        state.loading = false;
-        state.product = action.payload;
-      })
-      .addCase(getProductById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -94,19 +81,6 @@ const productSlice = createSlice({
         state.products = action.payload;
       })
       .addCase(getProductsByStore.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // Get products by branch
-      .addCase(getProductsByBranch.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(getProductsByBranch.fulfilled, (state, action) => {
-        state.loading = false;
-        state.products = action.payload;
-      })
-      .addCase(getProductsByBranch.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

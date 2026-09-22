@@ -67,11 +67,6 @@ export default function StoreWarehouseInventory() {
 
   const warehouseInventory = inventory?.filter(item => !item.branchId || item.branchId === null) || [];
   const branchInventory = inventory?.filter(item => item.branchId && item.branchId !== null) || [];
-  
-  useEffect(() => {
-    console.log("DEBUG - Inventory from Redux:", inventory);
-    console.log("DEBUG - Warehouse inventory filtered:", warehouseInventory);
-  }, [inventory, warehouseInventory]);
 
   const currentInventory = activeTab === "warehouse" ? warehouseInventory : branchInventory;
 
@@ -84,16 +79,6 @@ export default function StoreWarehouseInventory() {
   });
 
   const productList = Array.isArray(products) ? products : (products?.content || []);
-  
-  useEffect(() => {
-    console.log("DEBUG - Products from Redux:", products);
-    console.log("DEBUG - Processed productList:", productList);
-    console.log("DEBUG - form.productId:", form.productId);
-    if (form.productId && productList?.length > 0) {
-      const found = productList.find(p => String(p.id || p._id) === String(form.productId));
-      console.log("DEBUG - Selected product found:", found);
-    }
-  }, [products, productList, form.productId]);
 
   const lowStockCount = filtered?.filter(item => item.quantity > 0 && item.quantity <= lowStockThreshold).length || 0;
   const outOfStockCount = filtered?.filter(item => item.quantity === 0).length || 0;
@@ -149,7 +134,6 @@ export default function StoreWarehouseInventory() {
     }))
       .unwrap()
       .then(() => {
-        console.log("Product added, now fetching updated inventory");
         toast.success("Product added to warehouse inventory successfully");
         setDialogOpen(false);
         setForm({ productId: "", quantity: "" });

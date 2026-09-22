@@ -44,21 +44,19 @@ const ReturnItemSection = ({ selectedOrder, setShowReturnReciptDialog }) => {
 
     setLoading(true);
     try {
-      const refundResult = await dispatch(createRefund({
+      await dispatch(createRefund({
         orderId: selectedOrder.id,
         amount: selectedOrder.totalAmount,
         reason: finalReason,
         refundMethod: refundMethod
       })).unwrap();
       
-      console.log("✅ Refund created successfully:", refundResult);
       
       // Update order status locally
       dispatch(markOrderAsRefunded({
         orderId: selectedOrder.id
       }));
       
-      console.log("✅ Order marked as refunded locally");
       
       // Show success message
       alert("✅ Refund processed successfully! Items have been restored to inventory.");

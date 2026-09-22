@@ -62,7 +62,7 @@ export const createAdminUser = async (adminUserData = null) => {
     // Try to create user directly if there's a dedicated admin endpoint
     const response = await api.post("/admin/users", userData);
     return response.data;
-  } catch (error) {
+  } catch {
     // Fallback to signup if admin endpoint doesn't exist
     return await createPosAdmin();
   }

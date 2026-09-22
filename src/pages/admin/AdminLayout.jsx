@@ -78,6 +78,45 @@ function NavLinks({ onClose, pendingRequests, unreadPayments, isActive }) {
   });
 }
 
+function SidebarInner({ showClose, onClose, pendingRequests, unreadPayments, isActive, onLogout }) {
+  return (
+    <>
+      <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img src={posLogo} alt="POS" style={{ width: 30, height: 30, objectFit: "contain" }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>POS SYSTEM</span>
+        </div>
+        {showClose && (
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#8a909c", display: "flex", alignItems: "center" }}>
+            <X size={18} />
+          </button>
+        )}
+      </div>
+
+      <nav style={{ flex: 1, padding: "12px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+        <NavLinks
+          onClose={showClose ? onClose : undefined}
+          pendingRequests={pendingRequests}
+          unreadPayments={unreadPayments}
+          isActive={isActive}
+        />
+      </nav>
+
+      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
+        <button
+          onClick={onLogout}
+          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", background: "none", cursor: "pointer", color: "#e53e3e", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+        >
+          <LogOut size={17} />
+          Logout
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
@@ -128,43 +167,6 @@ export default function AdminLayout({ children }) {
 
   const initials = user?.email?.charAt(0).toUpperCase() || "A";
 
-  const SidebarInner = ({ showClose }) => (
-    <>
-      <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <img src={posLogo} alt="POS" style={{ width: 30, height: 30, objectFit: "contain" }} />
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>POS SYSTEM</span>
-        </div>
-        {showClose && (
-          <button onClick={() => setSidebarOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#8a909c", display: "flex", alignItems: "center" }}>
-            <X size={18} />
-          </button>
-        )}
-      </div>
-
-      <nav style={{ flex: 1, padding: "12px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-        <NavLinks
-          onClose={showClose ? () => setSidebarOpen(false) : undefined}
-          pendingRequests={pendingRequests}
-          unreadPayments={unreadPayments}
-          isActive={isActive}
-        />
-      </nav>
-
-      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
-        <button
-          onClick={handleLogout}
-          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", background: "none", cursor: "pointer", color: "#e53e3e", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}
-          onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
-          onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-        >
-          <LogOut size={17} />
-          Logout
-        </button>
-      </div>
-    </>
-  );
-
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f5f5", overflow: "hidden", fontFamily: "'DM Sans','Inter',sans-serif", fontSize: 13, color: "#1a1d23" }}>
 
@@ -185,7 +187,14 @@ export default function AdminLayout({ children }) {
           boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
         }}
       >
-        <SidebarInner showClose={true} />
+        <SidebarInner
+          showClose={true}
+          onClose={() => setSidebarOpen(false)}
+          pendingRequests={pendingRequests}
+          unreadPayments={unreadPayments}
+          isActive={isActive}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Desktop sidebar */}
@@ -197,7 +206,14 @@ export default function AdminLayout({ children }) {
           boxShadow: "2px 0 12px rgba(0,0,0,0.06)",
         }}
       >
-        <SidebarInner showClose={false} />
+        <SidebarInner
+          showClose={false}
+          onClose={() => setSidebarOpen(false)}
+          pendingRequests={pendingRequests}
+          unreadPayments={unreadPayments}
+          isActive={isActive}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Main */}
@@ -222,6 +238,7 @@ export default function AdminLayout({ children }) {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+
             {/* Bell */}
             <div style={{ position: "relative" }}>
               <button

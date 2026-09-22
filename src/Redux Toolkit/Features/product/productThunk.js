@@ -41,30 +41,11 @@ export const createProduct = createAsyncThunk(
       }
 
       const sanitizedData = sanitizeFormData(dto);
-      console.log("📤 SENDING TO API:", JSON.stringify(sanitizedData, null, 2));
       const headers = getAuthHeaders();
       const res = await api.post(`/api/products`, sanitizedData, { headers });
-      console.log("✅ product create success", res.data);
       return res.data;
     } catch (error) {
-      console.log("❌ error", error);
       return rejectWithValue(error.response?.data?.message || "Failed to create product");
-    }
-  },
-);
-
-export const getProductById = createAsyncThunk(
-  "product/getById",
-  async (id, { rejectWithValue }) => {
-    try {
-      const sanitizedParams = sanitizePathParams({ id });
-      const headers = getAuthHeaders();
-      const res = await api.get(`/api/products/${sanitizedParams.id}`, { headers });
-      console.log("get product success", res.data);
-      return res.data;
-    } catch (error) {
-      console.log("error", error);
-      return rejectWithValue(error.response?.data?.message || "Failed to fetch product");
     }
   },
 );
@@ -83,10 +64,8 @@ export const updateProduct = createAsyncThunk(
       const sanitizedData = sanitizeFormData(dto);
       const headers = getAuthHeaders();
       const res = await api.patch(`/api/products/${sanitizedParams.id}`, sanitizedData, { headers });
-      console.log("product update success", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
       return rejectWithValue(error.response?.data?.message || "Failed to update product");
     }
   },
@@ -99,10 +78,8 @@ export const deleteProduct = createAsyncThunk(
       const sanitizedParams = sanitizePathParams({ id });
       const headers = getAuthHeaders();
       const res = await api.delete(`/api/products/${sanitizedParams.id}`, { headers });
-      console.log("product delete success", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
       return rejectWithValue(error.response?.data?.message || "Failed to delete product");
     }
   },
@@ -112,38 +89,15 @@ export const getProductsByStore = createAsyncThunk(
   "product/getByStore",
   async (storeId, { rejectWithValue }) => {
     try {
-      console.log("📡 PRODUCT API: Starting getProductsByStore for storeId:", storeId);
       const sanitizedParams = sanitizePathParams({ storeId });
       const headers = getAuthHeaders();
       
-      console.log("📡 PRODUCT API: Making request to /api/products/store/" + sanitizedParams.storeId);
       const res = await api.get(`/api/products/store/${sanitizedParams.storeId}`, { headers });
       
-      console.log("✅ PRODUCT API SUCCESS:", res.data);
       return res.data;
     } catch (error) {
       console.error("❌ PRODUCT API ERROR:", error.response?.status, error.response?.data);
       return rejectWithValue(error.response?.data?.message || "Failed to fetch store products");
-    }
-  },
-);
-
-export const getProductsByBranch = createAsyncThunk(
-  "product/getByBranch",
-  async ({ branchId }, { rejectWithValue }) => {
-    try {
-      console.log("📡 PRODUCT API: Starting getProductsByBranch for branchId:", branchId);
-      const sanitizedParams = sanitizePathParams({ branchId });
-      const headers = getAuthHeaders();
-      
-      console.log("📡 PRODUCT API: Making request to /api/products/branch/" + sanitizedParams.branchId);
-      const res = await api.get(`/api/products/branch/${sanitizedParams.branchId}`, { headers });
-      
-      console.log("✅ PRODUCT API SUCCESS:", res.data);
-      return res.data;
-    } catch (error) {
-      console.error("❌ PRODUCT API ERROR:", error.response?.status, error.response?.data);
-      return rejectWithValue(error.response?.data?.message || "Failed to fetch branch products");
     }
   },
 );
@@ -164,10 +118,8 @@ export const searchProducts = createAsyncThunk(
         `/api/products/store/${sanitizedParams.storeId}/search?q=${encodeURIComponent(sanitizedQuery)}`,
         { headers },
       );
-      console.log("product search success", res.data);
       return res.data;
     } catch (error) {
-      console.log("error", error);
       return rejectWithValue(error.response?.data?.message || "Failed to search products");
     }
   },

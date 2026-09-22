@@ -2,7 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/util/api";
 import secureStorage from "@/util/secureStorage";
 import shiftManager from "@/util/shiftManager";
-import { validateUserAccess, updateBranchStatus } from "@/util/storeStatusChecker";
+import { validateUserAccess } from "@/util/storeStatusChecker";
 import { validateStoreAccess } from "@/util/paymentValidator";
 import { isPaymentRequiredBeforeActivation } from "@/util/adminSystemSettings";
 import { resetShift } from "../shiftReport/shiftReportSlice";
@@ -28,7 +28,6 @@ export const login = createAsyncThunk(
   async (userData, { rejectWithValue, dispatch }) => {
     try {
       const res = await api.post("/auth/login", userData);
-      console.log("✅ Login response:", res.data);
       const { jwt } = res.data;
       const { role, storeId, branchId, storeName, id: userId, email, fullName, username } = res.data.user ?? {};
 
@@ -73,17 +72,14 @@ export const login = createAsyncThunk(
           });
         }
         
-        console.log("✅ Store access validated successfully");
       }
 
       secureStorage.setToken(jwt);
       secureStorage.setUserData(userDataToStore);
 
       // Auto-start shift for all roles after successful login
-      console.log("🚀 Starting shift for user:", userDataToStore);
       try {
         await shiftManager.initializeShiftOnLogin(dispatch, userDataToStore);
-        console.log("✅ Shift initialized successfully");
       } catch (shiftError) {
         console.warn("⚠️ Shift initialization failed, continuing with login:", shiftError);
       }

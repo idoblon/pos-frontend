@@ -1,24 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Bell, AlertTriangle, Clock, X, CreditCard, Calendar } from 'lucide-react';
-import subscriptionService from '@/services/subscriptionService';
 import { 
   getDaysRemaining, 
   getSubscriptionStatus, 
   createSubscriptionNotification,
   SUBSCRIPTION_STATUS 
 } from '@/util/subscriptionUtils';
-import { toast } from 'sonner';
 
 const SubscriptionNotificationBanner = ({ subscription, onRenewClick }) => {
   const [isVisible, setIsVisible] = useState(true);
-  const [notification, setNotification] = useState(null);
 
-  useEffect(() => {
-    if (subscription?.subscriptionExpiry) {
-      const daysRemaining = getDaysRemaining(subscription.subscriptionExpiry);
-      const notificationData = createSubscriptionNotification(subscription, daysRemaining);
-      setNotification(notificationData);
-    }
+  // Derived from props — no need to mirror it into state via an effect.
+  const notification = useMemo(() => {
+    if (!subscription?.subscriptionExpiry) return null;
+    const daysRemaining = getDaysRemaining(subscription.subscriptionExpiry);
+    return createSubscriptionNotification(subscription, daysRemaining);
   }, [subscription]);
 
   const handleDismiss = () => {

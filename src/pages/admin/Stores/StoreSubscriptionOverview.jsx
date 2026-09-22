@@ -42,7 +42,6 @@ const SUBSCRIPTION_PLANS = {
 };
 
 function StoreSubscriptionCard({ store, onViewDetails, onManageSubscription }) {
-  const navigate = useNavigate();
   const plan =
     SUBSCRIPTION_PLANS[store.subscriptionPlan] || SUBSCRIPTION_PLANS.BASIC;
   const statusStyle =
@@ -292,7 +291,6 @@ export default function StoreSubscriptionOverview() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { stores, loading: storesLoading } = useSelector((s) => s.store);
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedStore, setSelectedStore] = useState(null);
@@ -302,13 +300,6 @@ export default function StoreSubscriptionOverview() {
     // Fetch stores from database
     dispatch(getAllStores());
   }, [dispatch]);
-
-  useEffect(() => {
-    // Transform store data when it loads
-    if (stores && stores.length > 0) {
-      transformStoreData();
-    }
-  }, [stores]);
 
   const transformStoreData = () => {
     const transformedStores = stores
@@ -352,6 +343,13 @@ export default function StoreSubscriptionOverview() {
 
     setStoresWithSubscriptions(transformedStores);
   };
+
+  useEffect(() => {
+    // Transform store data when it loads
+    if (stores && stores.length > 0) {
+      queueMicrotask(() => { transformStoreData(); });
+    }
+  }, [stores]);
 
   const filteredStores = storesWithSubscriptions.filter((store) => {
     const matchesSearch =
@@ -690,7 +688,7 @@ export default function StoreSubscriptionOverview() {
       </div>
 
       {/* Store Grid */}
-      {loading || storesLoading ? (
+      {storesLoading ? (
         <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
           Loading stores and subscriptions...
         </div>

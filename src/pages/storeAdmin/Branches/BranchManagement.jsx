@@ -165,29 +165,29 @@ export default function BranchManagement() {
   };
 
   useEffect(() => {
-    console.log("=== STOREID DEBUG ===");
-    console.log("Auth user:", user);
-    console.log("User profile:", userProfile);
-    console.log("SecureStorage userData:", userData);
-    console.log("LocalStorage storeId:", localStorage.getItem("storeId"));
-    console.log("Resolved storeId:", storeId);
-    console.log("====================");
+
+
+
+
+
+
+
 
     if (!storeId) {
       console.error("❌ No storeId found in any source!");
       toast.error("Store ID not found. Fetching user profile...");
 
       dispatch(getUserProfile()).then((result) => {
-        console.log("User profile fetch result:", result);
+
         if (result.payload?.storeId) {
-          console.log("✅ Got storeId from profile:", result.payload.storeId);
+
           dispatch(getBranchesByStore(result.payload.storeId));
         }
       });
       return;
     }
 
-    console.log("✅ Fetching branches for store:", storeId);
+
     dispatch(getBranchesByStore(storeId));
   }, [dispatch, storeId]);
 
@@ -326,8 +326,8 @@ export default function BranchManagement() {
       store: storeId ? { id: parseInt(storeId) } : null,
     };
 
-    console.log("Form submitted:", formattedData);
-    console.log("Payload to send:", payload);
+
+
 
     if (editing) {
       const branchId = editing.id || editing._id;

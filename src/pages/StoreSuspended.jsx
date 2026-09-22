@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Clock, Mail, Phone, LogOut, RefreshCw } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { logout } from '@/Redux Toolkit/Features/auth/authSlice';
-import { getSuspensionDetails, validateUserAccess } from '@/util/storeStatusChecker';
+import { validateUserAccess } from '@/util/storeStatusChecker';
 import secureStorage from '@/util/secureStorage';
 import posLogo from '@/logo/pos.png';
 

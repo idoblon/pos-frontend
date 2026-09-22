@@ -51,9 +51,9 @@ const branchSlice = createSlice({
       })
       .addCase(getBranchesByStore.fulfilled, (state, action) => {
         state.loading = false;
-        console.log("Branch slice - received payload:", action.payload);
-        console.log("Branch slice - payload type:", typeof action.payload);
-        console.log("Branch slice - is array:", Array.isArray(action.payload));
+
+
+
         
         // Handle if backend returns wrapped data
         if (action.payload && typeof action.payload === 'object') {
@@ -71,7 +71,7 @@ const branchSlice = createSlice({
           state.branches = [];
         }
         
-        console.log("Branch slice - final branches:", state.branches);
+
       })
       .addCase(getBranchesByStore.rejected, (state, action) => {
         state.loading = false;

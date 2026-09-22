@@ -4,13 +4,17 @@ import emailService from '@/services/emailService';
 import paymentNotificationService from '@/services/paymentNotificationService';
 import { toast } from 'sonner';
 
+// Fixed once at module load — Date.now() must not run during render.
+const TEST_REQUEST_ID = `TEST_${Date.now()}`;
+
 export default function EmailPaymentTest() {
   const [testStage, setTestStage] = useState('initial');
   const [testResults, setTestResults] = useState([]);
 
-  // Sample store data for testing
+  // Sample store data for testing (id fixed at module load — Date.now() is
+  // impure and must not run during render)
   const sampleStoreRequest = {
-    id: 'TEST_' + Date.now(),
+    id: TEST_REQUEST_ID,
     storeName: 'Mitra Pustak Store',
     ownerName: 'Puskar Gharti',
     email: 'ghartipuskar@yopmail.com',
@@ -35,7 +39,6 @@ export default function EmailPaymentTest() {
     addTestResult('Approval Email', null, 'Testing approval email...');
     
     try {
-      console.log('Testing Approval Email with data:', sampleStoreRequest);
       
       // Test the email service
       await emailService.sendApprovalEmail(sampleStoreRequest);
@@ -84,13 +87,9 @@ export default function EmailPaymentTest() {
         transactionId: `TEST_TXN${Date.now()}`
       };
       
-      console.log('Testing Payment Flow with data:', {
-        storeData: sampleStoreRequest,
-        paymentDetails
-      });
       
       // Simulate payment
-      const paymentResult = paymentNotificationService.simulateStorePayment(
+      paymentNotificationService.simulateStorePayment(
         {
           id: sampleStoreRequest.id,
           storeName: sampleStoreRequest.storeName,

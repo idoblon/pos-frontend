@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { Bell, Store, Users, AlertTriangle } from "lucide-react";
+import { Store, Users, AlertTriangle } from "lucide-react";
 import { getAllStores } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getAllUsers } from "@/Redux Toolkit/Features/user/userThunk";
 import subscriptionService from "@/services/subscriptionService";
@@ -29,9 +28,6 @@ function toNumber(value, fallback = 0) {
 
 function getStoreId(store) { return store?.id || store?._id; }
 function getStoreName(store) { return store?.brand || store?.name || store?.storeName || "Store"; }
-function getOrderAmount(order) {
-  return toNumber(order.totalAmount ?? order.total ?? order.amount ?? order.grandTotal ?? order.netAmount);
-}
 function formatMoney(amount) { return `रु ${toNumber(amount).toLocaleString("en-IN")}`; }
 
 function StatCard({ title, value, subtitle, icon, loading }) {
@@ -60,7 +56,6 @@ function StatCard({ title, value, subtitle, icon, loading }) {
 
 export default function AdminDashboard() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   const { stores, loading: storesLoading } = useSelector((s) => s.store);
   const { users, loading: usersLoading } = useSelector((s) => s.user);
@@ -96,7 +91,8 @@ export default function AdminDashboard() {
     [realStores],
   );
 
-  // Fetch branch/order metrics per store
+  // Fetch branch/order metrics per store: 2 calls per store
+  // (branches list + pre-aggregated analytics) instead of 1 + N branch order fetches.
   useEffect(() => {
     if (!realStores.length) return;
     let cancelled = false;
@@ -106,21 +102,16 @@ export default function AdminDashboard() {
       realStores.map(async (store) => {
         const storeId = getStoreId(store);
         try {
-          const branchRes = await api.get(`/api/branches/store/${storeId}`, { headers });
+          const [branchRes, analyticsRes] = await Promise.all([
+            api.get(`/api/branches/store/${storeId}`, { headers }),
+            api.get(`/api/analytics/store/${storeId}`, { headers }),
+          ]);
           const branches = getCollection(branchRes.data);
-          const orderResults = await Promise.allSettled(
-            branches
-              .map((b) => b.id || b._id)
-              .filter(Boolean)
-              .map((branchId) => api.get(`/api/orders/branch/${branchId}`, { headers })),
-          );
-          const orders = orderResults.flatMap((r) =>
-            r.status === "fulfilled" ? getCollection(r.value.data) : [],
-          );
+          const summary = analyticsRes.data || {};
           return [String(storeId), {
             branchCount: branches.length,
-            orders: orders.length,
-            revenue: orders.reduce((sum, o) => sum + getOrderAmount(o), 0),
+            orders: toNumber(summary.totalOrders),
+            revenue: toNumber(summary.totalSales),
           }];
         } catch {
           return [String(storeId), {
@@ -241,30 +232,6 @@ export default function AdminDashboard() {
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
             Live overview of your entire POS network
           </p>
-        </div>
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => navigate("/admin/payments")}
-            style={{
-              width: 44, height: 44, borderRadius: 12, border: "none", cursor: "pointer",
-              background: expiringCount > 0 ? "#f59e0b" : "#f3f4f6",
-              color: expiringCount > 0 ? "white" : "#6b7280",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-            title="Payment Notifications"
-          >
-            <Bell size={20} />
-          </button>
-          {expiringCount > 0 && (
-            <div style={{
-              position: "absolute", top: -6, right: -6, width: 20, height: 20,
-              borderRadius: "50%", background: "#dc2626", color: "white",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 11, fontWeight: 700,
-            }}>
-              {expiringCount}
-            </div>
-          )}
         </div>
       </div>
 

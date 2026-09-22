@@ -7,8 +7,15 @@ import ReturnItemSection from "./ReturnItemSection";
 const RefundPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showReturnReciptDialog, setShowReturnReciptDialog] = useState(false);
+  // Receipt number/date are generated here (event handler) so the impure
+  // Date.now()/new Date() calls never run during render.
+  const [receiptMeta, setReceiptMeta] = useState({ returnNumber: "", date: "" });
   const handleSelectOrder = (order) => {
     setSelectedOrder(order);
+    setReceiptMeta({
+      returnNumber: `RTN-${Date.now().toString().substring(8)}`,
+      date: new Date().toLocaleDateString(),
+    });
   };
 
   return (
@@ -36,6 +43,7 @@ const RefundPage = () => {
         showReturnReciptDialog={showReturnReciptDialog}
         setShowReturnReciptDialog={setShowReturnReciptDialog}
         selectedOrder={selectedOrder}
+        receiptMeta={receiptMeta}
       />
     </div>
   );

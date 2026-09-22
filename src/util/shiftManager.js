@@ -15,12 +15,11 @@ class ShiftManager {
   /**
    * Start shift tracking for a user after login
    */
-  async initializeShiftOnLogin(dispatch, userData) {
+  async initializeShiftOnLogin(dispatch) {
     // Always reset first so UI never shows stale data
     dispatch(resetShift());
 
     try {
-      console.log("🔄 Initializing shift for user:", userData);
 
       // Check if user already has an active shift
       let currentShift = null;
@@ -35,20 +34,16 @@ class ShiftManager {
         const today = new Date().toDateString();
 
         if (shiftDate === today) {
-          console.log("✅ Reusing today's active shift:", currentShift);
           this.startShiftMonitoring(dispatch, currentShift);
           return currentShift;
         }
 
         // Stale shift from a previous day — backend startShift will force-close it
-        console.log("🔄 Stale shift detected, backend will close it on startShift");
         dispatch(resetShift());
       }
 
       // Start new shift — backend force-closes any stale open shift automatically
-      console.log("🚀 Starting new shift for user");
       const newShift = await dispatch(startShift()).unwrap();
-      console.log("✅ New shift started:", newShift);
       this.startShiftMonitoring(dispatch, newShift);
       return newShift;
 
@@ -65,7 +60,6 @@ class ShiftManager {
     // Clear any existing interval
     this.stopShiftMonitoring();
     
-    console.log("⏰ Starting shift monitoring for:", shift.id);
     
     this.shiftCheckInterval = setInterval(() => {
       this.checkShiftDuration(dispatch, shift);
@@ -83,7 +77,6 @@ class ShiftManager {
     const now = new Date();
     const hoursWorked = (now - startTime) / (1000 * 60 * 60);
     
-    console.log(`⏱️ Shift duration check: ${hoursWorked.toFixed(1)} hours`);
     
     if (hoursWorked >= this.SHIFT_DURATION_HOURS) {
       this.handleOvertimeAlert(dispatch, shift, hoursWorked);
@@ -97,7 +90,6 @@ class ShiftManager {
    * Handle overtime alert when shift exceeds 10 hours
    */
   handleOvertimeAlert(dispatch, shift, hoursWorked) {
-    console.log("🚨 OVERTIME ALERT: Shift has exceeded 10 hours!");
     
     // Show browser notification if permission granted
     if (Notification.permission === 'granted') {
@@ -124,7 +116,6 @@ class ShiftManager {
     if (this.shiftCheckInterval) {
       clearInterval(this.shiftCheckInterval);
       this.shiftCheckInterval = null;
-      console.log("⏹️ Shift monitoring stopped");
     }
   }
 
@@ -200,7 +191,6 @@ class ShiftManager {
   async requestNotificationPermission() {
     if ('Notification' in window && Notification.permission === 'default') {
       const permission = await Notification.requestPermission();
-      console.log('Notification permission:', permission);
       return permission === 'granted';
     }
     return Notification.permission === 'granted';

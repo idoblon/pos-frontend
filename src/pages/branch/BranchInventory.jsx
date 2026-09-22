@@ -21,7 +21,6 @@ export default function BranchInventory() {
   const { user } = useSelector((s) => s.auth);
   const userData = secureStorage.getUserData();
   const branchId = userProfile?.branchId || user?.branchId || userData?.branchId;
-  const storeId = userProfile?.storeId || user?.storeId || userData?.storeId;
 
   const { inventory, loading } = useSelector((s) => s.inventory);
   const [search, setSearch] = useState("");

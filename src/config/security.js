@@ -11,7 +11,7 @@ export const SECURITY_CONFIG = {
     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     fontSrc: ["'self'", "https://fonts.gstatic.com"],
     imgSrc: ["'self'", "data:", "https:"],
-    connectSrc: ["'self'", process.env.VITE_API_BASE_URL || "http://localhost:8080"],
+    connectSrc: ["'self'", import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"],
     objectSrc: ["'none'"],
     mediaSrc: ["'self'"],
     frameSrc: ["'none'"]
@@ -23,7 +23,7 @@ export const SECURITY_CONFIG = {
     maxRetries: 3,
     allowedDomains: [
       'localhost:8080',
-      process.env.VITE_API_BASE_URL?.replace(/https?:\/\//, '') || 'localhost:8080'
+      import.meta.env.VITE_API_BASE_URL?.replace(/https?:\/\//, '') || 'localhost:8080'
     ],
     blockedIPs: [
       '127.0.0.1',
@@ -60,10 +60,10 @@ export const SECURITY_CONFIG = {
 
   // Feature Flags
   FEATURES: {
-    enableDevTools: process.env.NODE_ENV === 'development',
-    enableLogging: process.env.NODE_ENV === 'development',
-    enableAnalytics: process.env.NODE_ENV === 'production',
-    strictMode: process.env.NODE_ENV === 'production'
+    enableDevTools: import.meta.env.DEV,
+    enableLogging: import.meta.env.DEV,
+    enableAnalytics: import.meta.env.PROD,
+    strictMode: import.meta.env.PROD
   }
 };
 
@@ -90,12 +90,12 @@ export const generateCSPHeader = () => {
 export const validateSecurityConfig = () => {
   const errors = [];
   
-  if (process.env.NODE_ENV === 'production') {
-    if (!process.env.VITE_API_BASE_URL) {
+  if (import.meta.env.PROD) {
+    if (!import.meta.env.VITE_API_BASE_URL) {
       errors.push('VITE_API_BASE_URL must be set in production');
     }
     
-    if (process.env.VITE_API_BASE_URL?.includes('localhost')) {
+    if (import.meta.env.VITE_API_BASE_URL?.includes('localhost')) {
       errors.push('API URL should not use localhost in production');
     }
   }

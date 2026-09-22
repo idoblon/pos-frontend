@@ -49,7 +49,6 @@ export default function BranchDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { todayOrders, orders, recentOrders } = useSelector((s) => s.order);
-  const { employees } = useSelector((s) => s.employee);
   const { refundsByBranch: refunds } = useSelector((s) => s.refund);
   const { userProfile } = useSelector((s) => s.user);
   const { user } = useSelector((s) => s.auth);
@@ -96,7 +95,6 @@ export default function BranchDashboard() {
   };
 
   const displayRole = formatRole(userRole);
-  const email = userProfile?.email || user?.email || userData?.email;
 
   // Current-month orders and refunds
   const monthlyOrders = useMemo(
@@ -131,7 +129,6 @@ export default function BranchDashboard() {
 
   const estimatedProfit = todayRevenue * 0.3;
   const monthlyProfit = monthlyRevenue * 0.3;
-  const totalEmployees = employees?.length ?? 0;
 
   const paymentBreakdown = {
     cash: todayOrders?.filter((o) => (o.paymentType ?? o.paymentMethod ?? "").toUpperCase() === "CASH").reduce((s, o) => s + (o.totalAmount ?? 0), 0) ?? 0,
