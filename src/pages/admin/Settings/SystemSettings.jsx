@@ -128,6 +128,27 @@ const inputStyle = {
 export default function SystemSettings() {
   const [savedSettings, setSavedSettings] = useState(getAdminSystemSettings);
   const [settings, setSettings] = useState(savedSettings);
+  const [serverState, setServerState] = useState("local");
+
+  // Load server-persisted settings once (showcase fallback: localStorage).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { fetchServerSystemSettings } = await import("@/util/adminSystemSettings");
+        const server = await fetchServerSystemSettings();
+        if (!cancelled && server && Object.keys(server).length > 0) {
+          const next = saveAdminSystemSettings({ ...getAdminSystemSettings(), ...server });
+          setSavedSettings(next);
+          setSettings(next);
+          setServerState("server");
+        }
+      } catch {
+        if (!cancelled) setServerState("local");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const hasChanges = useMemo(
     () => JSON.stringify(settings) !== JSON.stringify(savedSettings),
@@ -147,11 +168,19 @@ export default function SystemSettings() {
     updateSetting(key, Number.isFinite(parsed) ? parsed : fallback);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const next = saveAdminSystemSettings(settings);
     setSavedSettings(next);
     setSettings(next);
-    toast.success("System settings saved");
+    try {
+      const { saveServerSystemSettings } = await import("@/util/adminSystemSettings");
+      await saveServerSystemSettings(settings);
+      setServerState("server");
+      toast.success("System settings saved (server + local)");
+    } catch {
+      setServerState("local");
+      toast.success("System settings saved locally (demo — backend unreachable)");
+    }
   };
 
   const handleDiscard = () => {
@@ -190,6 +219,7 @@ export default function SystemSettings() {
             color: "#718096"
           }}>
             Configure admin preferences for the POS system
+            {serverState === "server" ? " — synced with server" : " — local only (demo)"}
           </p>
         </div>
 

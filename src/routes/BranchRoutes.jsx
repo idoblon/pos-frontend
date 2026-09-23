@@ -6,11 +6,9 @@ import BranchOrders from "@/pages/branch/BranchOrders";
 import BranchRefunds from "@/pages/branch/BranchRefunds";
 import BranchInventory from "@/pages/branch/BranchInventory";
 import BranchCustomers from "@/pages/branch/BranchCustomers";
-import BranchTransactions from "@/pages/branch/BranchTransactions";
 import BranchReports from "@/pages/branch/BranchReports";
 import BranchSettings from "@/pages/branch/BranchSettings";
 import BranchRestockRequests from "@/pages/branch/BranchRestockRequests";
-import ShiftSummaryPage from "@/pages/cashier/Shift Report/ShiftSummaryPage";
 import BranchShiftSummaryPage from "@/pages/cashier/Shift Report/BranchShiftSummaryPage";
 import BranchRegister from "@/pages/branch/BranchRegister";
 

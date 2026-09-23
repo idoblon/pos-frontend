@@ -40,7 +40,7 @@ const roleLabels = {
   'ROLE_USER': 'Employee'
 };
 
-function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
+function UserCard({ user, isSelf, onEdit, onView, onDelete, onToggleStatus }) {
   const [menuOpen, setMenuOpen] = useState(false);
   
   const RoleIcon = roleIcons[user.role] || UserCheck;
@@ -223,7 +223,9 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
                 {user.status === 'active' ? 'Deactivate' : 'Activate'}
               </button>
               <button
-                onClick={() => { onDelete(user); setMenuOpen(false); }}
+                onClick={() => { if (!isSelf) { onDelete(user); setMenuOpen(false); } }}
+                disabled={isSelf}
+                title={isSelf ? "You cannot delete your own account" : "Delete user"}
                 style={{
                   width: "100%",
                   padding: "8px 12px",
@@ -231,19 +233,19 @@ function UserCard({ user, onEdit, onView, onDelete, onToggleStatus }) {
                   border: "none",
                   borderRadius: "6px",
                   textAlign: "left",
-                  cursor: "pointer",
+                  cursor: isSelf ? "not-allowed" : "pointer",
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
                   fontSize: "13px",
-                  color: "#dc2626",
+                  color: isSelf ? "#9ca3af" : "#dc2626",
                   transition: "background 0.2s"
                 }}
-                onMouseEnter={(e) => e.target.style.background = "#fee2e2"}
+                onMouseEnter={(e) => { if (!isSelf) e.target.style.background = "#fee2e2"; }}
                 onMouseLeave={(e) => e.target.style.background = "none"}
               >
                 <Trash2 size={14} />
-                Delete User
+                Delete User{isSelf ? " (you)" : ""}
               </button>
             </div>
           )}
@@ -566,6 +568,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, userName, loading
 export default function UserManagement() {
   const dispatch = useDispatch();
   const { users, loading, error } = useSelector((state) => state.user);
+  const { user: me } = useSelector((state) => state.auth);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
@@ -611,6 +614,12 @@ export default function UserManagement() {
   };
 
   const handleDeleteClick = (user) => {
+    const meId = me?.id ?? me?.userId;
+    const targetId = user?.id;
+    if (meId != null && targetId != null && String(meId) === String(targetId)) {
+      toast.error("You cannot delete your own account");
+      return;
+    }
     setDeleteConfirmUser(user);
     setShowDeleteModal(true);
   };
@@ -926,16 +935,21 @@ export default function UserManagement() {
           gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
           gap: "20px"
         }}>
-          {filteredUsers.map((user) => (
-            <UserCard
-              key={user.id}
-              user={user}
-              onView={handleView}
-              onEdit={handleEdit}
-              onDelete={handleDeleteClick}
-              onToggleStatus={handleToggleStatus}
-            />
-          ))}
+          {filteredUsers.map((user) => {
+            const meId = me?.id ?? me?.userId;
+            const isSelf = meId != null && user?.id != null && String(meId) === String(user.id);
+            return (
+              <UserCard
+                key={user.id}
+                user={user}
+                isSelf={isSelf}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+                onToggleStatus={handleToggleStatus}
+              />
+            );
+          })}
         </div>
       )}
 

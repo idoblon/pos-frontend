@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -6,14 +6,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Banknote, Smartphone, CheckCircle, Loader2, Mail, MessageSquare, Printer, X } from "lucide-react";
+import { CreditCard, Banknote, Smartphone, CheckCircle, Loader2, Mail, MessageSquare, Printer, X, Clock } from "lucide-react";
+import { toast } from "sonner";
 import api from "@/util/api";
+import { getAuthHeaders } from "@/util/getAuthHeader";
+import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { patchOrder } from "@/Redux Toolkit/Features/order/orderSlice";
 import {
   selectCartItems, selectTotal, selectSelectedCustomer,
   selectDiscount, selectCartNote, selectTax,
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
 import { formatMoney } from "@/util/currency";
+import { printOrderReceipt } from "@/components/Receipt";
 import { queueOfflineOrder } from "@/util/offlineOrderQueue";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -211,6 +215,62 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const [error,          setError]          = useState("");
   const [completedOrder, setCompletedOrder] = useState(null);
   const [receiptMessage, setReceiptMessage] = useState("");
+  const [shiftStatus, setShiftStatus] = useState("checking"); // checking | active | none
+  const [startingShift, setStartingShift] = useState(false);
+  const [enabledMethods, setEnabledMethods] = useState(null); // null = unknown → show all
+
+  // Gate checkout on an active shift and load store-enabled payment methods.
+  // Both fail open to the previous behavior when the backend is unreachable,
+  // except a confirmed "no shift" (204/empty) which blocks the sale.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setShiftStatus("checking");
+    (async () => {
+      try {
+        const shift = await dispatch(getCurrentShiftProgress()).unwrap();
+        if (!cancelled) setShiftStatus(shift?.id ? "active" : "none");
+      } catch {
+        if (!cancelled) setShiftStatus("checking");
+      }
+      try {
+        const headers = getAuthHeaders();
+        const res = await api.get("/api/payment-config/store/enabled", { headers });
+        if (!cancelled && Array.isArray(res.data)) {
+          const enabled = new Set(res.data.map((c) => String(c.paymentType || "").toUpperCase()));
+          enabled.add("CASH");
+          setEnabledMethods(enabled);
+        }
+      } catch {
+        if (!cancelled) setEnabledMethods(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, dispatch]);
+
+  const visibleMethods = enabledMethods
+    ? PAYMENT_METHODS.filter((m) => enabledMethods.has(m.id))
+    : PAYMENT_METHODS;
+
+  useEffect(() => {
+    if (enabledMethods && !enabledMethods.has(paymentMethod)) {
+      setPaymentMethod("CASH");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabledMethods]);
+
+  const handleStartShift = async () => {
+    setStartingShift(true);
+    try {
+      await dispatch(startShift()).unwrap();
+      setShiftStatus("active");
+      toast.success("Shift started — you can now take payments");
+    } catch (err) {
+      setError(err || "Failed to start shift");
+    } finally {
+      setStartingShift(false);
+    }
+  };
 
   const change = amountReceived ? Math.max(0, parseFloat(amountReceived) - total) : 0;
 
@@ -272,6 +332,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const resetState = () => {
     setAmountReceived(""); setPaymentMethod("CASH");
     setSuccess(false); setError(""); setCompletedOrder(null); setReceiptMessage("");
+    setShiftStatus("checking"); setEnabledMethods(null);
   };
 
   const handleClose = () => { if (loading) return; resetState(); onClose(); };
@@ -280,13 +341,12 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const receiptTotal        = completedOrder?.totalAmount ?? total;
   const receiptCustomerName = customer?.fullName || customer?.firstName || "Customer";
 
-  const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]);
-
   const printReceipt = () => {
-    const w = window.open("", "_blank", "noopener,noreferrer,width=420,height=600");
-    if (!w) { setReceiptMessage("Allow pop-ups to print this receipt."); return; }
-    w.document.write(`<!doctype html><html><head><title>${escapeHtml(receiptNumber)}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{font-size:20px;margin:0 0 8px}p{margin:6px 0}.total{font-size:20px;font-weight:700;margin-top:16px;border-top:1px dashed #777;padding-top:12px}</style></head><body><h1>Payment Receipt</h1><p>Order: ${escapeHtml(receiptNumber)}</p><p>Customer: ${escapeHtml(receiptCustomerName)}</p><p>Payment: ${escapeHtml(paymentMethod)}</p><p>Date: ${escapeHtml(new Date().toLocaleString())}</p><p class="total">Total: ${escapeHtml(formatMoney(receiptTotal))}</p><p>Thank you for your purchase.</p><script>window.print();window.onafterprint=()=>window.close();</script></body></html>`);
-    w.document.close();
+    const ok = printOrderReceipt(
+      { ...completedOrder, totalAmount: receiptTotal, paymentType: paymentMethod },
+      { onBlocked: () => setReceiptMessage("Allow pop-ups to print this receipt.") },
+    );
+    if (ok) setReceiptMessage("");
   };
 
   const emailReceipt = async () => {
@@ -315,6 +375,20 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
             onPrint={printReceipt} onEmail={emailReceipt} onSms={composeSmsReceipt}
             onDone={handleClose}
           />
+        ) : shiftStatus === "none" ? (
+          <div style={{ textAlign: "center", padding: "32px 8px" }}>
+            <Clock size={48} style={{ color: "#8a909c", margin: "0 auto 16px" }} />
+            <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 800, color: "#1a1d23" }}>No Active Shift</h2>
+            <p style={{ color: "#6b7280", margin: "0 0 20px", fontSize: 13 }}>
+              Start your shift before taking payments — sales are attributed to the open shift.
+            </p>
+            {error && <p style={{ fontSize: 13, color: "#e53e3e", margin: "0 0 12px" }}>{error}</p>}
+            <Button onClick={handleStartShift} disabled={startingShift}
+              style={{ width: "100%", background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>
+              {startingShift ? <><Loader2 size={15} className="animate-spin mr-2" />Starting…</> : "Start Shift"}
+            </Button>
+            <Button variant="outline" className="w-full" onClick={handleClose} disabled={startingShift} style={{ marginTop: 8 }}>Cancel</Button>
+          </div>
         ) : (
           <>
             <DialogHeader>
@@ -336,8 +410,11 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
               {/* Method selector */}
               <div>
                 <Label className="mb-2 block">Payment Method</Label>
+                {enabledMethods && visibleMethods.length === 0 && (
+                  <p style={{ fontSize: 12, color: "#b45309" }}>No payment methods enabled for this store — contact Store Admin. Cash fallback shown.</p>
+                )}
                 <div className="grid grid-cols-2 gap-2">
-                  {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
+                  {(visibleMethods.length > 0 ? visibleMethods : PAYMENT_METHODS.filter((m) => m.id === "CASH")).map(({ id, label, icon: Icon }) => (
                     <button key={id} type="button" onClick={() => { setPaymentMethod(id); setError(""); }}
                       style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", border: `2px solid ${paymentMethod === id ? "#1a1d23" : "#e5e7eb"}`, background: paymentMethod === id ? "#f5f5f5" : "white", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                       <Icon size={22} color={paymentMethod === id ? "#1a1d23" : "#6b7280"} />

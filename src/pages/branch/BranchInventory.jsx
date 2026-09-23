@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Search, Package, AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Package, AlertTriangle, Truck } from "lucide-react";
 import { getInventoryByBranch } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
-import secureStorage from "@/util/secureStorage";
+import useBranchContext from "@/hooks/useBranchContext";
 import { getLowStockThreshold } from "@/util/adminSystemSettings";
+import { toast } from "sonner";
 
 const s = {
   page:        { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
@@ -17,10 +19,8 @@ const s = {
 
 export default function BranchInventory() {
   const dispatch = useDispatch();
-  const { userProfile } = useSelector((s) => s.user);
-  const { user } = useSelector((s) => s.auth);
-  const userData = secureStorage.getUserData();
-  const branchId = userProfile?.branchId || user?.branchId || userData?.branchId;
+  const navigate = useNavigate();
+  const { branchId } = useBranchContext();
 
   const { inventory, loading } = useSelector((s) => s.inventory);
   const [search, setSearch] = useState("");
@@ -44,6 +44,20 @@ export default function BranchInventory() {
     if (qty <= 0)  return { background: "#fef2f2", color: "#e53e3e" };
     if (qty <= lowStockThreshold) return { background: "#fffbeb", color: "#d97706" };
     return { background: "#f0f0f0", color: "#1a1d23" };
+  };
+
+  const requestRestock = (item) => {
+    try {
+      localStorage.setItem("restockPrefill", JSON.stringify({
+        productId: String(item.productId ?? item.id ?? ""),
+        productName: item.productName ?? item.name ?? "",
+        currentStock: item.quantity ?? item.stock ?? 0,
+      }));
+    } catch {
+      // storage unavailable — navigate anyway, dialog opens blank
+    }
+    navigate("/branch/restock-requests");
+    toast.info(`Requesting restock for ${item.productName ?? item.name ?? "product"}`);
   };
 
   return (
@@ -127,7 +141,13 @@ export default function BranchInventory() {
                       </span>
                     </td>
                     <td style={{ ...s.td, textAlign: "right" }}>
-                      <span style={{ color: "#8a909c", fontSize: 12 }}>—</span>
+                      <button
+                        style={{ ...s.iconBtn, borderColor: "#d1d5db" }}
+                        onClick={() => requestRestock(item)}
+                        title="Request restock from Store Admin"
+                      >
+                        <Truck size={13} color="#1a1d23" />
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -18,6 +18,7 @@ import {
   Activity,
   HeartPulse,
   Settings,
+  Store as StoreIcon,
   Menu,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -44,6 +45,7 @@ const navItems = [
   { path: "/store-admin/shift-summary", label: "Shift Summary", icon: Clock },
   { path: "/store-admin/reports", label: "Analytics", icon: BarChart2 },
   { path: "/store-admin/payment-settings", label: "Payment Settings", icon: Settings },
+  { path: "/store-admin/profile", label: "Store Profile", icon: StoreIcon },
 ];
 
 function formatDate() {

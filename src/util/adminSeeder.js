@@ -2,25 +2,43 @@ import api from "./api";
 
 /**
  * POS System Admin Configuration
- * These are the default admin credentials for the POS system
+ * Credentials MUST come from environment for any non-dev use. Hardcoded
+ * defaults were removed so the seeder cannot mint a known-password admin.
+ * Set VITE_SEED_ADMIN_{EMAIL,PASSWORD,NAME} locally for first-run setup only.
  */
+const isSeederEnabled =
+  import.meta.env.DEV || import.meta.env.VITE_ENABLE_ADMIN_SEEDER === "true";
+
 export const POS_ADMIN_CREDENTIALS = {
-  email: "posproofficial@gmail.com",
-  password: "Pos@123#!",
-  fullName: "POS Super Admin",
+  email: import.meta.env.VITE_SEED_ADMIN_EMAIL || "",
+  password: "",
+  fullName: import.meta.env.VITE_SEED_ADMIN_NAME || "POS Super Admin",
   role: "ROLE_ADMIN"
 };
 
+// Only expose the password value in dev memory; never render it in prod UI.
+const getSeedPassword = () =>
+  import.meta.env.DEV ? import.meta.env.VITE_SEED_ADMIN_PASSWORD || "" : "";
+
 /**
  * Seeds the POS admin user into the system
- * This should be run once to create the super admin account
+ * Disabled in production builds unless VITE_ENABLE_ADMIN_SEEDER=true.
  */
 export const createPosAdmin = async () => {
+  if (!isSeederEnabled) {
+    throw new Error("Admin seeder is disabled in this environment.");
+  }
+  const password = getSeedPassword();
+  if (!POS_ADMIN_CREDENTIALS.email || !password) {
+    throw new Error(
+      "Seed admin credentials are not configured. Set VITE_SEED_ADMIN_EMAIL and VITE_SEED_ADMIN_PASSWORD."
+    );
+  }
   try {
     const adminData = {
       fullName: POS_ADMIN_CREDENTIALS.fullName,
       email: POS_ADMIN_CREDENTIALS.email,
-      password: POS_ADMIN_CREDENTIALS.password,
+      password,
       role: POS_ADMIN_CREDENTIALS.role,
       phone: "+1234567890",
       storeName: "POS System Administration",
@@ -48,10 +66,13 @@ export const createPosAdmin = async () => {
  * Use this if you need to create admin without going through normal signup flow
  */
 export const createAdminUser = async (adminUserData = null) => {
+  if (!isSeederEnabled) {
+    throw new Error("Admin seeder is disabled in this environment.");
+  }
   const defaultAdminData = {
     fullName: POS_ADMIN_CREDENTIALS.fullName,
-    email: POS_ADMIN_CREDENTIALS.email, 
-    password: POS_ADMIN_CREDENTIALS.password,
+    email: POS_ADMIN_CREDENTIALS.email,
+    password: getSeedPassword(),
     role: POS_ADMIN_CREDENTIALS.role,
     phone: "+1234567890"
   };

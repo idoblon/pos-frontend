@@ -101,3 +101,61 @@ export const deleteInventoryItem = createAsyncThunk(
     }
   }
 );
+
+/**
+ * Server-joined POS catalog (GET /api/inventories/branch/{id}/pos-catalog).
+ * Single query with server search + pagination. Rejects with status so the
+ * terminal can fall back to the legacy two-fetch join on 404.
+ */
+export const getPosCatalog = createAsyncThunk(
+  "inventory/getPosCatalog",
+  async ({ branchId, q = "", page = 0, size = 100 }, { rejectWithValue }) => {
+    try {
+      const sanitizedParams = sanitizePathParams({ branchId });
+      const headers = getAuthHeaders();
+      const params = new URLSearchParams({ page: String(page), size: String(size) });
+      if (q) params.set("q", q);
+      const res = await api.get(
+        `/api/inventories/branch/${sanitizedParams.branchId}/pos-catalog?${params.toString()}`,
+        { headers }
+      );
+      return res.data;
+    } catch (error) {
+      return rejectWithValue({
+        message: error.response?.data?.message || "Failed to fetch POS catalog",
+        status: error.response?.status,
+      });
+    }
+  }
+);
+
+/**
+ * Atomic warehouse → branch transfer (POST /api/inventories/transfer).
+ * Single transaction server-side: decrement warehouse, upsert branch row,
+ * audit both movements. Rejects with status so callers can fall back to the
+ * legacy two-call distribute when the backend predates the endpoint (404).
+ */
+export const transferStock = createAsyncThunk(
+  "inventory/transferStock",
+  async ({ warehouseInventoryId, toBranchId, quantity }, { rejectWithValue }) => {
+    try {
+      const sanitizedParams = sanitizePathParams({ warehouseInventoryId, toBranchId });
+      const headers = getAuthHeaders();
+      const res = await api.post(
+        `/api/inventories/transfer`,
+        {
+          warehouseInventoryId: sanitizedParams.warehouseInventoryId,
+          toBranchId: sanitizedParams.toBranchId,
+          quantity: Number(quantity),
+        },
+        { headers }
+      );
+      return res.data;
+    } catch (error) {
+      return rejectWithValue({
+        message: error.response?.data?.message || "Failed to transfer stock",
+        status: error.response?.status,
+      });
+    }
+  }
+);

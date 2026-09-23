@@ -25,10 +25,13 @@ export const startShift = createAsyncThunk(
 
 export const endShift = createAsyncThunk(
   "/shiftReport/end",
-  async (_, { rejectWithValue }) => {
+  async ({ declaredCash } = {}, { rejectWithValue }) => {
     try {
       const headers = getAuthHeaders();
-      const res = await api.patch(`/api/shift-reports/end`, {}, { headers });
+      const params = declaredCash !== undefined && declaredCash !== null && declaredCash !== ""
+        ? `?declaredCash=${encodeURIComponent(declaredCash)}`
+        : "";
+      const res = await api.patch(`/api/shift-reports/end${params}`, {}, { headers });
       return res.data;
     } catch (error) {
       const message = error.response?.data?.message || "Failed to end shift";

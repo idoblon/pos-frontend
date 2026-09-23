@@ -57,7 +57,7 @@ export default function BranchCustomers() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Customers</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>Manage customer records</p>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>Store-shared customer records — visible to all branches of your store</p>
         </div>
         <button style={s.addBtn} onClick={openAdd}><Plus size={14} /> Add Customer</button>
       </div>

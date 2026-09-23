@@ -12,24 +12,24 @@ export const PAYMENT_STATUS = {
 };
 
 /**
- * Check if store has completed payment via backend
+ * Check if store has completed payment via backend.
+ * Uses the public pre-login endpoint first (no auth required), falling back
+ * to the admin endpoint for authenticated sessions.
  */
 export const checkStorePaymentStatus = async (storeId, email) => {
   try {
     const api = await import('@/util/api');
-    const response = await api.default.get(`/api/admin/store-payment/status`, {
-      params: { storeId, email }
-    });
-
-    return {
-      status: response.data.status,
-      message: response.data.message,
-      paymentLink: response.data.paymentLink,
-      plan: response.data.plan,
-      storeName: response.data.storeName,
-      credentials: response.data.credentials
-    };
-
+    try {
+      const response = await api.default.get(`/api/public/store-payment/status`, {
+        params: { email }
+      });
+      return normalizePaymentStatus(response.data);
+    } catch {
+      const response = await api.default.get(`/api/admin/store-payment/status`, {
+        params: { storeId, email }
+      });
+      return normalizePaymentStatus(response.data);
+    }
   } catch (error) {
     console.error('Payment status check error:', error);
     return {
@@ -38,6 +38,15 @@ export const checkStorePaymentStatus = async (storeId, email) => {
     };
   }
 };
+
+const normalizePaymentStatus = (data = {}) => ({
+  status: data.status,
+  message: data.message,
+  paymentLink: data.paymentLink,
+  plan: data.plan,
+  storeName: data.storeName,
+  credentials: data.credentials
+});
 
 /**
  * Validate store access based on payment status via backend

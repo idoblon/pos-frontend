@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Plus, Search, Users, Pencil, Trash2, UserCircle, Clock } from "lucide-react";
+import { Plus, Search, Users, Pencil, Trash2, UserCircle, Clock, Mail } from "lucide-react";
 import { findStoreEmployee, createStoreEmpoyee, updateEmpoyee, deleteEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
@@ -331,17 +331,34 @@ export default function EmployeeManagement() {
       toast.error("Employee ID not found");
       return;
     }
-    
+
     dispatch(deleteEmployee({ employeeId }))
       .then((result) => {
         if (result.type.includes('fulfilled')) {
-          toast.success("Employee removed successfully");
+          toast.success("Employee disabled — login revoked, history preserved");
           dispatch(findStoreEmployee({ storeId }));
         } else {
-          toast.error(result.payload || "Failed to remove employee");
+          toast.error(result.payload || "Failed to disable employee");
         }
       });
-    setDeleteDialogOpen(false); 
+    setDeleteDialogOpen(false);
+  };
+
+  const handleResendCredentials = (emp) => {
+    const branchName = branches?.find((b) => String(b.id || b._id) === String(emp.branchId))?.name || "";
+    api.post("/api/email/store-credentials", {
+      to: emp.email,
+      fullName: emp.fullName,
+      email: emp.email,
+      tempPassword: "Employee@123",
+      role: emp.role?.replace("ROLE_", "").replace(/_/g, " "),
+      branchName,
+      status: "ACTIVE",
+    }).then(() => {
+      toast.success(`Credentials resent to ${emp.email}`);
+    }).catch(() => {
+      toast.error("Failed to resend credentials — mail service unreachable");
+    });
   };
 
   return (
@@ -490,8 +507,9 @@ export default function EmployeeManagement() {
                     <td style={{ ...s.td, color: "#8a909c" }}>{branches?.find((b) => String(b._id || b.id) === String(emp.branchId))?.name ?? "—"}</td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                        <button style={s.iconBtn} onClick={() => openEdit(emp)}><Pencil size={13} color="#6b7280" /></button>
-                        <button style={{ ...s.iconBtn, borderColor: "#fecaca" }} onClick={() => openDelete(emp)}><Trash2 size={13} color="#e53e3e" /></button>
+                        <button style={s.iconBtn} onClick={() => openEdit(emp)} title="Edit employee"><Pencil size={13} color="#6b7280" /></button>
+                        <button style={s.iconBtn} onClick={() => handleResendCredentials(emp)} title="Resend login credentials"><Mail size={13} color="#1d4ed8" /></button>
+                        <button style={{ ...s.iconBtn, borderColor: "#fecaca" }} onClick={() => openDelete(emp)} title="Disable employee (revoke login, keep history)"><Trash2 size={13} color="#e53e3e" /></button>
                       </div>
                     </td>
                   </tr>
@@ -556,14 +574,14 @@ export default function EmployeeManagement() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Remove Employee</DialogTitle>
+            <DialogTitle>Disable Employee</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove <strong>{selected?.fullName}</strong>?
+              Disable <strong>{selected?.fullName}</strong>? Their login is revoked but orders, shifts, and history are preserved.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Remove</Button>
+            <Button variant="destructive" onClick={handleDelete}>Disable</Button>
           </div>
         </DialogContent>
       </Dialog>

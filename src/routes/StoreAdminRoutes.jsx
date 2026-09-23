@@ -11,6 +11,7 @@ import StoreWarehouseInventory from "@/pages/storeAdmin/Inventory/StoreWarehouse
 import RestockManagement from "@/pages/storeAdmin/Restock/RestockManagement";
 import SubscriptionRequest from "@/pages/storeAdmin/Subscription/SubscriptionRequest";
 import PaymentSettings from "@/pages/storeAdmin/Settings/PaymentSettings";
+import StoreProfile from "@/pages/storeAdmin/Settings/StoreProfile";
 import EmployeeActivityPage from "@/pages/storeAdmin/Activity/EmployeeActivityPage";
 import OperationsCenter from "@/pages/storeAdmin/Operations/OperationsCenter";
 
@@ -31,6 +32,7 @@ const StoreAdminRoutes = () => {
         <Route path="shift-summary" element={<StoreShiftSummary />} />
         <Route path="reports"    element={<StoreAnalytics />} />
         <Route path="payment-settings" element={<PaymentSettings />} />
+        <Route path="profile" element={<StoreProfile />} />
       </Route>
     </Routes>
   );

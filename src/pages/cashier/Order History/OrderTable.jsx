@@ -10,39 +10,13 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Eye as EyeIcon, Printer } from "lucide-react";
+import { printOrderReceipt } from "@/components/Receipt";
 
 const OrderTable = ({ handleViewOrderDetails }) => {
   const { orders } = useSelector((state) => state.order);
-  
+
   const handlePrintOrder = (order) => {
-    const printContent = `
-ORDER RECEIPT
-================================
-Order ID: ${order.id}
-Date: ${order.createdAt}
-Customer: ${order.customer?.fullName || "Walk-in"}
-Phone: ${order.customer?.phone || "N/A"}
-Payment: ${order.paymentType}
-Status: ${order.status}
-
-ITEMS:
-${order.items
-  ?.map(
-    (item) =>
-      `${item.product?.name} x${item.quantity} - रु${(item.price * item.quantity).toFixed(2)}`,
-  )
-  .join("\n")}
-
-================================
-TOTAL: रु${order.totalAmount.toFixed(2)}
-
-Thank you for your business!
-    `;
-
-    const printWindow = window.open("", "", "width=600,height=600");
-    printWindow.document.write("<pre>" + printContent + "</pre>");
-    printWindow.document.close();
-    printWindow.print();
+    printOrderReceipt(order);
   };
 
   return (

@@ -6,6 +6,7 @@ import {
   GitBranch,
   MapPin,
   Pencil,
+  Trash2,
   Mail,
   Clock,
   Phone,
@@ -15,6 +16,7 @@ import {
   getBranchesByStore,
   createBranch,
   updateBranch,
+  deleteBranch,
 } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import {
@@ -151,6 +153,9 @@ export default function BranchManagement() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [targetDrafts, setTargetDrafts] = useState({});
   const [savingTargetId, setSavingTargetId] = useState(null);
@@ -299,14 +304,17 @@ export default function BranchManagement() {
       return;
     }
 
-    // Convert 12-hour time to 24-hour format
+    // Convert 12-hour time to 24-hour format (guards malformed input:
+    // invalid values yield "" instead of "NaN:undefined:00").
     const convert12to24 = (time, period) => {
-      if (!time) return "";
+      if (!time || typeof time !== "string" || !time.includes(":")) return "";
       const [hours, minutes] = time.split(":");
-      let h = parseInt(hours);
+      let h = parseInt(hours, 10);
+      const m = parseInt(minutes, 10);
+      if (!Number.isFinite(h) || !Number.isFinite(m) || h < 1 || h > 12 || m < 0 || m > 59) return "";
       if (period === "PM" && h !== 12) h += 12;
       if (period === "AM" && h === 12) h = 0;
-      return `${String(h).padStart(2, "0")}:${minutes}:00`;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
     };
 
     const formattedData = {
@@ -350,6 +358,32 @@ export default function BranchManagement() {
       });
     }
     setDialogOpen(false);
+  };
+
+  const closeDelete = () => {
+    setDeleteTarget(null);
+    setDeleteConfirmName("");
+    setDeleting(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteConfirmName.trim() !== (deleteTarget.name || "").trim()) return;
+    setDeleting(true);
+    try {
+      const result = await dispatch(deleteBranch(deleteTarget.id || deleteTarget._id));
+      if (result.type === "branch/delete/fulfilled") {
+        toast.success(`"${deleteTarget.name}" closed`);
+        dispatch(getBranchesByStore(storeId));
+        closeDelete();
+      } else {
+        toast.error(result.payload || "Failed to close branch");
+        setDeleting(false);
+      }
+    } catch {
+      toast.error("Failed to close branch");
+      setDeleting(false);
+    }
   };
 
   return (
@@ -469,19 +503,26 @@ export default function BranchManagement() {
                           fontWeight: 600,
                           padding: "2px 7px",
                           borderRadius: 20,
-                          background:
-                            b.status === "inactive" ? "#eef1f5" : "#f5f5f5",
-                          color:
-                            b.status === "inactive" ? "#6b7280" : "#1a6b3c",
+                          background: "#f5f5f5",
+                          color: "#1a6b3c",
                         }}
                       >
-                        {b.status ?? "active"}
+                        active
                       </span>
                     </div>
                   </div>
-                  <button style={s.editBtn} onClick={() => openEdit(b)}>
-                    <Pencil size={13} />
-                  </button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button style={s.editBtn} onClick={() => openEdit(b)} title="Edit branch">
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      style={{ ...s.editBtn, color: "#dc2626" }}
+                      onClick={() => setDeleteTarget(b)}
+                      title="Close branch (soft delete)"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 5 }}
@@ -720,9 +761,41 @@ export default function BranchManagement() {
                 {editing ? "Update" : "Create"}
               </Button>
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) closeDelete(); }}>
+          <DialogContent style={{ maxWidth: 420 }}>
+            <DialogHeader>
+              <DialogTitle>Close Branch?</DialogTitle>
+              <DialogDescription>
+                "{deleteTarget?.name}" will be hidden from listings. Orders, inventory history, and staff records are preserved.
+                Type the branch name to confirm.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              <Input
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={deleteTarget?.name || "Branch name"}
+              />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeDelete}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={deleting || deleteConfirmName.trim() !== (deleteTarget?.name || "").trim()}
+                  onClick={handleConfirmDelete}
+                  style={{ background: "#dc2626", color: "white", border: "none" }}
+                >
+                  {deleting ? "Closing..." : "Close Branch"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }

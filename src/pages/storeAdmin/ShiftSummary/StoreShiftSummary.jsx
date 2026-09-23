@@ -14,13 +14,12 @@ import {
 } from "lucide-react";
 import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { findStoreEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
-import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
-import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
-import { getShiftsByBranch, getShiftsByCashier } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { getOrdersByStore } from "@/Redux Toolkit/Features/order/orderThunk";
+import { getRefundsByStore } from "@/Redux Toolkit/Features/refund/refundThunk";
+import { getShiftsByStore } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
+import { Dialog, DialogContent, DialogHeader, DialogTitle,
+DialogDescription } from "@/components/ui/dialog";
 import secureStorage from "@/util/secureStorage";
-import api from "@/util/api";
-
 const OVERTIME_HOURS = 10;
 
 const s = {
@@ -151,34 +150,6 @@ const belongsToShift = (item, shift) => {
 const getBranchName = (branches, branchId) =>
   branches.find((branch) => getId(branch.id || branch._id) === getId(branchId))?.name || "Unknown Branch";
 
-const getEmployeeBranchId = (employee) => getId(employee.branchId || employee.branch?.id || employee.branch?._id);
-const isBranchManager = (employee) => employee?.role === "ROLE_BRANCH_MANAGER";
-
-const getEmployeeIds = (employee) =>
-  [employee.userId, employee.id, employee._id]
-    .map(getId)
-    .filter(Boolean)
-    .filter((id, index, ids) => ids.indexOf(id) === index);
-
-const uniqueStaffByIds = (staffList) => {
-  const seen = new Set();
-  return staffList.filter((staff) => {
-    const ids = getEmployeeIds(staff);
-    if (!ids.length || ids.some((id) => seen.has(id))) return false;
-    ids.forEach((id) => seen.add(id));
-    return true;
-  });
-};
-
-const getBranchEmployees = async (branchId) => {
-  try {
-    const response = await api.get(`/api/employees/branch/${encodeURIComponent(branchId)}`);
-    return getCollection(response.data);
-  } catch {
-    return [];
-  }
-};
-
 const getStaffMember = (employees, staffId) =>
   employees.find((emp) => [emp.id, emp._id, emp.userId].map(getId).includes(getId(staffId)));
 
@@ -247,60 +218,21 @@ export default function StoreShiftSummary() {
     dispatch(findStoreEmployee({ storeId }));
   }, [dispatch, storeId]);
 
+  // Store-wide loads (3 calls total — replaces the old per-branch +
+  // per-manager fan-out). Branch attribution comes from each record's own
+  // branchId; the manager-shift merge below is unnecessary because
+  // GET /api/shift-reports/store/{id} already returns every shift.
   useEffect(() => {
-    if (!branches?.length) return;
+    if (!storeId) return;
     let cancelled = false;
 
-    const loadBranchOperations = async () => {
+    const loadStoreOperations = async () => {
       setLoading(true);
-      const results = await Promise.all(
-        branches.map(async (branch) => {
-          const branchId = branch.id || branch._id;
-          if (!branchId) return { shifts: [], orders: [], refunds: [] };
-          const branchIdText = getId(branchId);
-          const branchEmployees = await getBranchEmployees(branchIdText);
-          const branchManagers = uniqueStaffByIds([
-            ...(employees || []).filter(
-              (employee) => isBranchManager(employee) && getEmployeeBranchId(employee) === branchIdText,
-            ),
-            ...branchEmployees.filter(isBranchManager),
-            ...(branch.manager ? [{ ...branch.manager, role: branch.manager.role || "ROLE_BRANCH_MANAGER", branchId: branchIdText }] : []),
-          ]);
-
-          const [shiftResult, orderResult, refundResult] = await Promise.all([
-            dispatch(getShiftsByBranch(branchId)).unwrap().catch(() => []),
-            dispatch(getOrdersByBranch({ branchId })).unwrap().catch(() => []),
-            dispatch(getRefundsByBranch(branchId)).unwrap().catch(() => []),
-          ]);
-          const managerShiftResults = await Promise.all(
-            branchManagers.flatMap((manager) =>
-              getEmployeeIds(manager).map((managerId) =>
-                dispatch(getShiftsByCashier(managerId)).unwrap()
-                  .then((result) => ({ manager, managerId, result }))
-                  .catch(() => ({ manager, managerId, result: [] })),
-              ),
-            ),
-          );
-          const managerShifts = managerShiftResults.flatMap(({ manager, managerId, result }) =>
-            getCollection(result).map((shift) => ({
-              ...shift,
-              branchId: getBranchId(shift) || branchIdText,
-              managerId: getStaffId(shift) || managerId,
-              managerName: getShiftStaffName(shift) || manager.fullName || manager.username || manager.email,
-              role: shift.role || "ROLE_BRANCH_MANAGER",
-            })),
-          );
-
-          return {
-            shifts: [
-              ...getCollection(shiftResult).map((shift) => ({ ...shift, branchId: getBranchId(shift) || branchIdText })),
-              ...managerShifts,
-            ],
-            orders: getCollection(orderResult).map((order) => ({ ...order, branchId: getBranchId(order) || branchIdText })),
-            refunds: getCollection(refundResult).map((refund) => ({ ...refund, branchId: getBranchId(refund) || branchIdText })),
-          };
-        }),
-      );
+      const [shiftResult, orderResult, refundResult] = await Promise.all([
+        dispatch(getShiftsByStore(storeId)).unwrap().catch(() => []),
+        dispatch(getOrdersByStore(storeId)).unwrap().catch(() => []),
+        dispatch(getRefundsByStore(storeId)).unwrap().catch(() => []),
+      ]);
 
       if (cancelled) return;
 
@@ -314,18 +246,18 @@ export default function StoreShiftSummary() {
         });
       };
 
-      setAllShifts(dedupe(results.flatMap((result) => result.shifts)));
-      setAllOrders(dedupe(results.flatMap((result) => result.orders)));
-      setAllRefunds(dedupe(results.flatMap((result) => result.refunds)));
+      setAllShifts(dedupe(getCollection(shiftResult)));
+      setAllOrders(dedupe(getCollection(orderResult)));
+      setAllRefunds(dedupe(getCollection(refundResult)));
       setLoading(false);
     };
 
-    loadBranchOperations();
+    loadStoreOperations();
 
     return () => {
       cancelled = true;
     };
-  }, [branches, dispatch, employees]);
+  }, [storeId, dispatch]);
 
   const filteredShifts = useMemo(() => {
     const { start, end } = getDateRange(range);

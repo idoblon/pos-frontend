@@ -1,11 +1,12 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { 
-  getInventoryByBranch, 
+import {
+  getInventoryByBranch,
   getInventoryByStore,
   getLowStockItems,
   addInventoryItem,
   updateInventoryStock,
-  deleteInventoryItem
+  deleteInventoryItem,
+  transferStock,
 } from "./inventoryThunk";
 
 const initialState = {
@@ -65,6 +66,17 @@ const inventorySlice = createSlice({
       })
       .addCase(deleteInventoryItem.fulfilled, (state, action) => {
         state.inventory = state.inventory.filter(item => (item.id || item._id) !== action.payload);
+      })
+      .addCase(transferStock.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(transferStock.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(transferStock.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.message || action.payload;
       });
   },
 });

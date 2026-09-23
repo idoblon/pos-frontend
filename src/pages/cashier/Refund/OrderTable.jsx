@@ -13,69 +13,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 
-// Mock data for testing when no user is logged in
-const mockOrders = [
-  {
-    id: 1,
-    createdAt: "Jul 8, 2025, 12:37 PM",
-    customer: {
-      fullName: "Pablo Escobar",
-      phone: "123243435",
-    },
-    totalAmount: 2134,
-    paymentType: "CASH",
-    status: "COMPLETED",
-    items: [
-      {
-        id: 1,
-        quantity: 2,
-        price: 500,
-        product: {
-          id: 101,
-          image:
-            "https://np.harringtonwear.com/cdn/shop/files/1_92992c7e-c7f9-4ce0-82cc-706e277a1396_370x.jpg?v=1775304465",
-          name: "Premium T-Shirt",
-          sku: "PROD001",
-        },
-      },
-      {
-        id: 2,
-        quantity: 1,
-        price: 1134,
-        product: {
-          id: 102,
-          image:
-            "https://np.harringtonwear.com/cdn/shop/files/1_92992c7e-c7f9-4ce0-82cc-706e277a1396_370x.jpg?v=1775304465",
-          name: "Designer Jeans",
-          sku: "PROD002",
-        },
-      },
-    ],
-  },
-  {
-    id: 2,
-    createdAt: "Jul 8, 2025, 1:15 PM",
-    customer: null,
-    totalAmount: 1500,
-    paymentType: "CARD",
-    status: "COMPLETED",
-    items: [
-      {
-        id: 3,
-        quantity: 3,
-        price: 500,
-        product: {
-          id: 103,
-          image:
-            "https://np.harringtonwear.com/cdn/shop/files/1_92992c7e-c7f9-4ce0-82cc-706e277a1396_370x.jpg?v=1775304465",
-          name: "Cotton Hoodie",
-          sku: "PROD003",
-        },
-      },
-    ],
-  },
-];
-
 const OrderTable = ({ handleSelectOrder }) => {
   const dispatch = useDispatch();
   const { orders, loading } = useSelector((state) => state.order);
@@ -104,16 +41,14 @@ const OrderTable = ({ handleSelectOrder }) => {
   };
 
   const refundableOrders = useMemo(() => {
-    // Use mock data if no real orders and no user logged in
-    const orderList =
-      orders && orders.length > 0 ? orders : !user ? mockOrders : [];
-    
+    const orderList = orders && orders.length > 0 ? orders : [];
+
     // Show both COMPLETED and REFUNDED orders for refund management
     return orderList.filter((o) => {
       const status = o.status?.toUpperCase();
       return status === "COMPLETED" || status === "REFUNDED";
     });
-  }, [orders, user]);
+  }, [orders]);
 
 
   if (loading) {

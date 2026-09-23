@@ -337,11 +337,21 @@ const initials = fullName
             selectedCustomer={selectedCustomer}
             onSelectCustomer={(customer) => dispatch(setSelectedCustomer(customer))}
           />
-          <DiscountSection
-            discount={discount.value}
-            discountType={discount.type === "percentage" ? "%" : "fixed"}
-            onDiscountChange={(value) => dispatch(setDiscount({ ...discount, value: Number(value) }))}
-            onDiscountTypeChange={(type) => dispatch(setDiscount({ ...discount, type: type === "%" ? "percentage" : "fixed" }))}
+            <DiscountSection
+              discount={discount.value}
+              discountType={discount.type === "percentage" ? "%" : "fixed"}
+              onDiscountChange={(value) => {
+                const raw = Number(value);
+                if (!Number.isFinite(raw)) return;
+                const isPercent = discount.type === "percentage";
+                const cap = isPercent ? 100 : Math.max(subtotal, 0);
+                const clamped = Math.min(Math.max(raw, 0), cap);
+                if (clamped !== raw) {
+                  toast.warning(isPercent ? "Discount capped at 100%" : "Discount cannot exceed the subtotal");
+                }
+                dispatch(setDiscount({ ...discount, value: clamped }));
+              }}
+              onDiscountTypeChange={(type) => dispatch(setDiscount({ ...discount, type: type === "%" ? "percentage" : "fixed" }))}
           />
           <NoteSection note={note} onNoteChange={(value) => dispatch(setNote(value))} />
           <PaymentSection

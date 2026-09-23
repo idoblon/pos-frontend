@@ -19,7 +19,7 @@ import {
 import { findBranchEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 import BranchSalesTargetCard from "@/components/branch/BranchSalesTargetCard";
-import secureStorage from "@/util/secureStorage";
+import useBranchContext from "@/hooks/useBranchContext";
 
 const card = {
   background: "white",
@@ -43,15 +43,12 @@ function CustomTooltip({ active, payload, label }) {
 export default function BranchDashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const userData = secureStorage.getUserData();
-  const branchId = userData?.branchId;
+  const { branchId, userProfile, user, userData } = useBranchContext();
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { todayOrders, orders, recentOrders } = useSelector((s) => s.order);
   const { refundsByBranch: refunds } = useSelector((s) => s.refund);
-  const { userProfile } = useSelector((s) => s.user);
-  const { user } = useSelector((s) => s.auth);
 
   // Start of current calendar month — resets naturally on the 1st
   const monthStart = useMemo(() => {
@@ -82,8 +79,11 @@ export default function BranchDashboard() {
 
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
+  // Pause background polling while the tab is hidden.
   useEffect(() => {
-    const interval = setInterval(fetchAllData, 30000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") fetchAllData();
+    }, 30000);
     return () => clearInterval(interval);
   }, [fetchAllData]);
 

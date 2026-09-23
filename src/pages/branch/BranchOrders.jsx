@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Search, ShoppingBag } from "lucide-react";
-import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
+import { Search, ShoppingBag, RotateCcw, Eye } from "lucide-react";
+import { getOrdersByBranch, getOrderById } from "@/Redux Toolkit/Features/order/orderThunk";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
-import secureStorage from "@/util/secureStorage";
-import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import useBranchContext from "@/hooks/useBranchContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import BranchRefundDialog from "@/pages/branch/BranchRefundDialog";
 
 const statusStyle = {
-  COMPLETED: { background: "#f0f0f0", color: "#1a1d23" },
+  PENDING: { background: "#fffbeb", color: "#92400e" },
+  HELD: { background: "#f5f5f5", color: "#6b7280" },
+  RESUMED: { background: "#eff6ff", color: "#1d4ed8" },
+  COMPLETED: { background: "#f0fdf4", color: "#166534" },
+  CANCELLED: { background: "#f5f5f5", color: "#6b7280" },
   REFUNDED: { background: "#fef2f2", color: "#dc2626" },
 };
 
@@ -22,47 +27,66 @@ const s = {
 
 export default function BranchOrders() {
   const dispatch = useDispatch();
-  const { userProfile } = useSelector((s) => s.user);
-  const { user } = useSelector((s) => s.auth);
-  const userData = secureStorage.getUserData();
-  const branchId = userProfile?.branchId ?? user?.branchId ?? userData?.branchId;
+  const { branchId } = useBranchContext();
   const { orders, loading } = useSelector((s) => s.order);
+  const { refundsByBranch: refunds } = useSelector((s) => s.refund);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-
-  useEffect(() => {
-    dispatch(getUserProfile());
-  }, [dispatch]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [refundOrder, setRefundOrder] = useState(null);
 
   useEffect(() => {
     if (branchId) {
       dispatch(getOrdersByBranch({ branchId }));
-      
-      // Test if getRefundsByBranch is available
-      
+
       // Also fetch existing refunds to mark orders as refunded
       dispatch(getRefundsByBranch(branchId));
     }
   }, [dispatch, branchId]);
 
+  const refundedOrderIds = new Set(
+    (refunds || []).map((r) => String(r.orderId ?? r.order?.id ?? "")),
+  );
+
+  const displayStatus = (o) => {
+    if (refundedOrderIds.has(String(o.id ?? o._id ?? ""))) return "REFUNDED";
+    return String(o.status || "COMPLETED").toUpperCase();
+  };
+
   const filtered = orders?.filter((o) => {
     const matchSearch = (o.id ?? o._id ?? "").toString().includes(search) ||
       (o.customerName ?? "").toLowerCase().includes(search.toLowerCase());
-    
-    // Determine actual status - only COMPLETED or REFUNDED
-    let actualStatus;
-    if (o.status === "REFUNDED") {
-      actualStatus = "REFUNDED";
-    } else {
-      // All other orders (PENDING with createdAt, COMPLETED, etc.) are treated as COMPLETED
-      actualStatus = "COMPLETED";
-    }
-    
+
+    const actualStatus = displayStatus(o);
+
     const matchStatus = statusFilter === "ALL" || actualStatus === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  // Debug: Log current orders to see their statuses
+  const openDetail = async (o) => {
+    const id = o.id ?? o._id;
+    setSelectedOrder(o);
+    setDetailOpen(true);
+    if (!id) return;
+    setDetailLoading(true);
+    try {
+      const full = await dispatch(getOrderById(id)).unwrap();
+      setSelectedOrder(full || o);
+    } catch {
+      // keep the row data as fallback
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const refreshAll = () => {
+    if (branchId) {
+      dispatch(getOrdersByBranch({ branchId }));
+      dispatch(getRefundsByBranch(branchId));
+    }
+  };
 
   return (
     <div style={s.page}>
@@ -81,7 +105,7 @@ export default function BranchOrders() {
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 13, background: "#f5f5f5", outline: "none", fontFamily: "inherit" }}
             >
-              {["ALL", "COMPLETED", "REFUNDED"].map((s) => (
+              {["ALL", "PENDING", "HELD", "RESUMED", "COMPLETED", "CANCELLED", "REFUNDED"].map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -104,51 +128,120 @@ export default function BranchOrders() {
         {filtered?.length > 0 && (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-               <thead>
-                 <tr>
-                   {["Order ID", "Date", "Cashier", "Items", "Payment", "Status", "Total"].map((h, i) => (
-                     <th key={h} style={{ ...s.th, textAlign: i === 6 ? "right" : "left" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((o, i) => {
-                  // Determine display status - only COMPLETED or REFUNDED
-                  const actualStatus = o.status === "REFUNDED" ? "REFUNDED" : "COMPLETED";
-                  
-                  return (
-                  <tr key={o.id ?? o._id ?? i} style={{ background: "white" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
-                    onMouseLeave={e => e.currentTarget.style.background = "white"}
-                  >
-                    <td style={{ ...s.td, fontWeight: 600 }}>#{(o.id ?? o._id ?? "").toString().slice(-8)}</td>
-                    <td style={{ ...s.td, color: "#8a909c" }}>
-                      {o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
-                    </td>
-                    <td style={{ ...s.td, color: "#1a1d23", fontWeight: 500 }}>{o.cashier?.fullName ?? "—"}</td>
-                    <td style={{ ...s.td, color: "#8a909c" }}>{o.items?.length ?? o.orderItems?.length ?? "—"}</td>
-                    <td style={{ ...s.td, color: "#8a909c" }}>{o.paymentType ?? o.paymentMethod ?? "—"}</td>
-                    <td style={s.td}>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, ...(statusStyle[actualStatus] ?? { background: "#eef1f5", color: "#6b7280" }) }}>
-                        {actualStatus}
-                      </span>
-                    </td>
-                    <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#1a1d23" }}>
-                      रु {(o.totalAmount ?? 0).toLocaleString("en-IN")}
-                      {o.refundedAmount > 0 && (
-                        <div style={{ fontSize: 10, color: "#dc2626", fontWeight: 400 }}>
-                          Refunded: रु {o.refundedAmount.toLocaleString("en-IN")}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+                <thead>
+                  <tr>
+                    {["Order ID", "Date", "Cashier", "Items", "Payment", "Status", "Total", "Actions"].map((h, i) => (
+                      <th key={h} style={{ ...s.th, textAlign: i === 6 ? "right" : "left" }}>{h}</th>
+                   ))}
+                 </tr>
+               </thead>
+               <tbody>
+                 {filtered.map((o, i) => {
+                   const actualStatus = displayStatus(o);
+
+                   return (
+                   <tr key={o.id ?? o._id ?? i} style={{ background: "white" }}
+                     onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
+                     onMouseLeave={e => e.currentTarget.style.background = "white"}
+                   >
+                     <td style={{ ...s.td, fontWeight: 600 }}>#{(o.id ?? o._id ?? "").toString().slice(-8)}</td>
+                     <td style={{ ...s.td, color: "#8a909c" }}>
+                       {o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                     </td>
+                     <td style={{ ...s.td, color: "#1a1d23", fontWeight: 500 }}>{o.cashier?.fullName ?? o.cashierName ?? "—"}</td>
+                     <td style={{ ...s.td, color: "#8a909c" }}>{o.items?.length ?? o.orderItems?.length ?? "—"}</td>
+                     <td style={{ ...s.td, color: "#8a909c" }}>{o.paymentType ?? o.paymentMethod ?? "—"}</td>
+                     <td style={s.td}>
+                       <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, ...(statusStyle[actualStatus] ?? { background: "#eef1f5", color: "#6b7280" }) }}>
+                         {actualStatus}
+                       </span>
+                     </td>
+                     <td style={{ ...s.td, textAlign: "right", fontWeight: 700, color: "#1a1d23" }}>
+                       रु {(o.totalAmount ?? 0).toLocaleString("en-IN")}
+                       {o.refundedAmount > 0 && (
+                         <div style={{ fontSize: 10, color: "#dc2626", fontWeight: 400 }}>
+                           Refunded: रु {o.refundedAmount.toLocaleString("en-IN")}
+                         </div>
+                       )}
+                     </td>
+                     <td style={{ ...s.td, textAlign: "right", whiteSpace: "nowrap" }}>
+                       <button
+                         onClick={() => openDetail(o)}
+                         title="View order detail"
+                         style={{ border: "1px solid #e5e7eb", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", marginRight: 6 }}
+                       >
+                         <Eye size={13} color="#6b7280" />
+                       </button>
+                       {actualStatus !== "REFUNDED" && (
+                         <button
+                           onClick={() => setRefundOrder(o)}
+                           title="Issue refund"
+                           style={{ border: "1px solid #fecaca", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer" }}
+                         >
+                           <RotateCcw size={13} color="#dc2626" />
+                         </button>
+                       )}
+                     </td>
+                   </tr>
+                   );
+                 })}
+               </tbody>
+             </table>
+           </div>
+         )}
+       </div>
+
+       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+         <DialogContent className="max-w-md">
+           <DialogHeader>
+             <DialogTitle>Order #{String(selectedOrder?.id ?? selectedOrder?._id ?? "").slice(-8)}</DialogTitle>
+             <DialogDescription>
+               {selectedOrder?.createdAt ? new Date(selectedOrder.createdAt).toLocaleString("en-IN") : ""} • {selectedOrder?.paymentType ?? selectedOrder?.paymentMethod ?? ""} • {selectedOrder ? displayStatus(selectedOrder) : ""}
+             </DialogDescription>
+           </DialogHeader>
+           {detailLoading ? (
+             <p style={{ fontSize: 13, color: "#8a909c" }}>Loading…</p>
+           ) : (
+             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
+               <div style={{ display: "flex", justifyContent: "space-between" }}>
+                 <span style={{ color: "#8a909c" }}>Cashier</span>
+                 <strong>{selectedOrder?.cashier?.fullName ?? selectedOrder?.cashierName ?? "—"}</strong>
+               </div>
+               <div style={{ display: "flex", justifyContent: "space-between" }}>
+                 <span style={{ color: "#8a909c" }}>Customer</span>
+                 <strong>{selectedOrder?.customerName ?? selectedOrder?.customer?.fullName ?? "—"}</strong>
+               </div>
+               {(selectedOrder?.items ?? selectedOrder?.orderItems ?? []).map((it, idx) => (
+                 <div key={idx} style={{ display: "flex", justifyContent: "space-between", padding: "8px 10px", background: "#f5f5f5", borderRadius: 6 }}>
+                   <span>{it.productName ?? it.product?.name ?? `Item ${idx + 1}`} × {it.quantity ?? 1}</span>
+                   <strong>रु {Number(it.price ?? it.total ?? 0).toLocaleString("en-IN")}</strong>
+                 </div>
+               ))}
+               {selectedOrder?.discount ? (
+                 <div style={{ display: "flex", justifyContent: "space-between" }}>
+                   <span style={{ color: "#8a909c" }}>Discount</span>
+                   <strong>− रु {Number(selectedOrder.discount).toLocaleString("en-IN")}</strong>
+                 </div>
+               ) : null}
+               {selectedOrder?.note ? (
+                 <p style={{ margin: 0, color: "#8a909c" }}>Note: {selectedOrder.note}</p>
+               ) : null}
+               <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #e5e7eb", paddingTop: 10 }}>
+                 <span style={{ color: "#8a909c" }}>Total</span>
+                 <strong>रु {Number(selectedOrder?.totalAmount ?? 0).toLocaleString("en-IN")}</strong>
+               </div>
+             </div>
+           )}
+         </DialogContent>
+       </Dialog>
+
+       <BranchRefundDialog
+         open={!!refundOrder}
+         onClose={() => setRefundOrder(null)}
+         order={refundOrder}
+         branchId={branchId}
+         onIssued={refreshAll}
+       />
+     </div>
+   );
+ }

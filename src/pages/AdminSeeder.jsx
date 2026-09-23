@@ -8,6 +8,17 @@ export default function AdminSeeder() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
+  const isEnabled =
+    import.meta.env.DEV || import.meta.env.VITE_ENABLE_ADMIN_SEEDER === "true";
+
+  if (!isEnabled) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p>Admin setup is disabled in this environment.</p>
+      </div>
+    );
+  }
+
   const handleCreateAdmin = async () => {
     setIsSeeding(true);
     setResult(null);
@@ -145,16 +156,16 @@ export default function AdminSeeder() {
                 <span style={{ fontSize: "14px", color: "#4a5568", fontWeight: "500" }}>
                   Password:
                 </span>
-                <span style={{ 
-                  fontSize: "14px", 
-                  color: "#1a202c", 
+                <span style={{
+                  fontSize: "14px",
+                  color: "#1a202c",
                   marginLeft: "8px",
                   fontFamily: "monospace",
                   background: "#e2e8f0",
                   padding: "2px 6px",
                   borderRadius: "4px"
                 }}>
-                  {POS_ADMIN_CREDENTIALS.password}
+                  {import.meta.env.DEV ? "(from VITE_SEED_ADMIN_PASSWORD)" : "••••••••"}
                 </span>
               </div>
             </div>

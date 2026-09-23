@@ -1,29 +1,67 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Search } from "lucide-react";
-import { getInventoryByBranch } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
+import { getInventoryByBranch, getPosCatalog } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
 import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
 import ProductCard from "@/components/ProductCard";
-import secureStorage from "@/util/secureStorage";
+import useBranchContext from "@/hooks/useBranchContext";
+
+const toCatalogProduct = (row) => ({
+  id: row.id ?? row.productId,
+  _id: row.id ?? row.productId,
+  name: row.name ?? row.productName,
+  sku: row.sku ?? row.productSku,
+  price: row.sellingPrice ?? row.price ?? row.unitPrice ?? 0,
+  sellingPrice: row.sellingPrice ?? row.price ?? row.unitPrice ?? 0,
+  category: { name: row.categoryName ?? row.category?.name },
+  image: row.image ?? row.productImage ?? null,
+  imageUrl: row.image ?? row.productImage ?? null,
+  description: row.description,
+  stock: row.stock ?? row.quantity ?? 0,
+});
 
 export default function ProductSection({ onAddToCart }) {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef(null);
   const { inventory, loading: inventoryLoading } = useSelector((state) => state.inventory);
   const { products, loading: productsLoading } = useSelector((state) => state.product);
-  const userData = secureStorage.getUserData();
-  const branchId = (userData?.branchId && userData.branchId !== 'null') ? userData.branchId : null;
-  const storeId = (userData?.storeId && userData.storeId !== 'null') ? userData.storeId : null;
+  const { branchId, storeId } = useBranchContext();
+  const [catalog, setCatalog] = useState(null); // null = server catalog unavailable → legacy join
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 250);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // Server-joined catalog first (single query, server search); legacy
+  // two-fetch client join as fallback for older backends (404).
+  useEffect(() => {
+    if (!branchId) return;
+    let cancelled = false;
+    dispatch(getPosCatalog({ branchId, q: debouncedSearch, size: 200 }))
+      .unwrap()
+      .then((data) => {
+        if (!cancelled) setCatalog(Array.isArray(data?.content) ? data.content : data);
+      })
+      .catch((err) => {
+        if (!cancelled && err?.status !== 404) setCatalog(null);
+        else if (!cancelled) setCatalog(null);
+      });
+    return () => { cancelled = true; };
+  }, [dispatch, branchId, debouncedSearch]);
+
+  // Legacy fallback path only when the server catalog is unavailable.
+  useEffect(() => {
+    if (catalog !== null) return;
     if (branchId) {
       dispatch(getInventoryByBranch({ branchId }));
     }
     if (storeId) {
       dispatch(getProductsByStore(storeId));
     }
-  }, [dispatch, branchId, storeId]);
+  }, [dispatch, branchId, storeId, catalog]);
 
   useEffect(() => {
     const focusSearch = (event) => {
@@ -36,7 +74,7 @@ export default function ProductSection({ onAddToCart }) {
     return () => window.removeEventListener("keydown", focusSearch);
   }, []);
 
-  // Create a map of productId to product details for quick lookup
+  // Create a map of productId to product details for quick lookup (legacy path)
   const productMap = {};
   const productList = products?.content || products || [];
   productList.forEach(product => {
@@ -44,19 +82,17 @@ export default function ProductSection({ onAddToCart }) {
     if (id != null) productMap[String(id)] = product;
   });
 
-  // Convert inventory items to product format, enriching with product details
+  // Convert inventory items to product format, enriching with product details (legacy path)
   const inventoryByProductId = new Map();
   (inventory || []).forEach((item) => {
     const key = String(item.productId);
     const current = inventoryByProductId.get(key);
-    // A product should have one branch inventory row. Until duplicate data is
-    // repaired server-side, show the record with the highest available stock.
     if (!current || Number(item.quantity || 0) > Number(current.quantity || 0)) {
       inventoryByProductId.set(key, item);
     }
   });
 
-  const productsFromInventory = [...inventoryByProductId.values()].map(inv => {
+  const legacyProducts = [...inventoryByProductId.values()].map(inv => {
     const productDetails = productMap[String(inv.productId)] || {};
     const image =
       inv.productImage ||
@@ -80,20 +116,31 @@ export default function ProductSection({ onAddToCart }) {
       stock: inv.quantity || 0,
     };
   });
-  
-  const filtered = productsFromInventory.filter((p) =>
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
+  const serverProducts = (catalog || []).map(toCatalogProduct);
+  const source = catalog !== null ? serverProducts : legacyProducts;
+
+  // Server already filters on q; filter client-side too for the legacy path
+  // (and as a fast echo while the debounced server query is in flight).
+  const query = searchTerm.trim().toLowerCase();
+  const filtered = catalog !== null && debouncedSearch === searchTerm.trim()
+    ? source
+    : source.filter((p) =>
+        p.name?.toLowerCase().includes(query) ||
+        p.sku?.toLowerCase().includes(query) ||
+        p.category?.name?.toLowerCase().includes(query)
+      );
 
   const loading = inventoryLoading || productsLoading;
 
   const handleSearchKeyDown = (event) => {
+    // Barcode-scanner / SKU fast path: exact match adds to cart on Enter.
     if (event.key !== "Enter" || !searchTerm.trim()) return;
-    const query = searchTerm.trim().toLowerCase();
-    const exactProduct = productsFromInventory.find((product) =>
-      product.sku?.toLowerCase() === query || String(product.id) === query,
+    const q = searchTerm.trim().toLowerCase();
+    const exactProduct = filtered.find((product) =>
+      product.sku?.toLowerCase() === q || String(product.id) === q,
+    ) ?? source.find((product) =>
+      product.sku?.toLowerCase() === q || String(product.id) === q,
     );
     if (exactProduct) {
       onAddToCart(exactProduct);

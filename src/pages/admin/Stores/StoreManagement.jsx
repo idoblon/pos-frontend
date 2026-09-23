@@ -3,13 +3,13 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   Plus, Search, Filter, MoreHorizontal, Edit2,
   Trash2, Eye, MapPin, Store as StoreIcon,
-  AlertCircle, CheckCircle, Activity, X, Save,
+  AlertCircle, CheckCircle, CheckCircle2, Ban, Activity, X, Save,
   Users, GitBranch, TrendingUp, Phone, Mail,
   User, Building2, Calendar, DollarSign, Loader2,
   ShieldCheck, Clock
 } from "lucide-react";
 import { toast } from "sonner";
-import { getAllStores, updateStore, deleteStore } from "@/Redux Toolkit/Features/Store/storeThunk";
+import { getAllStores, updateStore, deleteStore, moderateStore } from "@/Redux Toolkit/Features/Store/storeThunk";
 import api from "@/util/api";
 import { getAuthHeaders } from "@/util/getAuthHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,7 +119,7 @@ function getMetricKey(store) {
 
 // ─── Store Card ──────────────────────────────────────────────────────────────
 
-function StoreCard({ store, onEdit, onView, onDelete }) {
+function StoreCard({ store, onEdit, onView, onDelete, onModerate }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -132,6 +132,7 @@ function StoreCard({ store, onEdit, onView, onDelete }) {
   }, [menuOpen]);
 
   const statusVariant = { active: "success", inactive: "warning", suspended: "destructive", pending: "secondary" };
+  const isSuspended = store.status === "suspended";
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -159,6 +160,9 @@ function StoreCard({ store, onEdit, onView, onDelete }) {
                 {[
                   { icon: Eye, label: "View Details", action: () => { onView(store); setMenuOpen(false); } },
                   { icon: Edit2, label: "Edit Profile", action: () => { onEdit(store); setMenuOpen(false); } },
+                  isSuspended
+                    ? { icon: CheckCircle2, label: "Activate Store", action: () => { onModerate(store, "ACTIVATE"); setMenuOpen(false); } }
+                    : { icon: Ban, label: "Suspend Store", action: () => { onModerate(store, "SUSPEND"); setMenuOpen(false); } },
                   { icon: Trash2, label: "Delete Store", action: () => { onDelete(store); setMenuOpen(false); }, danger: true },
                 ].map(({ icon: Icon, label, action, danger }) => (
                   <button key={label} onClick={action}
@@ -666,7 +670,9 @@ function EditStoreModal({ store, onClose, onSave, saving }) {
 // ─── Delete Confirmation Modal ────────────────────────────────────────────────
 
 function DeleteModal({ store, onClose, onConfirm, deleting }) {
+  const [confirmName, setConfirmName] = useState("");
   if (!store) return null;
+  const matches = confirmName.trim() === store.name.trim();
   return (
     <div style={{
       position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
@@ -689,19 +695,25 @@ function DeleteModal({ store, onClose, onConfirm, deleting }) {
           Delete Store?
         </h3>
         <p style={{ margin: "0 0 6px", fontSize: "14px", color: "#64748b" }}>
-          You are about to permanently delete
+          You are about to delete
         </p>
-        <p style={{ margin: "0 0 24px", fontSize: "16px", fontWeight: "700", color: "#1e293b" }}>
+        <p style={{ margin: "0 0 16px", fontSize: "16px", fontWeight: "700", color: "#1e293b" }}>
           "{store.name}"
         </p>
         <div style={{
           padding: "14px 16px", background: "#fff8f0", border: "1px solid #fed7aa",
-          borderRadius: "10px", marginBottom: "24px", textAlign: "left"
+          borderRadius: "10px", marginBottom: "16px", textAlign: "left"
         }}>
           <p style={{ margin: 0, fontSize: "13px", color: "#9a3412" }}>
-            ⚠️ This action is irreversible. All branches, employees, and data associated with this store will be permanently removed.
+            The store is soft-deleted: staff accounts are detached and deactivated, while orders, payments, and history are preserved for audit. Type the store name to confirm.
           </p>
         </div>
+        <input
+          value={confirmName}
+          onChange={(e) => setConfirmName(e.target.value)}
+          placeholder={store.name}
+          style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: "10px", fontSize: "14px", marginBottom: "16px" }}
+        />
         <div style={{ display: "flex", gap: "12px" }}>
           <button onClick={onClose} style={{
             flex: 1, padding: "12px", border: "1.5px solid #e2e8f0",
@@ -710,12 +722,12 @@ function DeleteModal({ store, onClose, onConfirm, deleting }) {
           }}>
             Cancel
           </button>
-          <button onClick={onConfirm} disabled={deleting} style={{
+          <button onClick={onConfirm} disabled={deleting || !matches} style={{
             flex: 1, padding: "12px", border: "none",
             borderRadius: "10px",
-            background: deleting ? "#fca5a5" : "#ef4444",
+            background: deleting || !matches ? "#fca5a5" : "#ef4444",
             color: "white", fontSize: "14px", fontWeight: "700",
-            cursor: deleting ? "not-allowed" : "pointer",
+            cursor: deleting || !matches ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8
           }}>
             {deleting ? <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> : <Trash2 size={15} />}
@@ -887,6 +899,20 @@ export default function StoreManagement() {
     }
   };
 
+  const handleModerate = async (store, action) => {
+    try {
+      const result = await dispatch(moderateStore({ storeId: store.id, action }));
+      if (result.meta.requestStatus === "fulfilled") {
+        toast.success(action === "SUSPEND" ? `"${store.name}" suspended` : `"${store.name}" activated`);
+        dispatch(getAllStores());
+      } else {
+        toast.error(result.payload || "Failed to update store status");
+      }
+    } catch {
+      toast.error("Failed to update store status");
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
@@ -994,6 +1020,7 @@ export default function StoreManagement() {
                 onView={setViewStore}
                 onEdit={setEditStore}
                 onDelete={setDeleteTarget}
+                onModerate={handleModerate}
               />
             ))}
           </div>

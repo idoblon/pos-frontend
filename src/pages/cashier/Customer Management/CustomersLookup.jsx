@@ -9,6 +9,12 @@ import AddCustomerDialog from "./AddCustomerDialog";
 import EditCustomerDialog from "./EditCustomerDialog";
 import ViewCustomerDialog from "./ViewCustomerDialog";
 import DeleteCustomerDialog from "./DeleteCustomerDialog";
+import secureStorage from "@/util/secureStorage";
+
+// Cashiers may look up and register customers, but not edit or delete them
+// (backend PUT/DELETE now require manager+ roles).
+const canMutateCustomers = () =>
+  secureStorage.getUserData()?.role !== "ROLE_BRANCH_CASHIER";
 
 const CustomersLookup = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,8 +108,8 @@ const CustomersLookup = () => {
               <CustomerTable
                 customers={filteredCustomers}
                 onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
+                onEdit={canMutateCustomers() ? handleEdit : undefined}
+                onDelete={canMutateCustomers() ? handleDelete : undefined}
                 loading={loading}
               />
             </div>

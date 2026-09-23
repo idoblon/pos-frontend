@@ -12,8 +12,8 @@ import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk"
 import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
 import { findStoreEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getCategoriesByStore } from "@/Redux Toolkit/Features/category/categoryThunk";
-import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
-import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
+import { getRefundsByStore } from "@/Redux Toolkit/Features/refund/refundThunk";
+import { getOrdersByStore } from "@/Redux Toolkit/Features/order/orderThunk";
 import secureStorage from "@/util/secureStorage";
 
 const RANGES = ["This Month", "Last 3 Months", "Last 6 Months", "This Year"];
@@ -80,28 +80,21 @@ export default function StoreReports() {
     dispatch(getCategoriesByStore({ storeId }));
   }, [dispatch, storeId]);
 
-  // Fetch orders and refunds from all branches
+  // Fetch orders and refunds store-wide (single calls — no per-branch fan-out).
+  // Branch breakdowns below derive from the same payloads via order.branchId.
   useEffect(() => {
-    if (!branches?.length) return;
+    if (!storeId) return;
     queueMicrotask(() => {
       setAllOrders([]);
       setAllRefunds([]);
-      branches.forEach(branch => {
-        const branchId = branch._id || branch.id;
-        if (!branchId) return;
-        dispatch(getOrdersByBranch({ branchId })).unwrap()
-          .then(data => setAllOrders(prev => {
-            const existingIds = new Set(prev.map(o => o.id));
-            return [...prev, ...data.filter(o => !existingIds.has(o.id))];
-          })).catch(() => {});
-        dispatch(getRefundsByBranch(branchId)).unwrap()
-          .then(data => setAllRefunds(prev => {
-            const existingIds = new Set(prev.map(r => r.id));
-            return [...prev, ...data.filter(r => !existingIds.has(r.id))];
-          })).catch(() => {});
-      });
+      dispatch(getOrdersByStore(storeId)).unwrap()
+        .then((data) => setAllOrders(Array.isArray(data) ? data : []))
+        .catch(() => {});
+      dispatch(getRefundsByStore(storeId)).unwrap()
+        .then((data) => setAllRefunds(Array.isArray(data) ? data : []))
+        .catch(() => {});
     });
-  }, [dispatch, branches]);
+  }, [dispatch, storeId]);
 
   // Process order data
   const orderArray = useMemo(() => [...allOrders], [allOrders]);

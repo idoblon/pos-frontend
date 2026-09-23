@@ -5,9 +5,13 @@
 
 export const SECURITY_CONFIG = {
   // Content Security Policy
+  // Production forbids 'unsafe-inline' for scripts; Vite dev HMR needs it, so
+  // it is only added when import.meta.env.DEV is true.
   CSP: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-inline'"], // Note: Remove unsafe-inline in production
+    scriptSrc: import.meta.env.DEV
+      ? ["'self'", "'unsafe-inline'", "https://js.stripe.com"]
+      : ["'self'", "https://js.stripe.com"],
     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     fontSrc: ["'self'", "https://fonts.gstatic.com"],
     imgSrc: ["'self'", "data:", "https:"],

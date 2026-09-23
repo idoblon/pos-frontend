@@ -9,6 +9,7 @@ import UserManagement from "@/pages/admin/Users/UserManagement";
 import SystemReports from "@/pages/admin/Reports/SystemReports";
 import SystemSettings from "@/pages/admin/Settings/SystemSettings";
 import PaymentNotifications from "@/components/admin/PaymentNotifications";
+import AuditLog from "@/pages/admin/Audit/AuditLog";
 
 export default function AdminRoutes() {
   return (
@@ -22,6 +23,7 @@ export default function AdminRoutes() {
         <Route path="reports" element={<SystemReports />} />
         <Route path="settings" element={<SystemSettings />} />
         <Route path="payments" element={<PaymentNotifications />} />
+        <Route path="audit" element={<AuditLog />} />
         <Route path="payment-notifications" element={<Navigate to="/admin/payments" replace />} />
       </Routes>
     </AdminLayout>

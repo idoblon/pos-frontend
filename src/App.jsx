@@ -111,7 +111,19 @@ function App() {
           <Route path="/suspended" element={<StoreSuspended />} />
           <Route path="/payment-required" element={<PaymentRequired />} />
           <Route path="/pay" element={<StorePaymentPage />} />
-          <Route path="/setup-admin" element={<AdminSeeder />} />
+          {/* First-run admin bootstrap. Disabled in production unless
+              VITE_ENABLE_ADMIN_SEEDER=true; otherwise redirect to login so the
+              endpoint cannot be used to mint an admin. */}
+          <Route
+            path="/setup-admin"
+            element={
+              import.meta.env.DEV || import.meta.env.VITE_ENABLE_ADMIN_SEEDER === "true" ? (
+                <AdminSeeder />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
           {/* Catch-all route for unauthorized access */}
           <Route
             path="*"

@@ -36,6 +36,34 @@ export function saveAdminSystemSettings(settings) {
   return next;
 }
 
+// Server-persisted settings (GET|PUT /api/admin/settings). Showcase-safe:
+// merges server values over local defaults; failures fall back to localStorage.
+export async function fetchServerSystemSettings() {
+  const { default: api } = await import("@/util/api");
+  const res = await api.get("/api/admin/settings");
+  const data = res.data && typeof res.data === "object" ? res.data : {};
+  const coerced = {};
+  for (const [key, raw] of Object.entries(data)) {
+    if (!(key in DEFAULT_ADMIN_SYSTEM_SETTINGS)) continue;
+    const fallback = DEFAULT_ADMIN_SYSTEM_SETTINGS[key];
+    if (typeof fallback === "boolean") coerced[key] = raw === true || raw === "true";
+    else if (typeof fallback === "number") {
+      const n = Number(raw);
+      coerced[key] = Number.isFinite(n) ? n : fallback;
+    } else coerced[key] = String(raw ?? fallback);
+  }
+  return coerced;
+}
+
+export async function saveServerSystemSettings(settings) {
+  const { default: api } = await import("@/util/api");
+  const payload = {};
+  for (const [key, value] of Object.entries(settings)) {
+    if (key in DEFAULT_ADMIN_SYSTEM_SETTINGS) payload[key] = String(value);
+  }
+  await api.put("/api/admin/settings", payload);
+}
+
 export function subscribeAdminSystemSettings(callback) {
   const handleCustomUpdate = (event) => {
     callback(event.detail || getAdminSystemSettings());

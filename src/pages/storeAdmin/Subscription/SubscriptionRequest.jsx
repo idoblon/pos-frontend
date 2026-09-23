@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { AlertTriangle, CheckCircle, Clock, CreditCard, X } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, CreditCard, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getAuthHeaders } from "@/util/getAuthHeader";
@@ -11,29 +11,12 @@ import {
   getSubscriptionExpiryDate,
   getSubscriptionPurchaseDate,
 } from "@/util/subscriptionUtils";
+import { fetchSubscriptionPlans, SUBSCRIPTION_PLANS_FALLBACK } from "@/util/subscriptionPlans";
 import secureStorage from "@/util/secureStorage";
 import api from "@/util/api";
 
 const STORAGE_KEY = "subscriptionUpgradeRequests";
 const PLAN_ORDER = ["BASIC", "PROFESSIONAL", "ENTERPRISE"];
-
-const SUBSCRIPTION_PLANS = {
-  BASIC: {
-    name: "Basic",
-    price: 3500,
-    features: ["3 branches", "10 users", "5GB storage", "Email support"],
-  },
-  PROFESSIONAL: {
-    name: "Professional",
-    price: 7000,
-    features: ["10 branches", "50 users", "25GB storage", "Priority support", "API access"],
-  },
-  ENTERPRISE: {
-    name: "Enterprise",
-    price: 10000,
-    features: ["25 branches", "200 users", "100GB storage", "24/7 dedicated support", "Custom integrations"],
-  },
-};
 
 const readRequests = () => {
   try {
@@ -56,9 +39,9 @@ const normalizeRequest = (request) => ({
   status: String(request.status || "PAID").toUpperCase(),
 });
 
-const getPlanChangeAmount = (currentPlan, requestedPlan) => {
-  const current = SUBSCRIPTION_PLANS[currentPlan]?.price || 0;
-  const requested = SUBSCRIPTION_PLANS[requestedPlan]?.price || current;
+const getPlanChangeAmount = (plans, currentPlan, requestedPlan) => {
+  const current = plans[currentPlan]?.priceValue || 0;
+  const requested = plans[requestedPlan]?.priceValue || current;
   return Math.abs(requested - current);
 };
 
@@ -71,7 +54,7 @@ const getPlanChangeType = (currentPlan, requestedPlan) => {
   return "SAME";
 };
 
-function RequestStatus({ request }) {
+function RequestStatus({ request, plans }) {
   if (!request) return null;
 
   const statusConfig = {
@@ -92,7 +75,7 @@ function RequestStatus({ request }) {
           {config.label}
         </p>
         <p style={{ margin: "0", fontSize: 12, color: "#8a909c" }}>
-          {SUBSCRIPTION_PLANS[request.currentPlan]?.name} to {SUBSCRIPTION_PLANS[request.requestedPlan]?.name}
+          {plans[request.currentPlan]?.name} to {plans[request.requestedPlan]?.name}
           {request.paymentReference ? ` • ${request.paymentReference}` : ""}
         </p>
       </div>
@@ -113,11 +96,53 @@ export default function SubscriptionRequest() {
   const [requests, setRequests] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [plans, setPlans] = useState(SUBSCRIPTION_PLANS_FALLBACK);
+  const [planSource, setPlanSource] = useState("fallback");
+  const [synced, setSynced] = useState(false);
+
+  // Server-wins reconciliation: fetch this store's change requests and merge
+  // over the local demo cache so admin approve/reject is reflected here.
+  const reconcileRequests = async (sid) => {
+    if (!sid) return;
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.get(`/api/subscription-upgrade-requests/store/${encodeURIComponent(sid)}`, { headers });
+      const server = (Array.isArray(res.data) ? res.data : []).map(normalizeRequest);
+      if (server.length > 0) {
+        setRequests((current) => {
+          const byId = new Map(current.map((r) => [String(r.id), r]));
+          for (const s of server) byId.set(String(s.id), s);
+          const next = [...byId.values()];
+          saveRequests(next);
+          return next;
+        });
+        setSynced(true);
+        return;
+      }
+    } catch {
+      // backend unreachable or 403 (older role rules) → keep local cache
+    }
+    setSynced(false);
+  };
 
   useEffect(() => {
     dispatch(getStoreByAdmin());
-    setRequests(readRequests().map(normalizeRequest));
   }, [dispatch]);
+
+  useEffect(() => {
+    setRequests(readRequests().map(normalizeRequest));
+    (async () => {
+      const { plans: serverPlans, source } = await fetchSubscriptionPlans().catch(() => ({
+        plans: SUBSCRIPTION_PLANS_FALLBACK, source: "fallback",
+      }));
+      setPlans(serverPlans);
+      setPlanSource(source);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (storeId) reconcileRequests(storeId);
+  }, [storeId]);
 
   const availablePlans = useMemo(() => PLAN_ORDER.filter((plan) => plan !== currentPlan), [currentPlan]);
 
@@ -131,7 +156,7 @@ export default function SubscriptionRequest() {
 
   const latestRequest = activeRequest || requests.find((request) => request.storeId === storeId);
   const changeType = requestedPlan ? getPlanChangeType(currentPlan, requestedPlan) : "SAME";
-  const amount = requestedPlan ? getPlanChangeAmount(currentPlan, requestedPlan) : 0;
+  const amount = requestedPlan ? getPlanChangeAmount(plans, currentPlan, requestedPlan) : 0;
   const storeName = getStoreName(store) || userData?.storeName || "Your Store";
   const subscriptionPurchaseDate = getSubscriptionPurchaseDate(store);
   const subscriptionExpiryDate = getSubscriptionExpiryDate(store, subscriptionPurchaseDate);
@@ -189,6 +214,8 @@ export default function SubscriptionRequest() {
       upsertRequest(res.data || payload);
       toast.success("Subscription change request sent to POS admin");
       setShowModal(false);
+      dispatch(getStoreByAdmin());
+      reconcileRequests(storeId);
     } catch {
       upsertRequest({
         ...payload,
@@ -207,11 +234,17 @@ export default function SubscriptionRequest() {
     <div style={{ padding: "24px", boxSizing: "border-box", fontFamily: "'DM Sans','Inter',sans-serif", backgroundColor: "#f5f5f5", minHeight: "100%" }}>
       <div style={{ width: "100%", maxWidth: 1080, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
           <div>
             <h1 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>Subscription</h1>
             <p style={{ margin: "0", fontSize: 12, color: "#8a909c" }}>Manage your plan and request changes</p>
           </div>
+          <button
+            onClick={() => { dispatch(getStoreByAdmin()); reconcileRequests(storeId); toast.success("Refreshed"); }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "white", border: "1px solid #e2e5e9", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#1a1d23" }}
+          >
+            <RefreshCw size={13} /> Refresh status
+          </button>
         </div>
 
         {/* Current Plan Card */}
@@ -222,8 +255,8 @@ export default function SubscriptionRequest() {
           {/* Plan Display */}
           <div style={{ padding: 16, backgroundColor: "#f5f5f5", borderRadius: 8, border: "1px solid #e2e5e9", marginBottom: 18 }}>
             <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "#8a909c", textTransform: "uppercase" }}>Active Plan</p>
-            <p style={{ margin: "0 0 8px", fontSize: 24, fontWeight: 900, color: "#1a1d23" }}>{SUBSCRIPTION_PLANS[currentPlan]?.name || currentPlan}</p>
-            <p style={{ margin: "0", fontSize: 13, color: "#8a909c" }}>NPR {(SUBSCRIPTION_PLANS[currentPlan]?.price || 0).toLocaleString("en-IN")}/year</p>
+            <p style={{ margin: "0 0 8px", fontSize: 24, fontWeight: 900, color: "#1a1d23" }}>{plans[currentPlan]?.name || currentPlan}</p>
+            <p style={{ margin: "0", fontSize: 13, color: "#8a909c" }}>{plans[currentPlan]?.price || ""}{planSource === "fallback" ? " (demo)" : ""}</p>
           </div>
 
           {/* Subscription Dates */}
@@ -255,7 +288,7 @@ export default function SubscriptionRequest() {
           <div style={{ marginBottom: 18 }}>
             <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#1a1d23" }}>Includes:</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-              {SUBSCRIPTION_PLANS[currentPlan]?.features.map((feature) => (
+              {(plans[currentPlan]?.features || []).map((feature) => (
                 <div key={feature} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#1a1d23" }} />
                   <p style={{ margin: "0", fontSize: 12, color: "#1a1d23" }}>{feature}</p>
@@ -265,7 +298,12 @@ export default function SubscriptionRequest() {
           </div>
 
           {/* Request Status */}
-          {latestRequest && <RequestStatus request={latestRequest} />}
+          {latestRequest && <RequestStatus request={latestRequest} plans={plans} />}
+          {synced && (
+            <p style={{ margin: "10px 0 0", fontSize: 11, color: "#166534" }}>
+              Synced with POS admin — approval status is up to date.
+            </p>
+          )}
 
           {/* Change Plan Button */}
           {!activeRequest && (
@@ -372,7 +410,7 @@ export default function SubscriptionRequest() {
                   >
                     {availablePlans.map((plan) => (
                       <option key={plan} value={plan}>
-                        {SUBSCRIPTION_PLANS[plan].name} - NPR {SUBSCRIPTION_PLANS[plan].price.toLocaleString("en-IN")}/year
+                        {plans[plan]?.name || plan} - {plans[plan]?.price || ""}
                       </option>
                     ))}
                   </select>
@@ -388,7 +426,7 @@ export default function SubscriptionRequest() {
                   </div>
 
                   <div style={{ display: "grid", gap: 6, marginTop: 12 }}>
-                    {SUBSCRIPTION_PLANS[requestedPlan]?.features.map((feature) => (
+                    {(plans[requestedPlan]?.features || []).map((feature) => (
                       <div key={feature} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#1a1d23" }} />
                         <span style={{ fontSize: 12, color: "#6b7280" }}>{feature}</span>

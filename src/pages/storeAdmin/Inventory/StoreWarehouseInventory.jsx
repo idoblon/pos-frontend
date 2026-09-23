@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Plus, Search, Package, AlertTriangle, Edit, Trash2, Send } from "lucide-react";
-import { getInventoryByStore, addInventoryItem, updateInventoryStock, deleteInventoryItem } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
+import { getInventoryByStore, addInventoryItem, updateInventoryStock, deleteInventoryItem, transferStock } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
+import api from "@/util/api";
+import { getAuthHeaders } from "@/util/getAuthHeader";
 import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -55,6 +57,10 @@ export default function StoreWarehouseInventory() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ productId: "", quantity: "" });
   const [distributeForm, setDistributeForm] = useState({ branchId: "", quantity: "" });
+  const [threshold, setThreshold] = useState(() => getLowStockThreshold());
+  const [serverLowStock, setServerLowStock] = useState(null);
+  const [movements, setMovements] = useState([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
   const lowStockThreshold = getLowStockThreshold();
 
   useEffect(() => {
@@ -64,6 +70,29 @@ export default function StoreWarehouseInventory() {
       dispatch(getProductsByStore(storeId));
     }
   }, [dispatch, storeId]);
+
+  // Server-evaluated low-stock list for the chosen threshold
+  // (GET /api/inventories/store/{id}/low-stock?threshold=). Falls back to
+  // client-side counting when the backend is unreachable (live pending).
+  useEffect(() => {
+    if (!storeId) return;
+    let cancelled = false;
+    const t = Number(threshold);
+    if (!Number.isFinite(t) || t < 1) return;
+    (async () => {
+      try {
+        const headers = getAuthHeaders();
+        const res = await api.get(
+          `/api/inventories/store/${encodeURIComponent(storeId)}/low-stock?threshold=${Math.floor(t)}`,
+          { headers },
+        );
+        if (!cancelled) setServerLowStock(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        if (!cancelled) setServerLowStock(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [storeId, threshold]);
 
   const warehouseInventory = inventory?.filter(item => !item.branchId || item.branchId === null) || [];
   const branchInventory = inventory?.filter(item => item.branchId && item.branchId !== null) || [];
@@ -83,6 +112,7 @@ export default function StoreWarehouseInventory() {
   const lowStockCount = filtered?.filter(item => item.quantity > 0 && item.quantity <= lowStockThreshold).length || 0;
   const outOfStockCount = filtered?.filter(item => item.quantity === 0).length || 0;
   const totalValue = filtered?.reduce((sum, item) => sum + (item.quantity * (item.unitPrice || 0)), 0) || 0;
+  const lowStockDisplay = serverLowStock !== null ? serverLowStock.length : lowStockCount;
 
   const openAdd = () => {
     setForm({ productId: "", quantity: "" });
@@ -175,7 +205,7 @@ export default function StoreWarehouseInventory() {
       });
   };
 
-  const handleDistribute = (e) => {
+  const handleDistribute = async (e) => {
     e.preventDefault();
 
     if (!selected) {
@@ -184,7 +214,7 @@ export default function StoreWarehouseInventory() {
     }
 
     const distributeQty = Number(distributeForm.quantity);
-    
+
     if (!distributeForm.branchId || !distributeQty) {
       toast.error("Please select branch and enter quantity");
       return;
@@ -195,8 +225,29 @@ export default function StoreWarehouseInventory() {
       return;
     }
 
+    // Atomic server transfer first (single transaction, audited movements).
+    try {
+      const result = await dispatch(transferStock({
+        warehouseInventoryId: selected.id || selected._id,
+        toBranchId: distributeForm.branchId,
+        quantity: distributeQty,
+      })).unwrap();
+      void result;
+      toast.success(`Distributed ${distributeQty} units to branch successfully`);
+      setDistributeDialogOpen(false);
+      dispatch(getInventoryByStore({ storeId }));
+      return;
+    } catch (err) {
+      // 404 = backend predates the transfer endpoint → legacy two-step path.
+      if (err?.status !== 404) {
+        toast.error(err?.message || "Failed to distribute stock");
+        return;
+      }
+    }
+
+    // Legacy fallback (two sequential writes — kept for old backends only).
     const newWarehouseQty = selected.quantity - distributeQty;
-    
+
     dispatch(updateInventoryStock({
       inventoryId: selected.id || selected._id,
       quantity: newWarehouseQty,
@@ -260,17 +311,33 @@ export default function StoreWarehouseInventory() {
       </div>
 
       <div style={{ display: "flex", gap: 16, borderBottom: "1px solid #e5e7eb" }}>
-        <button 
+        <button
           style={{ ...s.tab, ...(activeTab === "warehouse" ? s.tabActive : {}) }}
           onClick={() => setActiveTab("warehouse")}
         >
           Package Warehouse Inventory
         </button>
-        <button 
+        <button
           style={{ ...s.tab, ...(activeTab === "branches" ? s.tabActive : {}) }}
           onClick={() => setActiveTab("branches")}
         >
           Store Branch Inventories
+        </button>
+        <button
+          style={{ ...s.tab, ...(activeTab === "movements" ? s.tabActive : {}) }}
+          onClick={() => {
+            setActiveTab("movements");
+            if (storeId) {
+              setMovementsLoading(true);
+              const headers = getAuthHeaders();
+              api.get(`/api/stock-movements/store/${encodeURIComponent(storeId)}`, { headers })
+                .then((res) => setMovements(Array.isArray(res.data) ? res.data : []))
+                .catch(() => setMovements([]))
+                .finally(() => setMovementsLoading(false));
+            }
+          }}
+        >
+          Stock Movements
         </button>
       </div>
 
@@ -287,10 +354,21 @@ export default function StoreWarehouseInventory() {
         <div style={{ ...s.card, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <AlertTriangle size={20} color="#d97706" />
-            <div>
-              <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>Low Stock</p>
-              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700, color: "#d97706" }}>{lowStockCount}</p>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>
+                Low Stock {serverLowStock === null ? "(local)" : "(server)"}
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700, color: "#d97706" }}>{lowStockDisplay}</p>
             </div>
+            <label style={{ fontSize: 11, color: "#8a909c" }}>
+              ≤
+              <input
+                type="number" min="1" step="1" value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                style={{ width: 56, marginLeft: 4, border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 6px", fontSize: 12 }}
+                title="Low-stock threshold (server-evaluated)"
+              />
+            </label>
           </div>
         </div>
         <div style={{ ...s.card, padding: 16 }}>
@@ -316,7 +394,9 @@ export default function StoreWarehouseInventory() {
       <div style={s.card}>
         <div style={s.cardHeader}>
           <span style={{ fontSize: 13, fontWeight: 600 }}>
-            {activeTab === "warehouse" ? "Warehouse Stock" : "Branch Stock"} ({filtered?.length || 0})
+            {activeTab === "movements"
+              ? `Stock Movements (${movements?.length || 0})`
+              : `${activeTab === "warehouse" ? "Warehouse Stock" : "Branch Stock"} (${filtered?.length || 0})`}
           </span>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {activeTab === "branches" && (
@@ -334,7 +414,7 @@ export default function StoreWarehouseInventory() {
           </div>
         </div>
 
-        {!loading && filtered?.length === 0 && (
+        {!loading && filtered?.length === 0 && activeTab !== "movements" && (
           <div style={s.empty}>
             <Package size={36} color="#e2e5e9" style={{ margin: "0 auto 10px", display: "block" }} />
             <p style={{ margin: 0, fontWeight: 600 }}>No inventory items found</p>
@@ -344,7 +424,46 @@ export default function StoreWarehouseInventory() {
           </div>
         )}
 
-        {filtered?.length > 0 && (
+        {activeTab === "movements" && (
+          <div style={{ overflowX: "auto" }}>
+            {movementsLoading ? (
+              <p style={{ padding: 20, color: "#8a909c", fontSize: 13 }}>Loading movements…</p>
+            ) : movements?.length === 0 ? (
+              <div style={s.empty}>
+                <Package size={36} color="#e2e5e9" style={{ margin: "0 auto 10px", display: "block" }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>No stock movements yet</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12 }}>Transfers, restocks, and manual edits will appear here with who made them.</p>
+              </div>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    {["Type", "Qty change", "Reason", "By", "When"].map((h) => (
+                      <th key={h} style={s.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {movements.map((m, i) => (
+                    <tr key={m.id || i} style={{ background: "white" }}>
+                      <td style={s.td}>{m.type || m.movementType || "—"}</td>
+                      <td style={{ ...s.td, fontWeight: 700, color: Number(m.quantityChanged ?? m.quantity) < 0 ? "#e53e3e" : "#059669" }}>
+                        {m.quantityChanged ?? m.quantity ?? "—"}
+                      </td>
+                      <td style={{ ...s.td, color: "#8a909c" }}>{m.reason || "—"}</td>
+                      <td style={{ ...s.td, color: "#8a909c" }}>{m.performedByName || m.performedBy?.fullName || m.username || "—"}</td>
+                      <td style={{ ...s.td, color: "#8a909c" }}>
+                        {m.createdAt ? new Date(m.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {filtered?.length > 0 && activeTab !== "movements" && (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>

@@ -27,6 +27,7 @@ import { getRestockRequestsByBranch } from "@/Redux Toolkit/Features/restock/res
 import secureStorage from "@/util/secureStorage";
 import posLogo from "@/logo/pos.png";
 import ChangePasswordDialog from "@/pages/cashier/Settings/ChangePasswordDialog";
+import useBranchContext from "@/hooks/useBranchContext";
 import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
 
 const navItems = [
@@ -212,11 +213,9 @@ export default function BranchLayout() {
   const [readNotifications, setReadNotifications] = useState(readStoredNotifications);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { userProfile } = useSelector((s) => s.user);
+  const { userProfile, userData, branchId } = useBranchContext();
   const { branch } = useSelector((s) => s.branch);
   const { requests: restockRequests } = useSelector((s) => s.restock);
-  const userData = secureStorage.getUserData();
-  const branchId = userData?.branchId;
 
   useEffect(() => {
     if (!userProfile) dispatch(getUserProfile());

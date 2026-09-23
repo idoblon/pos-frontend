@@ -89,3 +89,31 @@ export const getEmployeeAnalytics = createAsyncThunk(
     }
   }
 );
+
+export const getBranchAnalytics = createAsyncThunk(
+  "analytics/getBranch",
+  async (branchId, { rejectWithValue }) => {
+    try {
+      const { branchId: bid } = sanitizePathParams({ branchId });
+      const headers = getAuthHeaders();
+      const res = await api.get(`/api/analytics/branch/${bid}`, { headers });
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch branch analytics");
+    }
+  }
+);
+
+export const getBranchDailyComparison = createAsyncThunk(
+  "analytics/getBranchDaily",
+  async (branchId, { rejectWithValue }) => {
+    try {
+      const { branchId: bid } = sanitizePathParams({ branchId });
+      const headers = getAuthHeaders();
+      const res = await api.get(`/api/analytics/branch/${bid}/daily-comparison`, { headers });
+      return res.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch branch daily comparison");
+    }
+  }
+);

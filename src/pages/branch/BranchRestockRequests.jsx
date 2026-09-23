@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Package, Clock, CheckCircle, XCircle, AlertCircle, Truck, Plus } from "lucide-react";
 import { getRestockRequestsByBranch, fulfillRestockRequest, createRestockRequest } from "@/Redux Toolkit/Features/restock/restockThunk";
 import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
+import { getInventoryByBranch } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import secureStorage from "@/util/secureStorage";
+import useBranchContext from "@/hooks/useBranchContext";
 
 const statusStyle = {
   PENDING: { background: "#fffbeb", color: "#d97706", icon: Clock, label: "Pending Review" },
@@ -34,11 +36,8 @@ export default function BranchRestockRequests() {
   const navigate = useNavigate();
   const { requests: restockRequests, loading } = useSelector((s) => s.restock);
   const { products } = useSelector((s) => s.product);
-  const { userProfile } = useSelector((s) => s.user);
-  const { user } = useSelector((s) => s.auth);
-  const userData = secureStorage.getUserData();
-  const branchId = userData?.branchId || userProfile?.branchId || user?.branchId;
-  const storeId = userData?.storeId || userProfile?.storeId || user?.storeId;
+  const { inventory } = useSelector((s) => s.inventory);
+  const { branchId, storeId, userProfile } = useBranchContext();
 
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [fulfillDialogOpen, setFulfillDialogOpen] = useState(false);
@@ -62,6 +61,39 @@ export default function BranchRestockRequests() {
   useEffect(() => {
     if (storeId) dispatch(getProductsByStore(storeId));
   }, [dispatch, storeId]);
+
+  useEffect(() => {
+    if (branchId) dispatch(getInventoryByBranch({ branchId }));
+  }, [dispatch, branchId]);
+
+  // One-click handoff from Branch Inventory: prefill product + real stock.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("restockPrefill");
+      if (!raw) return;
+      localStorage.removeItem("restockPrefill");
+      const prefill = JSON.parse(raw);
+      if (prefill?.productId) {
+        setRestockForm({
+          productId: String(prefill.productId),
+          quantity: 50,
+          notes: `Low stock alert — ${prefill.productName || "product"} at ${prefill.currentStock ?? 0} units. `,
+        });
+        setRestockDialogOpen(true);
+      }
+    } catch {
+      // no prefill — dialog opens blank on demand
+    }
+  }, []);
+
+  const stockByProductId = (() => {
+    const map = {};
+    for (const item of inventory || []) {
+      const pid = String(item.productId ?? item.id ?? "");
+      if (pid) map[pid] = item.quantity ?? item.stock ?? 0;
+    }
+    return map;
+  })();
 
   const handleMarkReceived = async () => {
     
@@ -100,12 +132,13 @@ export default function BranchRestockRequests() {
     if (!restockForm.productId) { toast.error("Please select a product"); return; }
     setSubmitting(true);
     try {
+      const selectedProductId = String(restockForm.productId);
       await dispatch(createRestockRequest({
         branchId: Number(branchId),
         productId: Number(restockForm.productId),
         requestedQuantity: Number(restockForm.quantity),
         notes: restockForm.notes.trim(),
-        currentStock: 0,
+        currentStock: stockByProductId[selectedProductId] ?? 0,
       })).unwrap();
       toast.success("Restock request submitted to Store Admin");
       setRestockDialogOpen(false);
@@ -226,6 +259,11 @@ export default function BranchRestockRequests() {
                         <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={req.notes}>
                           {req.notes ?? "—"}
                         </div>
+                        {req.status === "REJECTED" && req.rejectionReason && (
+                          <div style={{ fontSize: 11, color: "#e53e3e", marginTop: 4, whiteSpace: "normal" }} title={req.rejectionReason}>
+                            Reason: {req.rejectionReason}
+                          </div>
+                        )}
                       </td>
                       <td style={{ ...s.td, textAlign: "right" }}>
                         {req.status === "APPROVED" && (

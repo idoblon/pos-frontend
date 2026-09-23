@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Search, RotateCcw, TrendingDown, DollarSign, Calendar, Users } from "lucide-react";
+import { Search, RotateCcw, TrendingDown, DollarSign, Calendar, Users, Plus } from "lucide-react";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
-import secureStorage from "@/util/secureStorage";
+import useBranchContext from "@/hooks/useBranchContext";
+import BranchRefundDialog from "@/pages/branch/BranchRefundDialog";
 
 const s = {
   page: {
@@ -48,11 +49,14 @@ const s = {
 
 export default function BranchRefunds() {
   const dispatch = useDispatch();
-  const userData = secureStorage.getUserData();
-  const branchId = userData?.branchId;
+  const { branchId } = useBranchContext();
   const { refundsByBranch: refunds, loading } = useSelector((s) => s.refund);
   const [search, setSearch] = useState("");
+  const [refundOpen, setRefundOpen] = useState(false);
 
+  const refresh = () => {
+    if (branchId) dispatch(getRefundsByBranch(branchId));
+  };
 
   useEffect(() => {
     if (branchId) {
@@ -83,11 +87,19 @@ export default function BranchRefunds() {
 
   return (
     <div style={s.page}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Refunds</h1>
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>
-          All branch refunds and returns
-        </p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Refunds</h1>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>
+            All branch refunds and returns
+          </p>
+        </div>
+        <button
+          onClick={() => setRefundOpen(true)}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1a1d23", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+        >
+          <Plus size={14} /> Issue Refund
+        </button>
       </div>
 
       {/* Refund Statistics */}
@@ -243,6 +255,14 @@ export default function BranchRefunds() {
           </div>
         )}
       </div>
+
+      <BranchRefundDialog
+        open={refundOpen}
+        onClose={() => setRefundOpen(false)}
+        order={null}
+        branchId={branchId}
+        onIssued={refresh}
+      />
     </div>
   );
 }

@@ -68,30 +68,12 @@ export const validateUserAccess = async (userData) => {
 
   try {
     const storeStatus = await checkStoreStatus(userData.storeId);
-    
+
     if (!storeStatus) {
-      // Store not in suspension data — treat as active (defaultStatus object
-      // below was never used and has been removed).
-      // Add this to localStorage for future reference
-      const subscriptionData = localStorage.getItem('subscriptionData');
-      if (subscriptionData) {
-        try {
-          const subscriptions = JSON.parse(subscriptionData);
-          subscriptions.push({
-            id: userData.storeId,
-            storeId: userData.storeId,
-            storeName: userData.storeName || 'Unknown Store',
-            status: 'ACTIVE',
-            suspendedAt: null,
-            suspensionReason: null
-          });
-          localStorage.setItem('subscriptionData', JSON.stringify(subscriptions));
-        } catch (error) {
-          console.error('Error updating subscription data:', error);
-        }
-      }
-      
-      return { allowed: true, reason: 'Default ACTIVE status assigned' };
+      // Backend unreachable or store not found — fail open for UX but surface
+      // a warning so the UI can retry. Do NOT silently mint a fake ACTIVE
+      // record in localStorage (previous behavior masked real suspensions).
+      return { allowed: true, reason: 'Store status unavailable, allowing access pending retry', degraded: true };
     }
 
 
@@ -116,69 +98,38 @@ export const validateUserAccess = async (userData) => {
     return { allowed: true, reason: 'Access granted' };
   } catch (error) {
     console.error('Store status validation error:', error);
-    // On error, allow access (fail-open for better UX)
+    // Fail open on network/validation errors for UX, but flag degraded mode.
     return {
       allowed: true,
-      reason: 'Validation error, allowing access'
+      reason: 'Validation error, allowing access',
+      degraded: true
     };
   }
 };
 
 /**
- * Check store status from various sources
+ * Check store status from the backend (single source of truth).
+ * Returns null when the status cannot be determined.
  */
 const checkStoreStatus = async (storeId) => {
-  // First try to get from subscription data in localStorage
-  const subscriptionData = localStorage.getItem('subscriptionData');
-  if (subscriptionData) {
-    try {
-      const subscriptions = JSON.parse(subscriptionData);
-      const storeSubscription = subscriptions.find(sub => 
-        sub.storeId === storeId || sub.id === storeId
-      );
-      if (storeSubscription) {
-        
-        // If store is ACTIVE, don't return suspension data even if it exists
-        if (storeSubscription.status === 'ACTIVE') {
-          return {
-            id: storeSubscription.storeId || storeSubscription.id,
-            status: 'ACTIVE',
-            suspendedAt: null,
-            suspensionReason: null
-          };
-        }
-        
-        // Only return suspension data if status is actually SUSPENDED
-        return {
-          id: storeSubscription.storeId || storeSubscription.id,
-          status: storeSubscription.status,
-          suspendedAt: storeSubscription.status === 'SUSPENDED' ? storeSubscription.suspendedAt : null,
-          suspensionReason: storeSubscription.status === 'SUSPENDED' ? storeSubscription.suspensionReason : null
-        };
-      }
-    } catch (error) {
-      console.error('Error parsing subscription data:', error);
-    }
-  }
-
-  // Fallback to API call (in real implementation)
   try {
-    const jwt = localStorage.getItem('jwt');
-    if (!jwt) return null;
+    const { default: secureStorage } = await import('./secureStorage');
+    const token = secureStorage.getToken();
+    if (!token) return null;
 
-    // This would be actual API call
-    // const response = await api.get(`/stores/${storeId}/status`);
-    // return response.data;
-    
-    // Mock response for demonstration - Default to ACTIVE unless specifically suspended
+    const { default: api } = await import('@/util/api');
+    const response = await api.get(`/api/stores/${encodeURIComponent(storeId)}`);
+    const store = response.data;
+    if (!store) return null;
+
     return {
-      id: storeId,
-      status: 'ACTIVE', // Default to active if no suspension data found
-      suspendedAt: null,
-      suspensionReason: null
+      id: store.id ?? storeId,
+      status: (store.status || 'UNKNOWN').toUpperCase(),
+      suspendedAt: store.suspendedAt || null,
+      suspensionReason: store.suspensionReason || null
     };
   } catch (error) {
-    console.error('API call failed:', error);
+    console.error('Store status API call failed:', error?.response?.status || error?.message);
     return null;
   }
 };

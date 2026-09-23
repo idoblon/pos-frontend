@@ -41,8 +41,8 @@ const StoreSubscriptionPage = () => {
 
   const handlePlanSelect = async (planType, isRenewal = false) => {
     try {
-      // Navigate to payment page with selected plan
-      navigate('/store/subscription/payment', {
+      // Navigate to the shared store payment page with selected plan
+      navigate('/pay', {
         state: {
           planType,
           isRenewal,

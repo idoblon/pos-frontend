@@ -1,4 +1,3 @@
-import CreateOrder from "@/pages/cashier/CreateOrder";
 import OrderHistory from "@/pages/cashier/Order History/OrderHistory";
 import CashierDashboardLayout from "@/pages/cashier/CashierDashboardLayout";
 import CustomersLookup from "@/pages/cashier/Customer Management/CustomersLookup";

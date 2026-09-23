@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
 import {
   LayoutDashboard, Store, Users, BarChart3, Settings,
-  LogOut, Bell, FileText, CreditCard, Clock, X, Menu,
+  LogOut, Bell, FileText, CreditCard, Clock, X, Menu, ShieldCheck,
 } from "lucide-react";
 import posLogo from "@/logo/pos.png";
 import api from "@/util/api";
@@ -23,6 +23,7 @@ const sidebarItems = [
   { icon: Users, label: "User Management", path: "/admin/users" },
   { icon: BarChart3, label: "System Analytics", path: "/admin/reports" },
   { icon: () => <span style={{ fontSize: 15, fontWeight: 700, color: "inherit" }}>रु</span>, label: "Payments", path: "/admin/payments", paymentBadge: true },
+  { icon: ShieldCheck, label: "Audit Log", path: "/admin/audit" },
   { icon: Settings, label: "System Settings", path: "/admin/settings" },
 ];
 

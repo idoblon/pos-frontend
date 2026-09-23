@@ -16,7 +16,9 @@ import { getShiftsByBranch } from "@/Redux Toolkit/Features/shiftReport/shiftRep
 import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 import { findBranchEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
-import secureStorage from "@/util/secureStorage";
+import { getBranchAnalytics, getBranchDailyComparison } from "@/Redux Toolkit/Features/analytics/analyticsThunk";
+import useBranchContext from "@/hooks/useBranchContext";
+import { toast } from "sonner";
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -32,14 +34,15 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function BranchReports() {
   const dispatch = useDispatch();
-  const userData = secureStorage.getUserData();
-  const branchId = userData?.branchId;
+  const { branchId } = useBranchContext();
   const [range, setRange] = useState("7");
 
   const { shiftsByBranch } = useSelector((s) => s.shiftReport);
   const { orders } = useSelector((s) => s.order);
   const { refunds } = useSelector((s) => s.refund);
   const { employees } = useSelector((s) => s.employee);
+  const [serverSummary, setServerSummary] = useState(null);
+  const [serverDaily, setServerDaily] = useState(null);
 
   // Fixed black/grey/white color scheme
   const textColor = "#1a1d23";
@@ -58,7 +61,42 @@ export default function BranchReports() {
     dispatch(getOrdersByBranch({ branchId }));
     dispatch(getRefundsByBranch(branchId));
     dispatch(findBranchEmployee({ branchId }));
+    // Server-computed snapshot (authoritative totals + daily comparison).
+    dispatch(getBranchAnalytics(branchId)).unwrap()
+      .then(setServerSummary).catch(() => setServerSummary(null));
+    dispatch(getBranchDailyComparison(branchId)).unwrap()
+      .then(setServerDaily).catch(() => setServerDaily(null));
   }, [dispatch, branchId]);
+
+  const exportCsv = () => {
+    try {
+      const rows = [["metric", "value"]];
+      const push = (k, v) => rows.push([k, String(v ?? "")]);
+      if (serverSummary) {
+        push("totalOrders", serverSummary.totalOrders);
+        push("totalSales", serverSummary.totalSales);
+        push("totalCustomers", serverSummary.totalCustomers);
+        push("averageOrderValue", serverSummary.averageOrderValue);
+      } else {
+        push("totalRevenue", totalRevenue);
+        push("totalOrders", totalOrders);
+        push("totalRefunds", totalRefunds);
+      }
+      if (serverDaily && typeof serverDaily === "object") {
+        for (const [k, v] of Object.entries(serverDaily)) push(`daily:${k}`, typeof v === "object" ? JSON.stringify(v) : v);
+      }
+      const csv = rows.map(([a, b]) => `${a},"${String(b).replace(/"/g, '""')}"`).join("\n");
+      const url = window.URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "branch-report.csv";
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Report exported");
+    } catch {
+      toast.error("Export failed");
+    }
+  };
 
   const days = Number(range);
   const trendData = Array.from({ length: days }, (_, i) => {
@@ -181,27 +219,56 @@ export default function BranchReports() {
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>
             Historical performance analysis and insights
+            {serverSummary ? " — server snapshot available" : " — local aggregation (server unreachable)"}
           </p>
         </div>
-        <select
-          value={range}
-          onChange={(e) => setRange(e.target.value)}
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: 8,
-            padding: "7px 12px",
-            fontSize: 13,
-            background: "white",
-            outline: "none",
-            fontFamily: "inherit",
-            color: textColor,
-          }}
-        >
-          <option value="7">Last 7 days</option>
-          <option value="14">Last 14 days</option>
-          <option value="30">Last 30 days</option>
-        </select>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={exportCsv}
+            style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 12px", fontSize: 13, background: "white", cursor: "pointer", fontWeight: 600 }}
+          >
+            Export CSV
+          </button>
+          <select
+            value={range}
+            onChange={(e) => setRange(e.target.value)}
+            style={{
+              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+              padding: "7px 12px",
+              fontSize: 13,
+              background: "white",
+              outline: "none",
+              fontFamily: "inherit",
+              color: textColor,
+            }}
+          >
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30">Last 30 days</option>
+          </select>
+        </div>
       </div>
+
+      {serverSummary && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+          {[
+            { label: "Server Orders", value: serverSummary.totalOrders ?? "—" },
+            { label: "Server Sales", value: `रु ${Number(serverSummary.totalSales ?? 0).toLocaleString("en-IN")}` },
+            { label: "Customers", value: serverSummary.totalCustomers ?? "—" },
+            { label: "Avg Order", value: `रु ${Number(serverSummary.averageOrderValue ?? 0).toLocaleString("en-IN")}` },
+            ...(serverDaily ? [
+              { label: "Today", value: `रु ${Number(serverDaily.todaySales ?? 0).toLocaleString("en-IN")} (${serverDaily.todayOrders ?? 0})` },
+              { label: "vs Yesterday", value: `${serverDaily.changePercent ?? 0}% ${serverDaily.trend ?? ""}` },
+            ] : []),
+          ].map(({ label, value }) => (
+            <div key={label} style={card}>
+              <p style={{ margin: 0, fontSize: 11, color: "#6b7280" }}>{label} (server)</p>
+              <p style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 700 }}>{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Performance Metrics */}
       <div

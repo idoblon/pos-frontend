@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Plus, Search, Users, Pencil, Trash2, UserCircle } from "lucide-react";
+import { Plus, Search, Users, Pencil, Trash2, UserCircle, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import { findBranchEmployee, createBranchEmpoyee, updateEmpoyee, deleteEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import secureStorage from "@/util/secureStorage";
+import useBranchContext from "@/hooks/useBranchContext";
 
-const EMPTY_FORM = { fullName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER" };
-const ROLES = ["ROLE_BRANCH_CASHIER", "ROLE_BRANCH_MANAGER"];
+const empId = (e) => e?.id ?? e?._id;
+const EMPTY_FORM = { fullName: "", email: "", phone: "", role: "ROLE_BRANCH_CASHIER", password: "" };
+// Branch managers may only create cashiers (backend enforces);
+// manager accounts are created by Store Admin.
+const CREATABLE_ROLES = ["ROLE_BRANCH_CASHIER"];
 
 const roleStyle = {
   ROLE_BRANCH_MANAGER: { background: "#f5f3ff", color: "#7c3aed" },
@@ -30,8 +34,7 @@ const s = {
 
 export default function BranchEmployees() {
   const dispatch = useDispatch();
-  const userData = secureStorage.getUserData();
-  const branchId = userData?.branchId;
+  const { branchId, userData } = useBranchContext();
   const { employees, loading } = useSelector((s) => s.employee);
 
   const [search, setSearch] = useState("");
@@ -40,6 +43,7 @@ export default function BranchEmployees() {
   const [editing, setEditing] = useState(null);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (branchId) {
@@ -53,19 +57,69 @@ export default function BranchEmployees() {
 
   const currentUser = employees?.find(emp => emp.email === userData?.email);
   const isStaff = userData?.role === 'ROLE_BRANCH_CASHIER';
-  const openAdd    = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
-  const openEdit   = (e) => { setEditing(e); setForm({ fullName: e.fullName ?? "", email: e.email ?? "", phone: e.phone ?? "", role: e.role ?? "ROLE_BRANCH_CASHIER" }); setDialogOpen(true); };
+  const openAdd    = () => { setEditing(null); setForm(EMPTY_FORM); setShowPassword(false); setDialogOpen(true); };
+  const openEdit   = (e) => { setEditing(e); setForm({ fullName: e.fullName ?? "", email: e.email ?? "", phone: e.phone ?? "", role: e.role ?? "ROLE_BRANCH_CASHIER", password: "" }); setShowPassword(false); setDialogOpen(true); };
   const openDelete = (e) => { setSelected(e); setDeleteDialogOpen(true); };
 
   const handleSubmit = (ev) => {
     ev.preventDefault();
-    if (editing) dispatch(updateEmpoyee({ employeeId: editing._id, employeeDetails: form }));
-    else dispatch(createBranchEmpoyee({ employee: { ...form, branchId }, branchId }));
-    setDialogOpen(false);
+    if (editing) {
+      const employeeId = empId(editing);
+      if (!employeeId) {
+        toast.error("Employee ID not found");
+        return;
+      }
+      const details = { fullName: form.fullName, email: form.email, phone: form.phone };
+      if (form.password) {
+        if (form.password.length < 8) {
+          toast.error("Password must be at least 8 characters");
+          return;
+        }
+        details.password = form.password;
+      }
+      dispatch(updateEmpoyee({ employeeId, employeeDetails: details }))
+        .then((result) => {
+          if (result.type.includes("fulfilled")) {
+            toast.success("Employee updated successfully");
+            if (branchId) dispatch(findBranchEmployee({ branchId }));
+            setDialogOpen(false);
+          } else {
+            toast.error(result.payload || "Failed to update employee");
+          }
+        });
+      return;
+    }
+    if (!form.password || form.password.length < 8) {
+      toast.error("Set an initial password (min 8 characters)");
+      return;
+    }
+    dispatch(createBranchEmpoyee({ employee: { ...form, branchId }, branchId }))
+      .then((result) => {
+        if (result.type.includes("fulfilled")) {
+          toast.success("Cashier created successfully");
+          if (branchId) dispatch(findBranchEmployee({ branchId }));
+          setDialogOpen(false);
+        } else {
+          toast.error(result.payload || "Failed to create employee");
+        }
+      });
   };
 
   const handleDelete = () => {
-    dispatch(deleteEmployee({ employeeId: selected._id }));
+    const employeeId = empId(selected);
+    if (!employeeId) {
+      toast.error("Employee ID not found");
+      return;
+    }
+    dispatch(deleteEmployee({ employeeId }))
+      .then((result) => {
+        if (result.type.includes("fulfilled")) {
+          toast.success("Employee disabled — login revoked, history preserved");
+          if (branchId) dispatch(findBranchEmployee({ branchId }));
+        } else {
+          toast.error(result.payload || "Failed to disable employee");
+        }
+      });
     setDeleteDialogOpen(false);
   };
 
@@ -124,7 +178,7 @@ export default function BranchEmployees() {
               </thead>
               <tbody>
                 {(isStaff ? [currentUser] : filtered).map((emp) => (
-                    <tr key={emp._id} style={{ background: "white" }}
+                    <tr key={empId(emp)} style={{ background: "white" }}
                       onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
                       onMouseLeave={e => e.currentTarget.style.background = "white"}
                     >
@@ -187,9 +241,40 @@ export default function BranchEmployees() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Role</Label>
-                    <select style={s.select} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-                      {ROLES.map((r) => <option key={r} value={r}>{r.replace("ROLE_", "").replace("_", " ")}</option>)}
-                    </select>
+                    {editing ? (
+                      <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
+                        {(form.role || "").replace("ROLE_", "").replace("_", " ")} (roles are managed by Store Admin)
+                      </p>
+                    ) : (
+                      <>
+                        <select style={s.select} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
+                          {CREATABLE_ROLES.map((r) => <option key={r} value={r}>{r.replace("ROLE_", "").replace("_", " ")}</option>)}
+                        </select>
+                        <p style={{ fontSize: 11, color: "#8a909c", margin: "4px 0 0" }}>Branch managers can create cashiers. Manager accounts are created by Store Admin.</p>
+                      </>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{editing ? "New Password (optional)" : "Initial Password"}</Label>
+                    <div style={{ position: "relative" }}>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={form.password}
+                        onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                        placeholder={editing ? "Leave blank to keep current" : "Min 8 characters"}
+                        required={!editing}
+                        minLength={8}
+                        style={{ paddingRight: 36 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", cursor: "pointer", color: "#8a909c" }}
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -207,11 +292,13 @@ export default function BranchEmployees() {
       {!isStaff && (
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent className="max-w-sm">
-            <DialogHeader><DialogTitle>Remove Employee</DialogTitle></DialogHeader>
-            <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>Remove <strong>{selected?.fullName}</strong>?</p>
+            <DialogHeader><DialogTitle>Disable Employee</DialogTitle></DialogHeader>
+            <p style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
+              Disable <strong>{selected?.fullName}</strong>? Their login is revoked but shifts, orders, and history are preserved.
+            </p>
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDelete}>Remove</Button>
+              <Button variant="destructive" onClick={handleDelete}>Disable</Button>
             </div>
           </DialogContent>
         </Dialog>
