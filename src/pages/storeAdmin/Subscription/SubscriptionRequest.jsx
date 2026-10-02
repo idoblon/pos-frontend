@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { AlertTriangle, CheckCircle, Clock, CreditCard, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, CreditCard, X } from "lucide-react";
 import { toast } from "sonner";
 import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
 import { getAuthHeaders } from "@/util/getAuthHeader";
@@ -234,17 +234,9 @@ export default function SubscriptionRequest() {
     <div style={{ padding: "24px", boxSizing: "border-box", fontFamily: "'DM Sans','Inter',sans-serif", backgroundColor: "#f5f5f5", minHeight: "100%" }}>
       <div style={{ width: "100%", maxWidth: 1080, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-          <div>
-            <h1 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>Subscription</h1>
-            <p style={{ margin: "0", fontSize: 12, color: "#8a909c" }}>Manage your plan and request changes</p>
-          </div>
-          <button
-            onClick={() => { dispatch(getStoreByAdmin()); reconcileRequests(storeId); toast.success("Refreshed"); }}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "white", border: "1px solid #e2e5e9", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#1a1d23" }}
-          >
-            <RefreshCw size={13} /> Refresh status
-          </button>
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>Subscription</h1>
+          <p style={{ margin: "0", fontSize: 12, color: "#8a909c" }}>Manage your plan and request changes</p>
         </div>
 
         {/* Current Plan Card */}

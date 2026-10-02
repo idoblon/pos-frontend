@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { ShoppingBag, Users, RotateCcw, TrendingUp, RefreshCw, ShoppingCart } from "lucide-react";
+import { ShoppingBag, Users, RotateCcw, TrendingUp, RefreshCw } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -42,7 +41,6 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function BranchDashboard() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { branchId, userProfile, user, userData } = useBranchContext();
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -226,16 +224,6 @@ export default function BranchDashboard() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={() => navigate("/branch/register")}
-            style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
-              background: "#1a1d23", color: "white", border: "none", borderRadius: 6,
-              fontSize: 12, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            <ShoppingCart size={14} /> Open Register
-          </button>
           <button
             onClick={fetchAllData}
             disabled={isRefreshing}

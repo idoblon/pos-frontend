@@ -89,7 +89,7 @@ export default function StoreRegistrationRequests() {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 font-sans" style={{ padding: 24, background: "#f5f5f5", minHeight: "100%", color: "#1a1d23" }}>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

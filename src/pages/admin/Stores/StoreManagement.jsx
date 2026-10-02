@@ -914,7 +914,7 @@ export default function StoreManagement() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: "24px", background: "#f5f5f5", minHeight: "100%", fontFamily: "'Inter', sans-serif", color: "#1a1d23" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>

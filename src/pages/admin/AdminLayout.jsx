@@ -48,29 +48,31 @@ function NavLinks({ onClose, pendingRequests, unreadPayments, isActive }) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
-          padding: "10px 12px",
+          gap: 12,
+          padding: 12,
           borderRadius: 8,
           textDecoration: "none",
           fontSize: 13,
           background: active ? "#1a1d23" : "transparent",
-          color: active ? "white" : "#4b5563",
+          color: active ? "white" : "#475569",
           fontWeight: active ? 600 : 500,
           position: "relative",
-          transition: "background 0.15s, color 0.15s",
+          transition: "all 0.2s",
         }}
-        onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "#f3f4f6"; e.currentTarget.style.color = "#1a1d23"; } }}
-        onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#4b5563"; } }}
+        onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "#f3f4f6"; e.currentTarget.style.color = "#111827"; } }}
+        onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#475569"; } }}
       >
-        <Icon size={17} />
-        <span style={{ flex: 1 }}>{item.label}</span>
+        <span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+          <Icon size={20} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
         {showBadge && (
-          <span style={{ background: "#e53e3e", color: "white", borderRadius: 12, padding: "2px 6px", fontSize: 10, fontWeight: 700, minWidth: 18, textAlign: "center" }}>
+          <span style={{ background: "#e53e3e", color: "white", borderRadius: 12, padding: "2px 6px", fontSize: 10, fontWeight: 700, minWidth: 18, textAlign: "center", flexShrink: 0 }}>
             {pendingRequests}
           </span>
         )}
         {showPaymentBadge && (
-          <span style={{ background: "#059669", color: "white", borderRadius: 12, padding: "2px 6px", fontSize: 10, fontWeight: 700, minWidth: 18, textAlign: "center" }}>
+          <span style={{ background: "#059669", color: "white", borderRadius: 12, padding: "2px 6px", fontSize: 10, fontWeight: 700, minWidth: 18, textAlign: "center", flexShrink: 0 }}>
             {unreadPayments}
           </span>
         )}
@@ -82,19 +84,19 @@ function NavLinks({ onClose, pendingRequests, unreadPayments, isActive }) {
 function SidebarInner({ showClose, onClose, pendingRequests, unreadPayments, isActive, onLogout }) {
   return (
     <>
-      <div style={{ padding: "14px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <img src={posLogo} alt="POS" style={{ width: 30, height: 30, objectFit: "contain" }} />
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>POS SYSTEM</span>
+          <img src={posLogo} alt="POS" style={{ width: 28, height: 28, objectFit: "contain" }} />
+          <span style={{ fontSize: 20, fontWeight: 700, color: "#1e293b" }}>POS SYSTEM</span>
         </div>
         {showClose && (
-          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#8a909c", display: "flex", alignItems: "center" }}>
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "#475569", display: "flex", alignItems: "center" }}>
             <X size={18} />
           </button>
         )}
       </div>
 
-      <nav style={{ flex: 1, padding: "12px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+      <nav style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
         <NavLinks
           onClose={showClose ? onClose : undefined}
           pendingRequests={pendingRequests}
@@ -103,14 +105,14 @@ function SidebarInner({ showClose, onClose, pendingRequests, unreadPayments, isA
         />
       </nav>
 
-      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
+      <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
         <button
           onClick={onLogout}
-          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", background: "none", cursor: "pointer", color: "#e53e3e", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}
+          style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: 12, borderRadius: 8, border: "none", background: "none", cursor: "pointer", color: "#e53e3e", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}
           onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
           onMouseLeave={(e) => e.currentTarget.style.background = "none"}
         >
-          <LogOut size={17} />
+          <LogOut size={20} />
           Logout
         </button>
       </div>
@@ -120,6 +122,13 @@ function SidebarInner({ showClose, onClose, pendingRequests, unreadPayments, isA
 
 export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Close the drawer with Escape, like the cashier sidebar
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKeyDown = (e) => { if (e.key === "Escape") setSidebarOpen(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen]);
   const [pendingRequests, setPendingRequests] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -171,51 +180,29 @@ export default function AdminLayout({ children }) {
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f5f5f5", overflow: "hidden", fontFamily: "'DM Sans','Inter',sans-serif", fontSize: 13, color: "#1a1d23" }}>
 
-      {/* Backdrop */}
+      {/* Sidebar drawer — same pattern as the cashier sidebar: hidden until the header menu button opens it */}
       {sidebarOpen && (
-        <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 20 }} />
+        <>
+          <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 20 }} />
+          <aside
+            style={{
+              position: "fixed", top: 0, bottom: 0, left: 0, zIndex: 30,
+              width: 256, background: "white", borderRight: "1px solid #e5e7eb",
+              padding: 16, display: "flex", flexDirection: "column",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+            }}
+          >
+            <SidebarInner
+              showClose={true}
+              onClose={() => setSidebarOpen(false)}
+              pendingRequests={pendingRequests}
+              unreadPayments={unreadPayments}
+              isActive={isActive}
+              onLogout={handleLogout}
+            />
+          </aside>
+        </>
       )}
-
-      {/* Mobile sidebar */}
-      <aside
-        className="lg-sidebar"
-        style={{
-          position: "fixed", top: 0, bottom: 0, left: 0, zIndex: 30,
-          width: 240, background: "white", borderRight: "1px solid #e5e7eb",
-          display: "flex", flexDirection: "column",
-          transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.3s ease",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
-        }}
-      >
-        <SidebarInner
-          showClose={true}
-          onClose={() => setSidebarOpen(false)}
-          pendingRequests={pendingRequests}
-          unreadPayments={unreadPayments}
-          isActive={isActive}
-          onLogout={handleLogout}
-        />
-      </aside>
-
-      {/* Desktop sidebar */}
-      <aside
-        className="hidden-mobile"
-        style={{
-          width: 240, background: "white", borderRight: "1px solid #e5e7eb",
-          display: "flex", flexDirection: "column", flexShrink: 0,
-          boxShadow: "2px 0 12px rgba(0,0,0,0.06)",
-        }}
-      >
-        <SidebarInner
-          showClose={false}
-          onClose={() => setSidebarOpen(false)}
-          pendingRequests={pendingRequests}
-          unreadPayments={unreadPayments}
-          isActive={isActive}
-          onLogout={handleLogout}
-        />
-      </aside>
 
       {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
@@ -224,11 +211,12 @@ export default function AdminLayout({ children }) {
         <header style={{ background: "white", padding: "0 20px", height: 70, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button
-              className="lg-sidebar"
-              onClick={() => setSidebarOpen(true)}
-              style={{ border: "none", background: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}
+              onClick={() => setSidebarOpen((v) => !v)}
+              aria-label="Open navigation menu"
+              title="Menu"
+              style={{ width: 36, height: 36, border: "none", background: "#1a1d23", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }}
             >
-              <Menu size={20} />
+              <Menu size={16} color="#fff" />
             </button>
             <div>
               <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#1a1d23", letterSpacing: "-0.2px" }}>
@@ -329,15 +317,6 @@ export default function AdminLayout({ children }) {
           {children || <Outlet />}
         </main>
       </div>
-
-      <style>{`
-        .hidden-mobile { display: flex; }
-        .lg-sidebar { display: none !important; }
-        @media (max-width: 1024px) {
-          .hidden-mobile { display: none !important; }
-          .lg-sidebar { display: flex !important; }
-        }
-      `}</style>
     </div>
   );
 }

@@ -17,6 +17,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  ShoppingCart,
+  ChevronDown,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout as clearAuth } from "@/Redux Toolkit/Features/auth/authSlice";
@@ -88,20 +90,23 @@ function NavLinks({ onClose, notificationCount }) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
-          padding: "10px 12px",
+          gap: 12,
+          padding: 12,
           borderRadius: 8,
           textDecoration: "none",
           fontSize: 13,
           background: active
             ? "#1a1d23"
             : "transparent",
-          color: active ? "white" : "#4b5563",
+          color: active ? "white" : "#475569",
           fontWeight: active ? 600 : 500,
           position: "relative",
+          transition: "all 0.2s",
         }}
+        onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "#f3f4f6"; e.currentTarget.style.color = "#111827"; } }}
+        onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#475569"; } }}
       >
-        <NavIcon size={17} color={active ? "white" : "#1a1d23"} />
+        <NavIcon size={20} />
         {label}
         {isRestockPage && notificationCount > 0 && (
           <span style={{
@@ -132,11 +137,10 @@ function SidebarInner({ showClose, onClose, notificationCount, onLogout }) {
     <>
       <div
         style={{
-          padding: "14px 20px",
-          borderBottom: "1px solid #e5e7eb",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          marginBottom: 24,
           flexShrink: 0,
         }}
       >
@@ -144,9 +148,9 @@ function SidebarInner({ showClose, onClose, notificationCount, onLogout }) {
           <img
             src={posLogo}
             alt="POS"
-            style={{ width: 30, height: 30, objectFit: "contain" }}
+            style={{ width: 28, height: 28, objectFit: "contain" }}
           />
-          <span style={{ fontSize: 15, fontWeight: 700 }}>POS SYSTEM</span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: "#1e293b" }}>POS SYSTEM</span>
         </div>
         {showClose && (
           <button
@@ -155,7 +159,7 @@ function SidebarInner({ showClose, onClose, notificationCount, onLogout }) {
               border: "none",
               background: "none",
               cursor: "pointer",
-              color: "#8a909c",
+              color: "#475569",
               display: "flex",
               alignItems: "center",
             }}
@@ -167,7 +171,6 @@ function SidebarInner({ showClose, onClose, notificationCount, onLogout }) {
       <nav
         style={{
           flex: 1,
-          padding: "12px",
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
@@ -179,15 +182,15 @@ function SidebarInner({ showClose, onClose, notificationCount, onLogout }) {
           notificationCount={notificationCount}
         />
       </nav>
-      <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb" }}>
+      <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
         <button
           onClick={onLogout}
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 10,
+            gap: 12,
             width: "100%",
-            padding: "10px 12px",
+            padding: 12,
             borderRadius: 8,
             border: "none",
             background: "none",
@@ -198,7 +201,7 @@ function SidebarInner({ showClose, onClose, notificationCount, onLogout }) {
             fontWeight: 600,
           }}
         >
-          <LogOut size={17} color="#e53e3e" />
+          <LogOut size={20} />
           Logout
         </button>
       </div>
@@ -208,7 +211,15 @@ function SidebarInner({ showClose, onClose, notificationCount, onLogout }) {
 
 export default function BranchLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Close the drawer with Escape, like the cashier sidebar
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKeyDown = (e) => { if (e.key === "Escape") setSidebarOpen(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen]);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [readNotifications, setReadNotifications] = useState(readStoredNotifications);
   const navigate = useNavigate();
@@ -314,65 +325,43 @@ export default function BranchLayout() {
         color: "#1a1d23",
       }}
     >
+      {/* Sidebar drawer — same pattern as the cashier sidebar: hidden until the header menu button opens it */}
       {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.3)",
-            zIndex: 20,
-          }}
-        />
+        <>
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.3)",
+              zIndex: 20,
+            }}
+          />
+          <aside
+            style={{
+              position: "fixed",
+              top: 0,
+              bottom: 0,
+              left: 0,
+              zIndex: 30,
+              width: 256,
+              background: "white",
+              borderRight: "1px solid #e5e7eb",
+              padding: 16,
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+            }}
+          >
+            <SidebarInner
+              showClose={true}
+              onClose={() => setSidebarOpen(false)}
+              notificationCount={notificationCount}
+              onLogout={handleLogout}
+            />
+          </aside>
+        </>
       )}
-
-      {/* Mobile sidebar */}
-      <aside
-        style={{
-          position: "fixed",
-          top: 0,
-          bottom: 0,
-          left: 0,
-          zIndex: 30,
-          width: 240,
-          background: "white",
-          borderRight: "1px solid #e5e7eb",
-          display: "flex",
-          flexDirection: "column",
-          transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.3s ease",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
-        }}
-        className="lg-sidebar"
-      >
-        <SidebarInner
-          showClose={true}
-          onClose={() => setSidebarOpen(false)}
-          notificationCount={notificationCount}
-          onLogout={handleLogout}
-        />
-      </aside>
-
-      {/* Desktop sidebar */}
-      <aside
-        style={{
-          width: 240,
-          background: "white",
-          borderRight: "1px solid #e5e7eb",
-          display: "flex",
-          flexDirection: "column",
-          flexShrink: 0,
-          boxShadow: "2px 0 12px rgba(0,0,0,0.06)",
-        }}
-        className="hidden-mobile"
-      >
-        <SidebarInner
-          showClose={false}
-          onClose={() => setSidebarOpen(false)}
-          notificationCount={notificationCount}
-          onLogout={handleLogout}
-        />
-      </aside>
 
       <div
         style={{
@@ -398,16 +387,12 @@ export default function BranchLayout() {
           {/* Left — hamburger + branch name */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button
-              className="lg-sidebar"
-              onClick={() => setSidebarOpen(true)}
-              style={{
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                padding: 4,
-              }}
+              onClick={() => setSidebarOpen((v) => !v)}
+              aria-label="Open navigation menu"
+              title="Menu"
+              style={{ width: 36, height: 36, border: "none", background: "#1a1d23", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }}
             >
-              <Menu size={20} />
+              <Menu size={16} color="#fff" />
             </button>
             <div>
               <p
@@ -436,7 +421,10 @@ export default function BranchLayout() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ position: "relative" }}>
               <button
-                onClick={() => setNotificationOpen(!notificationOpen)}
+                onClick={() => {
+                  setNotificationOpen(!notificationOpen);
+                  setProfileOpen(false);
+                }}
                 style={{
                   position: "relative",
                   width: 36,
@@ -611,54 +599,126 @@ export default function BranchLayout() {
               )}
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 4px",
-              }}
-            >
-              <div
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => {
+                  setProfileOpen((v) => !v);
+                  setNotificationOpen(false);
+                }}
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: "#1a1d23",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  flexShrink: 0,
+                  gap: 8,
+                  padding: "6px 4px",
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
                 }}
+                title="Account"
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
               >
-                {initials}
-              </div>
-              <div style={{ textAlign: "left" }}>
-                <p
+                <div
                   style={{
-                    margin: 0,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "#1a1d23",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {displayName}
-                </p>
-                <p
-                  style={{
-                    margin: 0,
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    background: "#1a1d23",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
                     fontSize: 11,
-                    color: "#6b7280",
-                    lineHeight: 1.3,
+                    fontWeight: 700,
+                    flexShrink: 0,
                   }}
                 >
-                  {displayEmail}
-                </p>
-              </div>
+                  {initials}
+                </div>
+                <div style={{ textAlign: "left" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#1a1d23",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {displayName}
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 11,
+                      color: "#6b7280",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {displayEmail}
+                  </p>
+                </div>
+                <ChevronDown
+                  size={14}
+                  color="#6b7280"
+                  style={{
+                    transition: "transform 0.2s ease",
+                    transform: profileOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                />
+              </button>
+
+              {profileOpen && (
+                <>
+                  <div
+                    style={{ position: "fixed", inset: 0, zIndex: 10 }}
+                    onClick={() => setProfileOpen(false)}
+                  />
+                  <div
+                    role="menu"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      right: 0,
+                      marginTop: 8,
+                      width: 200,
+                      background: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 10,
+                      boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                      zIndex: 20,
+                      overflow: "hidden",
+                      padding: 6,
+                    }}
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        navigate("/branch/register");
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        width: "100%",
+                        padding: "10px 12px",
+                        border: "none",
+                        borderRadius: 8,
+                        background: "#1a1d23",
+                        color: "white",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <ShoppingCart size={14} /> Open Register
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>
@@ -675,15 +735,6 @@ export default function BranchLayout() {
           onSignOut={handleLogout}
         />
       </div>
-
-      <style>{`
-        .hidden-mobile { display: flex; }
-        .lg-sidebar { display: none !important; }
-        @media (max-width: 1024px) {
-          .hidden-mobile { display: none !important; }
-          .lg-sidebar { display: flex !important; }
-        }
-      `}</style>
     </div>
   );
 }

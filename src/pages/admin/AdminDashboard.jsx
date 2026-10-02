@@ -221,7 +221,16 @@ export default function AdminDashboard() {
   const statsLoading = storesLoading || subscriptionStats === null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24, fontFamily: "'DM Sans','Inter',sans-serif" }}>
+    <div style={{
+      padding: 24,
+      display: "flex",
+      flexDirection: "column",
+      gap: 24,
+      background: "#f5f5f5",
+      minHeight: "100%",
+      fontFamily: "'DM Sans','Inter',sans-serif",
+      color: "#1a1d23",
+    }}>
 
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
