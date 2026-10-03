@@ -41,10 +41,12 @@ import { getAdminTaxRate, getLowStockThreshold } from "@/util/adminSystemSetting
 import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
 import "./cashier-styles.css";
 import OfflineOrderSync from "@/components/OfflineOrderSync";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function CashierDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(() =>
     isPasswordChangeRequired(secureStorage.getUserData()?.userId),
   );
@@ -147,9 +149,11 @@ const initials = fullName
 
   const removeItem = (id) => dispatch(removeFromCart(id));
   const handleClearCart = () => {
-    if (cart.length && window.confirm("Clear this cart? This cannot be undone.")) {
-      dispatch(clearCart());
-    }
+    if (cart.length) setClearConfirmOpen(true);
+  };
+  const confirmClearCart = () => {
+    setClearConfirmOpen(false);
+    dispatch(clearCart());
   };
   const totalItems = cart.reduce((sum, i) => sum + (i.quantity || 1), 0);
 
@@ -374,6 +378,15 @@ const initials = fullName
         open={passwordDialogOpen} 
         onSuccess={handlePasswordChangeSuccess}
         onClose={() => setPasswordDialogOpen(false)} 
+      />
+      <ConfirmDialog
+        open={clearConfirmOpen}
+        title="Clear this cart?"
+        message="All items will be removed. This cannot be undone."
+        confirmText="Clear Cart"
+        danger
+        onCancel={() => setClearConfirmOpen(false)}
+        onConfirm={confirmClearCart}
       />
       <OfflineOrderSync />
     </div>

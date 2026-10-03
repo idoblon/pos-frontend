@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Archive, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   discardHeldOrderRemotely,
   resumeHeldOrderRemotely,
@@ -20,6 +22,7 @@ export default function HeldOrdersPage() {
   const navigate = useNavigate();
   const heldOrders = useSelector(selectHeldOrders);
   const activeCart = useSelector(selectCartItems);
+  const [discardTarget, setDiscardTarget] = useState(null);
 
   const restore = (order) => {
     if (activeCart.length) {
@@ -32,10 +35,13 @@ export default function HeldOrdersPage() {
     }).catch(() => toast.error("Unable to resume this held order."));
   };
 
-  const discard = (order) => {
-    if (window.confirm("Discard this held order? This cannot be undone.")) {
-      dispatch(discardHeldOrderRemotely(order)).then(() => toast.success("Held order discarded.")).catch(() => toast.error("Unable to discard this held order."));
-    }
+  const discard = (order) => setDiscardTarget(order);
+
+  const confirmDiscard = () => {
+    if (!discardTarget) return;
+    const order = discardTarget;
+    setDiscardTarget(null);
+    dispatch(discardHeldOrderRemotely(order)).then(() => toast.success("Held order discarded.")).catch(() => toast.error("Unable to discard this held order."));
   };
 
   return (
@@ -82,6 +88,15 @@ export default function HeldOrdersPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!discardTarget}
+        title="Discard this held order?"
+        message="The parked order will be permanently removed. This cannot be undone."
+        confirmText="Discard Order"
+        danger
+        onCancel={() => setDiscardTarget(null)}
+        onConfirm={confirmDiscard}
+      />
     </main>
   );
 }

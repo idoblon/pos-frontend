@@ -23,6 +23,22 @@ export const signup = createAsyncThunk(
   },
 );
 
+export const trialSignup = createAsyncThunk(
+  "auth/trialSignup",
+  async (userData, { rejectWithValue }) => {
+    try {
+      const res = await api.post("/auth/trial-signup", userData);
+      const { jwt } = res.data;
+      const { role, storeId, branchId, storeName, id: userId, email, fullName } = res.data.user ?? {};
+      secureStorage.setToken(jwt);
+      secureStorage.setUserData({ role, storeId, branchId, storeName, userId, email, fullName });
+      return { jwt, role, storeId, branchId, storeName, userId, email, fullName, isTrial: true };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "trial signup failed");
+    }
+  },
+);
+
 export const login = createAsyncThunk(
   "auth/login",
   async (userData, { rejectWithValue, dispatch }) => {

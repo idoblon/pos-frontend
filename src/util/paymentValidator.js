@@ -66,6 +66,18 @@ export const validateStoreAccess = async (userData) => {
     };
   }
 
+  // Active free trials skip the payment gate — trial stores convert through
+  // the in-app upgrade flow instead of the registration payment link.
+  try {
+    const { default: trialApi } = await import('@/util/api');
+    const trial = await trialApi.get('/api/stores/trial-status');
+    if (trial.data?.isTrialActive) {
+      return { allowed: true, reason: 'Active free trial' };
+    }
+  } catch {
+    // Trial endpoint unreachable (older backend) — fall through to payment check.
+  }
+
   const paymentStatus = await checkStorePaymentStatus(userData.storeId, userData.email);
 
   switch (paymentStatus.status) {

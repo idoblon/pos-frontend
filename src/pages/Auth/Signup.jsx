@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import posLogo from "@/logo/pos.png";
 import { useNavigate, Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 import api from "@/util/api";
 import emailService from "@/services/emailService";
+import { trialSignup } from "@/Redux Toolkit/Features/auth/authThunk";
 
 const STORE_TYPES = [
   { value: "RETAIL", label: "Retail" },
@@ -42,7 +44,9 @@ const SUBSCRIPTION_PLANS = [
 
 const Signup = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
+  const [isTrial, setIsTrial] = useState(true);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -81,6 +85,26 @@ const Signup = () => {
 
     setLoading(true);
     try {
+      // Free-trial path: instant store + login, no payment link, no approval wait.
+      if (isTrial) {
+        await dispatch(trialSignup({
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          role: "ROLE_STORE_ADMIN",
+          storeName: formData.storeName,
+          storeDescription: formData.storeDescription,
+          storeType: formData.storeType,
+          storeAddress: formData.storeAddress,
+          storeEmail: formData.email,
+          storePhone: formData.phone,
+        })).unwrap();
+        toast.success("Trial started — welcome to POS Pro!");
+        navigate("/store-admin");
+        return;
+      }
+
       const response = await api.post("/api/public/store-registration-request", {
           ownerName: formData.fullName,
           email: formData.email,
@@ -113,7 +137,9 @@ const Signup = () => {
       toast.success("Registration submitted. Your payment link has been sent to your email.");
       navigate(`/payment-required?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
-      const message = error.response?.data?.message || error.response?.data || error.message;
+      const message = typeof error === "string"
+        ? error
+        : error.response?.data?.message || error.response?.data || error.message;
       setPasswordError(message || "Unable to submit registration or send the payment link. Please try again.");
     } finally {
       setLoading(false);
@@ -139,11 +165,30 @@ const Signup = () => {
             <span className="text-2xl font-bold text-slate-800">POS Pro</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-800">
-            Request Store Registration
+            {isTrial ? "Start Your Free Trial" : "Request Store Registration"}
           </h1>
           <p className="text-slate-500 mt-1.5 text-sm">
-            Register your store and receive a secure payment link by email
+            {isTrial
+              ? "14 days free · no credit card · your store is ready instantly"
+              : "Register your store and receive a secure payment link by email"}
           </p>
+          {/* Mode toggle */}
+          <div className="mt-4 inline-flex rounded-lg border border-gray-200 bg-white p-1 text-sm font-semibold">
+            <button
+              type="button"
+              onClick={() => { setIsTrial(true); setPasswordError(""); }}
+              className={`px-4 py-1.5 rounded-md transition ${isTrial ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-800"}`}
+            >
+              Free Trial · 14 days
+            </button>
+            <button
+              type="button"
+              onClick={() => { setIsTrial(false); setPasswordError(""); }}
+              className={`px-4 py-1.5 rounded-md transition ${!isTrial ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-800"}`}
+            >
+              Pay First
+            </button>
+          </div>
         </div>
 
         {/* Card */}
@@ -293,7 +338,7 @@ const Signup = () => {
             {/* Subscription Plans */}
             <div className="mt-6 pt-6 border-t border-gray-100">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">
-                Choose Subscription Plan
+                {isTrial ? "Trial runs on Basic — upgrade anytime" : "Choose Subscription Plan"}
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -389,7 +434,7 @@ const Signup = () => {
                 type="submit"
                 disabled={loading}
               >
-                {loading ? "Submitting request…" : "Submit Registration Request"}
+                {loading ? "Submitting request…" : isTrial ? "Start My Free Trial" : "Submit Registration Request"}
               </Button>
             </div>
           </form>

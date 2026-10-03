@@ -399,6 +399,11 @@ export default function AdminDashboard() {
                   {realStores.map((store, i) => {
                     const sid = String(getStoreId(store) || "");
                     const status = String(store.status || "ACTIVE").toUpperCase();
+                    const trialStatus = String(store.trialStatus || store.trial_status || "NONE").toUpperCase();
+                    const trialEndsAt = store.trialEndsAt || store.trial_ends_at;
+                    const trialDaysLeft = trialEndsAt
+                      ? Math.max(0, Math.ceil((new Date(trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24)))
+                      : null;
                     return (
                       <tr key={sid || i} style={{ borderBottom: "1px solid #f9fafb" }}>
                         <td style={{ padding: "10px 12px", fontWeight: 600, color: "#1a1d23" }}>{getStoreName(store)}</td>
@@ -413,6 +418,30 @@ export default function AdminDashboard() {
                           }}>
                             {status}
                           </span>
+                          {trialStatus === "TRIAL" && (
+                            <span title={trialEndsAt ? `Trial ends ${new Date(trialEndsAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}` : "Trial active"} style={{
+                              marginLeft: 6, padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
+                              background: "#fffbeb", color: "#92400e",
+                            }}>
+                              TRIAL{trialDaysLeft !== null ? ` · ${trialDaysLeft}d` : ""}
+                            </span>
+                          )}
+                          {trialStatus === "EXPIRED" && (
+                            <span style={{
+                              marginLeft: 6, padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
+                              background: "#fef2f2", color: "#991b1b",
+                            }}>
+                              TRIAL EXPIRED
+                            </span>
+                          )}
+                          {trialStatus === "CONVERTED" && (
+                            <span style={{
+                              marginLeft: 6, padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
+                              background: "#f5f5f5", color: "#6b7280",
+                            }}>
+                              TRIAL → PAID
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: "10px 12px", color: "#6b7280" }}>
                           {storeMetrics[sid]?.branchCount ?? "—"}

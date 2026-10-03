@@ -15,6 +15,7 @@ import { getCategoriesByStore } from "@/Redux Toolkit/Features/category/category
 import { getRefundsByStore } from "@/Redux Toolkit/Features/refund/refundThunk";
 import { getOrdersByStore } from "@/Redux Toolkit/Features/order/orderThunk";
 import secureStorage from "@/util/secureStorage";
+import { toast } from "sonner";
 
 const RANGES = ["This Month", "Last 3 Months", "Last 6 Months", "This Year"];
 // Java returns `items`; the optional Node order service also exposes the older
@@ -329,7 +330,7 @@ export default function StoreReports() {
       
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      toast.error('Export failed. Please try again.');
     }
   };
 

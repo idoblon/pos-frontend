@@ -204,7 +204,7 @@ const Landing = () => {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-neutral-900" />
-                30-day free trial
+                14-day free trial
               </div>
             </div>
           </div>
@@ -335,7 +335,7 @@ const Landing = () => {
               </Button>
             </button>
           </div>
-          <p className="text-white/80 text-sm mt-6">No credit card required • 30-day free trial • Cancel anytime</p>
+          <p className="text-white/80 text-sm mt-6">No credit card required • 14-day free trial • Cancel anytime</p>
         </div>
       </section>
 

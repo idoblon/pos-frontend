@@ -20,12 +20,14 @@ import {
 import api from '@/util/api';
 import { toast } from 'sonner';
 import PaymentManagementDialog from '@/components/admin/PaymentManagementDialog';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 const StoreRegistrationRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [paymentDialogRequest, setPaymentDialogRequest] = useState(null);
+  const [pendingPaymentRequest, setPendingPaymentRequest] = useState(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,9 +80,7 @@ const StoreRegistrationRequests = () => {
       // If it's a payment issue, offer to open payment management
       if (errorMessage.includes('Payment not completed')) {
         const request = requests.find(r => r.id === id);
-        if (request && confirm('Payment not completed. Would you like to manage the payment?')) {
-          setPaymentDialogRequest(request);
-        }
+        if (request) setPendingPaymentRequest(request);
       }
     }
   };
@@ -477,6 +477,19 @@ const StoreRegistrationRequests = () => {
           onUpdate={fetchRequests}
         />
       )}
+
+      {/* Manage-payment offer */}
+      <ConfirmDialog
+        open={!!pendingPaymentRequest}
+        title="Payment not completed"
+        message={`Payment for ${pendingPaymentRequest?.storeName || "this store"} is not completed. Would you like to manage the payment?`}
+        confirmText="Manage Payment"
+        onCancel={() => setPendingPaymentRequest(null)}
+        onConfirm={() => {
+          setPaymentDialogRequest(pendingPaymentRequest);
+          setPendingPaymentRequest(null);
+        }}
+      />
     </div>
   );
 };

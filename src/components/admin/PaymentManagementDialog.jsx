@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
 import api from '@/util/api';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ const PaymentManagementDialog = ({ request, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
+  const [overrideConfirmOpen, setOverrideConfirmOpen] = useState(false);
 
   // Fetch current payment status
   const fetchPaymentStatus = async () => {
@@ -59,9 +61,7 @@ const PaymentManagementDialog = ({ request, onClose, onUpdate }) => {
 
   // Approve with override
   const approveWithOverride = async () => {
-    if (!confirm('Are you sure you want to approve this store registration with payment override? This action cannot be undone.')) {
-      return;
-    }
+    setOverrideConfirmOpen(false);
 
     try {
       setLoading(true);
@@ -345,7 +345,7 @@ const PaymentManagementDialog = ({ request, onClose, onUpdate }) => {
               )}
               
               <Button 
-                onClick={approveWithOverride} 
+                onClick={() => setOverrideConfirmOpen(true)} 
                 variant="destructive"
                 disabled={loading}
               >
@@ -380,6 +380,15 @@ const PaymentManagementDialog = ({ request, onClose, onUpdate }) => {
         </div>
       </DialogContent>
     </Dialog>
+    <ConfirmDialog
+      open={overrideConfirmOpen}
+      title="Approve with payment override?"
+      message="This approves the store registration without a verified payment. This action cannot be undone."
+      confirmText="Approve Anyway"
+      danger
+      onCancel={() => setOverrideConfirmOpen(false)}
+      onConfirm={approveWithOverride}
+    />
   );
 };
 

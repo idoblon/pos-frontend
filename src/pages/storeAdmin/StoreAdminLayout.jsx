@@ -27,6 +27,7 @@ import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
 import { getRestockRequestsByStore } from "@/Redux Toolkit/Features/restock/restockThunk";
 import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
 import secureStorage from "@/util/secureStorage";
+import api from "@/util/api";
 import posLogo from "@/logo/pos.png";
 import ChangePasswordDialog from "@/pages/cashier/Settings/ChangePasswordDialog";
 import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
@@ -186,6 +187,52 @@ function SidebarInner({ showClose, onClose, pendingCount, onLogout }) {
         </button>
       </div>
     </>
+  );
+}
+
+/**
+ * Free-trial countdown banner. Shows only while the store has an active
+ * trial; the Upgrade button deep-links to the subscription page where the
+ * existing upgrade-request + payment flow converts the trial.
+ */
+function TrialBanner() {
+  const navigate = useNavigate();
+  const [trial, setTrial] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get("/api/stores/trial-status")
+      .then((res) => { if (!cancelled) setTrial(res.data); })
+      .catch(() => { if (!cancelled) setTrial(null); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!trial?.isTrialActive) return null;
+  const days = trial.daysRemaining ?? 0;
+  const urgent = days <= 3;
+
+  return (
+    <div style={{
+      margin: "16px 24px 0", padding: "12px 16px", borderRadius: 10,
+      background: urgent ? "#fef2f2" : "#fffbeb",
+      border: `1px solid ${urgent ? "#fecaca" : "#fde68a"}`,
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      gap: 12, flexWrap: "wrap",
+    }}>
+      <p style={{ margin: 0, fontSize: 13, color: "#1a1d23" }}>
+        <strong>{days} {days === 1 ? "day" : "days"} left</strong> in your free trial
+        ({trial.subscriptionPlan || "BASIC"} plan). Upgrade to keep your store running without interruption.
+      </p>
+      <button
+        onClick={() => navigate("/store-admin/subscription")}
+        style={{
+          padding: "8px 16px", border: "none", borderRadius: 8, background: "#1a1d23",
+          color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap",
+        }}
+      >
+        Upgrade Now
+      </button>
+    </div>
   );
 }
 
@@ -522,6 +569,7 @@ export default function StoreAdminLayout() {
         </header>
 
         <main style={{ flex: 1, overflowY: "auto" }}>
+          <TrialBanner />
           <Outlet />
         </main>
 

@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { signup, login, logout as logoutThunk } from "./authThunk";
+import { signup, trialSignup, login, logout as logoutThunk } from "./authThunk";
 import { getUserProfile } from "../user/userThunk";
 import secureStorage from "@/util/secureStorage";
 
@@ -56,6 +56,20 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
       })
       .addCase(signup.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(trialSignup.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(trialSignup.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.jwt = action.payload.jwt;
+        state.isAuthenticated = true;
+      })
+      .addCase(trialSignup.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

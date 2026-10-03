@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Mail, CreditCard, AlertCircle, Clock, CheckCircle, X } from "lucide-react";
+import { toast } from "sonner";
 
 export default function StoreOwnerEmailInbox() {
   const [emails, setEmails] = useState([]);
@@ -43,7 +44,10 @@ export default function StoreOwnerEmailInbox() {
 
   const handlePayment = (emailData) => {
     // Simulate payment process
-    alert(`Payment of ₹${emailData.content.planPrice} initiated for ${emailData.content.storeName}!\n\nIn production, this would redirect to:\n${emailData.content.paymentLink}`);
+    toast.info(`Payment of ₹${emailData.content.planPrice} initiated for ${emailData.content.storeName}!`, {
+      description: `In production, this would redirect to: ${emailData.content.paymentLink}`,
+      duration: 6000,
+    });
   };
 
   return (

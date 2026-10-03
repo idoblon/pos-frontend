@@ -38,6 +38,27 @@ function formatStatus(status) {
     .join(" ");
 }
 
+// Trial state for admin visibility: which stores are evaluating, lapsing, or converted.
+function getTrialInfo(store) {
+  const status = (store.trialStatus || store.trial_status || "NONE").toUpperCase();
+  if (status === "NONE") return null;
+  let daysLeft = null;
+  const endsAt = store.trialEndsAt || store.trial_ends_at;
+  if (endsAt) {
+    daysLeft = Math.max(0, Math.ceil((new Date(endsAt) - new Date()) / (1000 * 60 * 60 * 24)));
+  }
+  if (status === "TRIAL") return { label: daysLeft === null ? "TRIAL" : `TRIAL · ${daysLeft}d left`, tone: "amber" };
+  if (status === "EXPIRED") return { label: "TRIAL EXPIRED", tone: "red" };
+  if (status === "CONVERTED") return { label: "TRIAL → PAID", tone: "slate" };
+  return null;
+}
+
+const TRIAL_TONE = {
+  amber: "bg-amber-50 text-amber-700 border-amber-200",
+  red: "bg-red-50 text-red-600 border-red-200",
+  slate: "bg-slate-50 text-slate-500 border-slate-200",
+};
+
 function formatCurrency(amount) {
   return `रु ${(amount || 0).toLocaleString("en-IN")}`;
 }
@@ -145,9 +166,19 @@ function StoreCard({ store, onEdit, onView, onDelete, onModerate }) {
             <div>
               <h3 className="font-bold text-sm text-gray-900 leading-tight">{store.name}</h3>
               {store.type && <p className="text-xs text-gray-400 mt-0.5">{store.type}</p>}
-              <Badge variant={statusVariant[store.status] || "outline"} className="mt-1.5 text-[10px]">
-                {formatStatus(store.status)}
-              </Badge>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <Badge variant={statusVariant[store.status] || "outline"} className="text-[10px]">
+                  {formatStatus(store.status)}
+                </Badge>
+                {(() => {
+                  const trial = getTrialInfo(store);
+                  return trial ? (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${TRIAL_TONE[trial.tone]}`}>
+                      {trial.label}
+                    </span>
+                  ) : null;
+                })()}
+              </div>
             </div>
           </div>
 

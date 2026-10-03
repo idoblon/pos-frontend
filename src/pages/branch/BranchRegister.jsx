@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ import PaymentSection from "@/pages/cashier/CustomerPaymentSection/PaymentSectio
 import { formatMoney } from "@/util/currency";
 import { getAdminTaxRate, getLowStockThreshold } from "@/util/adminSystemSettings";
 import "@/pages/cashier/cashier-styles.css";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function BranchRegister() {
   const navigate = useNavigate();
@@ -72,10 +73,15 @@ export default function BranchRegister() {
     dispatch(updateCartItemQuantity({ id, quantity: newQty }));
   }, [cart, dispatch]);
 
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+
   const handleClearCart = () => {
-    if (cart.length && window.confirm("Clear this cart? This cannot be undone.")) {
-      dispatch(clearCart());
-    }
+    if (cart.length) setClearConfirmOpen(true);
+  };
+
+  const confirmClearCart = () => {
+    setClearConfirmOpen(false);
+    dispatch(clearCart());
   };
 
   return (
@@ -179,13 +185,22 @@ export default function BranchRegister() {
             discount={discount}
             discountType={discount.type}
             note={note}
-            onOrderComplete={() => {
-              dispatch(clearCart());
-              dispatch(getCurrentShiftProgress()).catch(() => undefined);
-            }}
-          />
+          onOrderComplete={() => {
+            dispatch(clearCart());
+            dispatch(getCurrentShiftProgress()).catch(() => undefined);
+          }}
+        />
         </div>
       </div>
+      <ConfirmDialog
+        open={clearConfirmOpen}
+        title="Clear this cart?"
+        message="All items will be removed. This cannot be undone."
+        confirmText="Clear Cart"
+        danger
+        onCancel={() => setClearConfirmOpen(false)}
+        onConfirm={confirmClearCart}
+      />
     </div>
   );
 }
