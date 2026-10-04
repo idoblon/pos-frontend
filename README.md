@@ -1,16 +1,40 @@
-# React + Vite
+# POS Frontend (Vite + React + Redux Toolkit)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Multi-tenant POS: `SuperAdmin > StoreAdmin > Branch (Manager/Cashier) > Customer`.
 
-Currently, two official plugins are available:
+## Setup
+```bash
+cp .env.example .env   # set VITE_API_BASE_URL, VITE_STRIPE_PUBLISHABLE_KEY
+npm install
+npm run dev      # local
+npm run build    # prod -> dist/
+npm test         # vitest run (algorithms + cart + roleMapper)
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Roles & routes
+- `src/routes/{AdminRoutes,StoreAdminRoutes,BranchRoutes,CashierRoutes}.jsx`
+- Cashier: `src/pages/cashier/` (ProductSection, PaymentDialog, HeldOrders, Refund)
+- Branch: `src/pages/branch/Branch{Dashboard,Inventory,Orders,Refunds,RestockRequests,Reports}.jsx`
+- StoreAdmin: `src/pages/storeAdmin/` (Inventory, Restock, Reports, Operations, Employees)
+- SuperAdmin: `src/pages/admin/` (Stores, Subscriptions, SystemReports, Audit)
 
-## React Compiler
+## Algorithm suite (`src/util/*Algorithms.js`, search `ALGORITHM NAME:`)
+| File | Algorithms |
+|---|---|
+| `searchAlgorithms.js` | Normalization, Levenshtein DP, Ranked Fuzzy, Top-K, Generic `fuzzySearchByKeys` |
+| `inventoryAlgorithms.js` | EOQ, Safety Stock, ROP, Exp.Smoothing, Moving Avg, ABC/Pareto |
+| `cartAlgorithms.js` | Bundle Solver (brute-force min), Greedy Change |
+| `orderAlgorithms.js` | Priority Score, mean/std, Z-Score anomaly |
+| `customerAlgorithms.js` | RFM, CLV |
+| `recommendationAlgorithms.js` | Apriori Lite |
+| `analyticsAlgorithms.js` | Group-By Day, Sales Anomaly Flag |
+| `staffingAlgorithms.js` | Greedy Peak Cover, Overtime Predictor |
+| `paymentAlgorithms.js` | Luhn Mod-10, Exp.Backoff, Token Bucket |
+| `growthAlgorithms.js` | Upsell 80% rule, MRR Forecast, Paginate+Clamp |
+Tests: `src/util/algorithms.test.js` (13 tests).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Wired UI
+- `ProductSection` fuzzy rank, `CustomerManagement` fuzzy, `BranchOrders` fuzzy+priority sort
+- `InventoryManagement` ROP column, `BranchInventory` ROP count
+- `PaymentDialog` greedy change breakdown, `HeldOrders` priority order
+- `ViewCustomerDialog` RFM+CLV header, `BranchRefunds` Z-score REVIEW badge

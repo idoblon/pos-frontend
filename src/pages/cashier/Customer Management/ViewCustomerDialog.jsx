@@ -37,10 +37,12 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
   if (!customer) return null;
 
   const totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-  // ALGORITHM NAMES: RFM Segmentation + CLV Prediction
+  // ALGORITHM NAMES: RFM Segmentation + CLV Prediction (real monthsActive from first order)
   const lastDate = orders.length ? Math.max(...orders.map((o) => new Date(o.createdAt).getTime())) : Date.now();
+  const firstDate = orders.length ? Math.min(...orders.map((o) => new Date(o.createdAt).getTime())) : Date.now();
+  const monthsActive = Math.max(1, Math.round(((lastDate - firstDate) / (30 * 86400000)) || 1));
   const rfm = rfmSegment({ daysSinceLast: (Date.now() - lastDate) / 86400000, orderCount: orders.length, totalSpent });
-  const clv = predictCLV({ totalSpent, orderCount: orders.length, monthsActive: 6 });
+  const clv = predictCLV({ totalSpent, orderCount: orders.length, monthsActive });
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

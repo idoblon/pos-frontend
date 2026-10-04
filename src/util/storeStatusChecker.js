@@ -1,6 +1,8 @@
 /**
  * Store Status Checker - Validates if store and branches are active
  */
+import api from '@/util/api';
+import secureStorage from './secureStorage';
 
 export const STORE_STATUS = {
   ACTIVE: 'ACTIVE',
@@ -113,11 +115,9 @@ export const validateUserAccess = async (userData) => {
  */
 const checkStoreStatus = async (storeId) => {
   try {
-    const { default: secureStorage } = await import('./secureStorage');
     const token = secureStorage.getToken();
     if (!token) return null;
 
-    const { default: api } = await import('@/util/api');
     const response = await api.get(`/api/stores/${encodeURIComponent(storeId)}`);
     const store = response.data;
     if (!store) return null;

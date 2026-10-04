@@ -9,7 +9,9 @@
 // Higher = serve first. WORLDWIDE USE: kitchen display + hold resume.
 // ------------------------------------------------------------
 export function orderPriorityScore({ createdAt, totalAmount = 0, nowMs = Date.now() }) {
-  const ageMin = Math.max(0, (nowMs - new Date(createdAt).getTime()) / 60000);
+  // Guard: missing/invalid dates score by value only (no NaN ordering)
+  const t = new Date(createdAt).getTime();
+  const ageMin = Number.isFinite(t) ? Math.max(0, (nowMs - t) / 60000) : 0;
   return ageMin * 0.6 + (Number(totalAmount) || 0) / 1000;
 }
 

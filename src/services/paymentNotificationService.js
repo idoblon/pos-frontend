@@ -1,5 +1,6 @@
 // Payment Notification Service for Admin
 // Handles payment confirmations and backend integration
+import api from '@/util/api';
 
 const PLAN_PRICES = {
   BASIC: 3500,
@@ -192,8 +193,7 @@ class PaymentNotificationService {
 
   async getRegistrationPaymentNotifications() {
     try {
-      const api = await import('@/util/api');
-      const response = await api.default.get('/api/admin/registration-requests');
+      const response = await api.get('/api/admin/registration-requests');
       return this.extractList(response.data)
         .map((request) => this.registrationRequestToNotification(request))
         .filter(Boolean);
@@ -207,8 +207,7 @@ class PaymentNotificationService {
     let requests = [];
 
     try {
-      const api = await import('@/util/api');
-      const response = await api.default.get('/api/admin/subscription-change-requests');
+      const response = await api.get('/api/admin/subscription-change-requests');
       requests = this.extractList(response.data);
     } catch (error) {
       console.error('Failed to fetch subscription change payment records:', error);
@@ -225,8 +224,7 @@ class PaymentNotificationService {
   async processStorePayment(storeData, paymentDetails) {
     try {
       // Call backend payment completion endpoint
-      const api = await import('@/util/api');
-      const response = await api.default.post('/api/admin/store-payment/complete', {
+      const response = await api.post('/api/admin/store-payment/complete', {
         storeId: storeData.id,
         storeName: storeData.storeName,
         ownerName: storeData.ownerName,

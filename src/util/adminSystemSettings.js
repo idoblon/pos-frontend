@@ -1,5 +1,6 @@
 export const ADMIN_SYSTEM_SETTINGS_KEY = "posAdminSystemSettings";
 export const ADMIN_SYSTEM_SETTINGS_EVENT = "pos-admin-system-settings-updated";
+import api from "@/util/api";
 
 export const DEFAULT_ADMIN_SYSTEM_SETTINGS = {
   enforceStrongPasswords: true,
@@ -39,7 +40,6 @@ export function saveAdminSystemSettings(settings) {
 // Server-persisted settings (GET|PUT /api/admin/settings). Showcase-safe:
 // merges server values over local defaults; failures fall back to localStorage.
 export async function fetchServerSystemSettings() {
-  const { default: api } = await import("@/util/api");
   const res = await api.get("/api/admin/settings");
   const data = res.data && typeof res.data === "object" ? res.data : {};
   const coerced = {};
@@ -56,7 +56,6 @@ export async function fetchServerSystemSettings() {
 }
 
 export async function saveServerSystemSettings(settings) {
-  const { default: api } = await import("@/util/api");
   const payload = {};
   for (const [key, value] of Object.entries(settings)) {
     if (key in DEFAULT_ADMIN_SYSTEM_SETTINGS) payload[key] = String(value);

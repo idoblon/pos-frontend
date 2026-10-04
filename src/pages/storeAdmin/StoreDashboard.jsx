@@ -134,6 +134,7 @@ export default function StoreDashboard() {
           orders: branchOrders.length,
         };
       })
+      // ALGORITHM: Descending Sort for ranking (Top branches first)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 4);
   }, [branches, monthlyOrders]);

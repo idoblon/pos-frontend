@@ -1,4 +1,5 @@
 import { isPaymentRequiredBeforeActivation } from "@/util/adminSystemSettings";
+import api from "@/util/api";
 
 /**
  * Payment Validator - Checks if store has completed subscription payment via backend
@@ -18,14 +19,13 @@ export const PAYMENT_STATUS = {
  */
 export const checkStorePaymentStatus = async (storeId, email) => {
   try {
-    const api = await import('@/util/api');
     try {
-      const response = await api.default.get(`/api/public/store-payment/status`, {
+      const response = await api.get(`/api/public/store-payment/status`, {
         params: { email }
       });
       return normalizePaymentStatus(response.data);
     } catch {
-      const response = await api.default.get(`/api/admin/store-payment/status`, {
+      const response = await api.get(`/api/admin/store-payment/status`, {
         params: { storeId, email }
       });
       return normalizePaymentStatus(response.data);
@@ -69,8 +69,7 @@ export const validateStoreAccess = async (userData) => {
   // Active free trials skip the payment gate — trial stores convert through
   // the in-app upgrade flow instead of the registration payment link.
   try {
-    const { default: trialApi } = await import('@/util/api');
-    const trial = await trialApi.get('/api/stores/trial-status');
+    const trial = await api.get('/api/stores/trial-status');
     if (trial.data?.isTrialActive) {
       return { allowed: true, reason: 'Active free trial' };
     }
