@@ -8,6 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { User, Phone, Mail, MapPin, ShoppingBag, Calendar } from "lucide-react";
 import api from "@/util/api";
+// ALGORITHM NAMES: RFM Segmentation + CLV Prediction — see src/util/customerAlgorithms.js
+import { rfmSegment, predictCLV } from "@/util/customerAlgorithms";
 
 const ViewCustomerDialog = ({ open, onClose, customer }) => {
   const [orders, setOrders] = useState([]);
@@ -35,6 +37,10 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
   if (!customer) return null;
 
   const totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  // ALGORITHM NAMES: RFM Segmentation + CLV Prediction
+  const lastDate = orders.length ? Math.max(...orders.map((o) => new Date(o.createdAt).getTime())) : Date.now();
+  const rfm = rfmSegment({ daysSinceLast: (Date.now() - lastDate) / 86400000, orderCount: orders.length, totalSpent });
+  const clv = predictCLV({ totalSpent, orderCount: orders.length, monthsActive: 6 });
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -52,7 +58,7 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
               </div>
               <div>
                 <h3 className="font-semibold text-lg">{customer.fullName}</h3>
-                <p className="text-sm text-gray-600">Customer ID: #{customer.id}</p>
+                <p className="text-sm text-gray-600">Customer ID: #{customer.id} · {rfm.segment} (R{rfm.r}F{rfm.f}M{rfm.m}) · CLV रु{clv}</p>
               </div>
             </div>
 

@@ -5,6 +5,9 @@ import { Search, Package, AlertTriangle, Truck } from "lucide-react";
 import { getInventoryByBranch } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
 import useBranchContext from "@/hooks/useBranchContext";
 import { getLowStockThreshold } from "@/util/adminSystemSettings";
+// REPLACED: plain threshold style + filter -> ROP with Safety Stock + Fuzzy Search
+import { getReorderSuggestion } from "@/util/inventoryAlgorithms";
+import { fuzzySearchByKeys } from "@/util/searchAlgorithms";
 import { toast } from "sonner";
 
 const s = {
@@ -32,12 +35,18 @@ export default function BranchInventory() {
     }
   }, [dispatch, branchId]);
 
-  const filtered = inventory?.filter((item) =>
-    (item.productName ?? item.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-    (item.productSku ?? item.sku ?? "").toLowerCase().includes(search.toLowerCase())
-  );
+  // REPLACED BUILT-IN plain `filter(includes)` -> Ranked Fuzzy Search
+  const filtered = fuzzySearchByKeys(inventory || [], search, [
+    (item) => item.productName ?? item.name,
+    (item) => item.productSku ?? item.sku,
+  ]);
 
-  const lowStockCount  = filtered?.filter(item => item.quantity > 0 && item.quantity <= lowStockThreshold).length || 0;
+  // REPLACED BUILT-IN fixed-threshold count -> ROP with Safety Stock count
+  const ropOf = (qty) => {
+    const avg = Math.max(1, Math.ceil(lowStockThreshold / 7));
+    return getReorderSuggestion({ quantityOnHand: qty, avgDailyDemand: avg, dailyStdDev: avg * 0.3, leadTimeDays: 7 });
+  };
+  const lowStockCount  = filtered?.filter((item) => ropOf(item.quantity).shouldReorder && item.quantity > 0).length || 0;
   const outOfStockCount = filtered?.filter(item => item.quantity === 0).length || 0;
 
   const getStockStyle = (qty) => {

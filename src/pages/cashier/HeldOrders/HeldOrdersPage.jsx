@@ -11,6 +11,8 @@ import {
   selectHeldOrders,
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
 import { formatMoney } from "@/util/currency";
+// ALGORITHM NAMES: Priority Queue Score (Age x Value) — see src/util/orderAlgorithms.js
+import { sortByPriority } from "@/util/orderAlgorithms";
 
 const orderTotal = (order) => order.items.reduce(
   (total, item) => total + (Number(item.price || item.sellingPrice) || 0) * (item.quantity || 1),
@@ -37,8 +39,7 @@ export default function HeldOrdersPage() {
 
   const discard = (order) => setDiscardTarget(order);
 
-  const confirmDiscard = () => {
-    if (!discardTarget) return;
+  const confirmDiscard = () => {    if (!discardTarget) return;
     const order = discardTarget;
     setDiscardTarget(null);
     dispatch(discardHeldOrderRemotely(order)).then(() => toast.success("Held order discarded.")).catch(() => toast.error("Unable to discard this held order."));
@@ -63,7 +64,8 @@ export default function HeldOrdersPage() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {heldOrders.map((order, index) => {
+            {/* ALGORITHM NAME: Priority Queue Score — oldest + highest value first */}
+            {sortByPriority(heldOrders.map((h) => ({ ...h, createdAt: h.createdAt, totalAmount: orderTotal(h) }))).map((order, index) => {
               const quantity = order.items.reduce((count, item) => count + (item.quantity || 1), 0);
               const customerName = order.selectedCustomer?.fullName || "Walk-in customer";
               return (

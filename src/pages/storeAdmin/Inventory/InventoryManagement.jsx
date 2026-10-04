@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import secureStorage from "@/util/secureStorage";
 import { getLowStockThreshold } from "@/util/adminSystemSettings";
+// ALGORITHM NAMES in use below: Reorder Point (ROP) with Safety Stock
+import { getReorderSuggestion } from "@/util/inventoryAlgorithms";
 
 const s = {
   page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
@@ -240,8 +242,8 @@ export default function InventoryManagement() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  {["Product", "SKU", "Branch", "Stock", "Actions"].map((h, i) => (
-                    <th key={h} style={{ ...s.th, textAlign: i === 4 ? "right" : "left" }}>{h}</th>
+                  {["Product", "SKU", "Branch", "Stock", "Reorder (ROP)", "Actions"].map((h, i) => (
+                    <th key={h} style={{ ...s.th, textAlign: i === 5 ? "right" : "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -260,6 +262,24 @@ export default function InventoryManagement() {
                       <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, ...getStockStyle(item.quantity, lowStockThreshold) }}>
                         {item.quantity} units
                       </span>
+                    </td>
+                    <td style={s.td}>
+                      {(() => {
+                        // ALGORITHM NAME: Reorder Point (ROP) with Safety Stock — see src/util/inventoryAlgorithms.js
+                        // Estimate avg daily demand from low-stock threshold when sales history is unavailable.
+                        const avgDailyDemand = Math.max(1, Math.ceil(lowStockThreshold / 7));
+                        const { reorderPoint, shouldReorder } = getReorderSuggestion({
+                          quantityOnHand: item.quantity,
+                          avgDailyDemand,
+                          dailyStdDev: avgDailyDemand * 0.3,
+                          leadTimeDays: 7,
+                        });
+                        return (
+                          <span title={`Reorder point ${reorderPoint}`} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, background: shouldReorder ? "#fef2f2" : "#f0fdf4", color: shouldReorder ? "#e53e3e" : "#059669" }}>
+                            {shouldReorder ? `Reorder (≤${reorderPoint})` : `OK (>${reorderPoint})`}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>

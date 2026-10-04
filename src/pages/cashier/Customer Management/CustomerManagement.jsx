@@ -10,6 +10,8 @@ import AddCustomerDialog from "./AddCustomerDialog";
 import EditCustomerDialog from "./EditCustomerDialog";
 import ViewCustomerDialog from "./ViewCustomerDialog";
 import DeleteCustomerDialog from "./DeleteCustomerDialog";
+// REPLACED: plain filter(includes) -> Generic Ranked Fuzzy Search (typo-tolerant)
+import { fuzzySearchByKeys } from "@/util/searchAlgorithms";
 
 export default function CustomerManagement() {
   const dispatch = useDispatch();
@@ -29,12 +31,12 @@ export default function CustomerManagement() {
     }
   }, [dispatch, branchId]);
 
-  const filteredCustomers = customers?.filter(
-    (customer) =>
-      customer.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.includes(searchTerm)
-  );
+  // REPLACED BUILT-IN: `filter(includes)` with best-suited Ranked Fuzzy Search
+  const filteredCustomers = fuzzySearchByKeys(customers || [], searchTerm, [
+    (c) => c.fullName,
+    (c) => c.email,
+    (c) => c.phone,
+  ]);
 
   const handleView = (customer) => {
     setSelectedCustomer(customer);

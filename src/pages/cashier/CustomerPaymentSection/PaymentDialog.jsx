@@ -19,6 +19,8 @@ import {
 import { formatMoney } from "@/util/currency";
 import { printOrderReceipt } from "@/components/Receipt";
 import { queueOfflineOrder } from "@/util/offlineOrderQueue";
+// ALGORITHM NAME: Greedy Change-Making — see src/util/cartAlgorithms.js
+import { makeChangeGreedy } from "@/util/cartAlgorithms";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const checkoutKey = () => globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -434,7 +436,12 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                   {amountReceived && parseFloat(amountReceived) >= total && (
                     <div style={{ marginTop: 8, padding: "10px 14px", background: "#f5f5f5", border: "1px solid #e5e7eb", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                       <span style={{ color: "#6b7280" }}>Change to return:</span>
-                      <span style={{ fontWeight: 700, color: "#1a1d23" }}>{formatMoney(change)}</span>
+                      <span style={{ fontWeight: 700, color: "#1a1d23" }}>{formatMoney(change)}{(() => {
+                        // ALGORITHM NAME: Greedy Change-Making breakdown
+                        const { breakdown } = makeChangeGreedy({ change });
+                        if (!breakdown.length) return "";
+                        return ` (${breakdown.map((b) => `${b.count}x${b.denom}`).join(" + ")})`;
+                      })()}</span>
                     </div>
                   )}
                 </div>

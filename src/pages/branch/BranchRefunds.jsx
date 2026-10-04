@@ -4,6 +4,8 @@ import { Search, RotateCcw, TrendingDown, DollarSign, Calendar, Users, Plus } fr
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 import useBranchContext from "@/hooks/useBranchContext";
 import BranchRefundDialog from "@/pages/branch/BranchRefundDialog";
+// ALGORITHM NAME: Z-Score Anomaly Detection — see src/util/orderAlgorithms.js
+import { isAnomaly } from "@/util/orderAlgorithms";
 
 const s = {
   page: {
@@ -84,6 +86,9 @@ export default function BranchRefunds() {
     return refundDate === today;
   }).length || 0;
   const avgRefundAmount = totalRefunds > 0 ? totalAmount / totalRefunds : 0;
+  // ALGORITHM NAME: Z-Score Anomaly Detection — flags suspiciously large refunds
+  const amounts = allRefunds?.map((r) => Number(r.amount) || 0) || [];
+  const flagged = new Set((allRefunds || []).filter((r) => amounts.length >= 5 && isAnomaly(Number(r.amount) || 0, amounts)).map((r) => String(r.id ?? r._id)));
 
   return (
     <div style={s.page}>
@@ -247,6 +252,9 @@ export default function BranchRefunds() {
                       }}
                     >
                       रु {(r.amount ?? 0).toLocaleString("en-IN")}
+                      {flagged.has(String(r.id ?? r._id)) && (
+                        <span title="ALGORITHM: Z-Score Anomaly — unusually large refund" style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10, background: "#fef2f2", color: "#e53e3e" }}>REVIEW</span>
+                      )}
                     </td>
                   </tr>
                 ))}

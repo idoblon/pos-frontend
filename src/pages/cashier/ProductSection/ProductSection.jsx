@@ -5,6 +5,8 @@ import { getInventoryByBranch, getPosCatalog } from "@/Redux Toolkit/Features/in
 import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
 import ProductCard from "@/components/ProductCard";
 import useBranchContext from "@/hooks/useBranchContext";
+// ALGORITHM NAMES in use below: Ranked Fuzzy Match + Levenshtein + Exact fast path
+import { fuzzySearchProducts } from "@/util/searchAlgorithms";
 
 const toCatalogProduct = (row) => ({
   id: row.id ?? row.productId,
@@ -122,14 +124,11 @@ export default function ProductSection({ onAddToCart }) {
 
   // Server already filters on q; filter client-side too for the legacy path
   // (and as a fast echo while the debounced server query is in flight).
-  const query = searchTerm.trim().toLowerCase();
+  // ALGORITHM NAME: Rank + Filter + Top-K Sort (Best-match first) — see searchAlgorithms.js
+  const query = searchTerm.trim();
   const filtered = catalog !== null && debouncedSearch === searchTerm.trim()
     ? source
-    : source.filter((p) =>
-        p.name?.toLowerCase().includes(query) ||
-        p.sku?.toLowerCase().includes(query) ||
-        p.category?.name?.toLowerCase().includes(query)
-      );
+    : fuzzySearchProducts(source, query, 200);
 
   const loading = inventoryLoading || productsLoading;
 

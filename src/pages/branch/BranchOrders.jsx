@@ -6,6 +6,9 @@ import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk"
 import useBranchContext from "@/hooks/useBranchContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import BranchRefundDialog from "@/pages/branch/BranchRefundDialog";
+// REPLACED: plain filter + unsorted -> Generic Fuzzy Search + Priority Sort
+import { fuzzySearchByKeys } from "@/util/searchAlgorithms";
+import { sortByPriority } from "@/util/orderAlgorithms";
 
 const statusStyle = {
   PENDING: { background: "#fffbeb", color: "#92400e" },
@@ -55,15 +58,14 @@ export default function BranchOrders() {
     return String(o.status || "COMPLETED").toUpperCase();
   };
 
-  const filtered = orders?.filter((o) => {
-    const matchSearch = (o.id ?? o._id ?? "").toString().includes(search) ||
-      (o.customerName ?? "").toLowerCase().includes(search.toLowerCase());
-
-    const actualStatus = displayStatus(o);
-
-    const matchStatus = statusFilter === "ALL" || actualStatus === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  // REPLACED BUILT-IN: plain `filter(includes)` -> Ranked Fuzzy Search, then Priority Sort
+  const searched = fuzzySearchByKeys(orders || [], search, [
+    (o) => String(o.id ?? o._id ?? ""),
+    (o) => o.customerName,
+  ]);
+  const filtered = sortByPriority(
+    (searched || []).filter((o) => statusFilter === "ALL" || displayStatus(o) === statusFilter)
+  );
 
   const openDetail = async (o) => {
     const id = o.id ?? o._id;
