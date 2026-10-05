@@ -97,7 +97,6 @@ export default function SubscriptionRequest() {
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [plans, setPlans] = useState(SUBSCRIPTION_PLANS_FALLBACK);
-  const [planSource, setPlanSource] = useState("fallback");
   const [synced, setSynced] = useState(false);
 
   // Server-wins reconciliation: fetch this store's change requests and merge
@@ -132,11 +131,10 @@ export default function SubscriptionRequest() {
   useEffect(() => {
     setRequests(readRequests().map(normalizeRequest));
     (async () => {
-      const { plans: serverPlans, source } = await fetchSubscriptionPlans().catch(() => ({
+      const { plans: serverPlans } = await fetchSubscriptionPlans().catch(() => ({
         plans: SUBSCRIPTION_PLANS_FALLBACK, source: "fallback",
       }));
       setPlans(serverPlans);
-      setPlanSource(source);
     })();
   }, []);
 
@@ -248,7 +246,7 @@ export default function SubscriptionRequest() {
           <div style={{ padding: 16, backgroundColor: "#f5f5f5", borderRadius: 8, border: "1px solid #e2e5e9", marginBottom: 18 }}>
             <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: "#8a909c", textTransform: "uppercase" }}>Active Plan</p>
             <p style={{ margin: "0 0 8px", fontSize: 24, fontWeight: 900, color: "#1a1d23" }}>{plans[currentPlan]?.name || currentPlan}</p>
-            <p style={{ margin: "0", fontSize: 13, color: "#8a909c" }}>{plans[currentPlan]?.price || ""}{planSource === "fallback" ? " (demo)" : ""}</p>
+            <p style={{ margin: "0", fontSize: 13, color: "#8a909c" }}>{plans[currentPlan]?.price || ""}</p>
           </div>
 
           {/* Subscription Dates */}

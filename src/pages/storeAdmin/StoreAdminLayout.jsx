@@ -31,6 +31,15 @@ import api from "@/util/api";
 import posLogo from "@/logo/pos.png";
 import ChangePasswordDialog from "@/pages/cashier/Settings/ChangePasswordDialog";
 import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
+import { hasPermission, mapToBackendRole } from "@/util/roleMapper";
+
+// Billing routes (subscription plan changes, payment gateway keys) are
+// owner-only (see RoleOnlyRoute in StoreAdminRoutes). Nav + banners must
+// hide those actions from store managers instead of bouncing them.
+const canManageBilling = (role) =>
+  hasPermission(mapToBackendRole(role), ["ROLE_STORE_ADMIN"]);
+
+const storeRole = () => secureStorage.getUserData()?.role;
 
 const navItems = [
   { path: "/store-admin", label: "Dashboard", icon: LayoutDashboard },
@@ -40,12 +49,12 @@ const navItems = [
   { path: "/store-admin/products", label: "Products", icon: Package },
   { path: "/store-admin/inventory", label: "Inventory", icon: Warehouse },
   { path: "/store-admin/restock-requests", label: "Restock Requests", icon: Truck },
-  { path: "/store-admin/subscription", label: "Subscription", icon: CreditCard },
+  { path: "/store-admin/subscription", label: "Subscription", icon: CreditCard, ownerOnly: true },
   { path: "/store-admin/employees", label: "Employees", icon: Users },
   { path: "/store-admin/categories", label: "Categories", icon: Tag },
   { path: "/store-admin/shift-summary", label: "Shift Summary", icon: Clock },
   { path: "/store-admin/reports", label: "Analytics", icon: BarChart2 },
-  { path: "/store-admin/payment-settings", label: "Payment Settings", icon: Settings },
+  { path: "/store-admin/payment-settings", label: "Payment Settings", icon: Settings, ownerOnly: true },
   { path: "/store-admin/profile", label: "Store Profile", icon: StoreIcon },
 ];
 
@@ -60,7 +69,9 @@ function formatDate() {
 
 function NavLinks({ onClose, pendingCount }) {
   const location = useLocation();
-  return navItems.map(({ path, label, icon: Icon }) => {
+  const billingVisible = canManageBilling(storeRole());
+  const visibleItems = navItems.filter((item) => !item.ownerOnly || billingVisible);
+  return visibleItems.map(({ path, label, icon: Icon }) => {
     const isRestockPage = path === "/store-admin/restock-requests";
     return (
       <Link
@@ -223,6 +234,7 @@ function TrialBanner() {
         <strong>{days} {days === 1 ? "day" : "days"} left</strong> in your free trial
         ({trial.subscriptionPlan || "BASIC"} plan). Upgrade to keep your store running without interruption.
       </p>
+      {canManageBilling(storeRole()) && (
       <button
         onClick={() => navigate("/store-admin/subscription")}
         style={{
@@ -232,6 +244,7 @@ function TrialBanner() {
       >
         Upgrade Now
       </button>
+      )}
     </div>
   );
 }

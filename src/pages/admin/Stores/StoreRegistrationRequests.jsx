@@ -16,9 +16,9 @@ const STATUS_VARIANT = {
 };
 
 const PLAN_PRICE = {
-  BASIC: "रु 2,999/mo",
-  PROFESSIONAL: "रु 5,999/mo",
-  ENTERPRISE: "रु 12,999/mo",
+  BASIC: "रु 75,000/year",
+  PROFESSIONAL: "रु 135,000/year",
+  ENTERPRISE: "रु 210,000/year",
 };
 
 const FILTERS = ["PENDING", "APPROVED", "REJECTED", "ALL"];

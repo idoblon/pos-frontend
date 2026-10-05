@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { RoleOnlyRoute } from "@/components/ProtectedRoute";
 import StoreAdminLayout from "@/pages/storeAdmin/StoreAdminLayout";
 import StoreDashboard from "@/pages/storeAdmin/StoreDashboard";
 import BranchManagement from "@/pages/storeAdmin/Branches/BranchManagement";
@@ -24,14 +25,17 @@ const StoreAdminRoutes = () => {
         <Route path="products"   element={<ProductManagement />} />
         <Route path="inventory"  element={<StoreWarehouseInventory />} />
         <Route path="restock-requests" element={<RestockManagement />} />
-        <Route path="subscription" element={<SubscriptionRequest />} />
+        {/* Money / billing routes: store owner (or POS admin) only.
+            Hierarchical guard: ["ROLE_STORE_ADMIN"] admits ROLE_ADMIN too,
+            but never ROLE_STORE_MANAGER. */}
+        <Route path="subscription" element={<RoleOnlyRoute allowedRoles={["ROLE_STORE_ADMIN"]}><SubscriptionRequest /></RoleOnlyRoute>} />
         <Route path="employees"  element={<EmployeeManagement />} />
         <Route path="employee-activity" element={<EmployeeActivityPage />} />
         <Route path="operations" element={<OperationsCenter />} />
         <Route path="categories" element={<CategoryManagement />} />
         <Route path="shift-summary" element={<StoreShiftSummary />} />
         <Route path="reports"    element={<StoreAnalytics />} />
-        <Route path="payment-settings" element={<PaymentSettings />} />
+        <Route path="payment-settings" element={<RoleOnlyRoute allowedRoles={["ROLE_STORE_ADMIN"]}><PaymentSettings /></RoleOnlyRoute>} />
         <Route path="profile" element={<StoreProfile />} />
       </Route>
     </Routes>

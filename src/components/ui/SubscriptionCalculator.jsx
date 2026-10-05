@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { Calculator, Info, Check, ArrowRight } from "lucide-react";
-import { SUBSCRIPTION_PLANS, calculateSubscriptionCost, getRecommendedPlan } from "@/util/subscriptionLogic";
+import { Calculator, Info, Check } from "lucide-react";
+import { SUBSCRIPTION_PLANS, calculateSubscriptionCost, getRecommendedPlan, planFitsUsage } from "@/util/subscriptionLogic";
 
 export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
   const [usage, setUsage] = useState({
@@ -8,15 +8,15 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
     users: 5,
     storage: 1
   });
-  
-  // Derived from usage — computed during render instead of via a setState effect.
+
+  // Flat prices — no add-on charges. Usage only determines fit.
   const calculations = useMemo(() => {
     const out = {};
     Object.keys(SUBSCRIPTION_PLANS).forEach(plan => {
-      out[plan] = calculateSubscriptionCost(plan, usage);
+      out[plan] = calculateSubscriptionCost(plan);
     });
     return out;
-  }, [usage]);
+  }, []);
 
   const recommendedPlan = useMemo(() => getRecommendedPlan(usage), [usage]);
 
@@ -24,7 +24,9 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
     setUsage(prev => ({ ...prev, [field]: parseInt(value) || 0 }));
   };
 
-  const PlanCard = ({ planKey, planData, calculation, isRecommended, isSelected }) => (
+  const PlanCard = ({ planKey, planData, calculation, isRecommended, isSelected }) => {
+    const fits = planFitsUsage(planKey, usage);
+    return (
     <div
       onClick={() => onPlanSelect(planKey)}
       style={{
@@ -86,25 +88,23 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
         </div>
       </div>
 
-      {/* Base Price */}
+      {/* Flat price note */}
       <div style={{ marginBottom: "8px", fontSize: "11px", color: "#6b7280" }}>
-        Base: {planData.currency} {planData.basePrice.toLocaleString("en-IN")}/{planData.billing}
+        Flat yearly price — no extra charges
       </div>
 
-      {/* Add-ons */}
-      {calculation.breakdown.length > 1 && (
-        <div style={{ marginBottom: "12px" }}>
-          <div style={{ fontSize: "10px", fontWeight: "600", color: "#059669", marginBottom: "4px" }}>
-            Add-ons:
-          </div>
-          {calculation.breakdown.slice(1).map((item, idx) => (
-            <div key={idx} style={{ fontSize: "10px", color: "#6b7280", display: "flex", justifyContent: "space-between" }}>
-              <span>{item.item} ({item.quantity}x)</span>
-              <span>{planData.currency} {item.totalPrice.toLocaleString("en-IN")}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Fit indicator */}
+      <div style={{
+        marginBottom: "12px",
+        padding: "6px 8px",
+        borderRadius: "4px",
+        fontSize: "10px",
+        fontWeight: "600",
+        background: fits ? "#f0fdf4" : "#fef2f2",
+        color: fits ? "#166534" : "#991b1b",
+      }}>
+        {fits ? "Fits your needs" : "Exceeds limits — upgrade required"}
+      </div>
 
       {/* Included Features */}
       <div style={{ fontSize: "10px", color: "#6b7280" }}>
@@ -114,12 +114,20 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
         <div>• {planData.included.storage} storage</div>
         <div>• {planData.included.support} support</div>
       </div>
+
+      {/* Full feature list */}
+      <div style={{ fontSize: "10px", color: "#4b5563", marginTop: "8px" }}>
+        {planData.features.map((f) => (
+          <div key={f}>• {f}</div>
+        ))}
+      </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div style={{ marginTop: "20px" }}>
-      {/* Usage Calculator */}
+      {/* Usage Checker */}
       <div style={{
         background: "#f8fafc",
         border: "1px solid #e2e8f0",
@@ -130,10 +138,10 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
           <Calculator size={16} color="#3b82f6" />
           <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "#1a1d23" }}>
-            Calculate Your Needs
+            Check Your Needs
           </h4>
         </div>
-        
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px" }}>
           <div>
             <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
@@ -154,7 +162,7 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
               }}
             />
           </div>
-          
+
           <div>
             <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
               Users
@@ -174,7 +182,7 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
               }}
             />
           </div>
-          
+
           <div>
             <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>
               Storage (GB)
@@ -208,7 +216,7 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
           gap: "4px"
         }}>
           <Info size={12} />
-          Pricing automatically adjusts based on your needs. Add extra branches/users as needed.
+          Each plan has fixed limits. If your needs exceed a plan, choose a higher plan — no per-branch payments.
         </div>
       </div>
 
@@ -226,7 +234,7 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
         ))}
       </div>
 
-      {/* Pricing Example */}
+      {/* Flat pricing note */}
       <div style={{
         marginTop: "12px",
         padding: "12px",
@@ -235,10 +243,10 @@ export default function SubscriptionCalculator({ onPlanSelect, selectedPlan }) {
         borderRadius: "6px"
       }}>
         <div style={{ fontSize: "11px", color: "#166534", marginBottom: "6px", fontWeight: "600" }}>
-          Example: Basic Plan + 2 Extra Branches
+          Flat yearly pricing — Basic रु 75,000 · Professional रु 135,000 · Enterprise रु 210,000
         </div>
         <div style={{ fontSize: "10px", color: "#166534" }}>
-          रु 3,500 (Base) + रु 1,000 (2 × रु 500/branch) = रु 4,500/year
+          Need more than your plan allows? Upgrade the plan instead of paying per branch.
         </div>
       </div>
     </div>

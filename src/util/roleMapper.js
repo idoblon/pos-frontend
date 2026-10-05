@@ -61,12 +61,14 @@ export const hasPermission = (userRole, requiredRoles) => {
   });
 };
 
-// Get allowed routes for role
+// Get allowed route trees for a role. Must mirror the tree-level
+// ProtectedRoute guards in App.jsx (per-page narrowing lives in
+// routes/*Routes.jsx via RoleOnlyRoute).
 export const getAllowedRoutes = (userRole) => {
   const routes = {
     'ROLE_ADMIN': ['/admin', '/store-admin', '/branch', '/cashier'],
-    'ROLE_STORE_ADMIN': ['/store-admin', '/cashier'],
-    'ROLE_STORE_MANAGER': ['/store-admin', '/cashier'],
+    'ROLE_STORE_ADMIN': ['/store-admin', '/branch', '/cashier'],
+    'ROLE_STORE_MANAGER': ['/store-admin', '/branch', '/cashier'],
     'ROLE_BRANCH_MANAGER': ['/branch', '/cashier'],
     'ROLE_BRANCH_CASHIER': ['/cashier'],
     'ROLE_USER': []

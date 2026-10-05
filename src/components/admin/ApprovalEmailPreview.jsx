@@ -4,19 +4,19 @@ import { Mail, CreditCard, CheckCircle, Clock, Building2 } from "lucide-react";
 export default function ApprovalEmailPreview({ request }) {
   const getPlanPrice = (plan) => {
     switch(plan) {
-      case 'BASIC': return '3,500';
-      case 'PROFESSIONAL': return '7,000'; 
-      case 'ENTERPRISE': return '10,000';
-      default: return '3,500';
+      case 'BASIC': return '75,000';
+      case 'PROFESSIONAL': return '135,000'; 
+      case 'ENTERPRISE': return '210,000';
+      default: return '75,000';
     }
   };
 
   const getPlanFeatures = (plan) => {
     switch(plan) {
-      case 'BASIC': return ['1 Store', '3 Branches', '10 Users', 'Basic Support'];
-      case 'PROFESSIONAL': return ['1 Store', '10 Branches', '50 Users', 'Priority Support', 'Advanced Reports'];
-      case 'ENTERPRISE': return ['Unlimited Stores', 'Unlimited Branches', 'Unlimited Users', '24/7 Support', 'Custom Features'];
-      default: return ['1 Store', '3 Branches', '10 Users', 'Basic Support'];
+      case 'BASIC': return ['1 Store', '3 Branches', '10 Users', '5GB Storage', 'Core POS + Daily Sales Reports', 'Inventory Management', 'Email Support'];
+      case 'PROFESSIONAL': return ['1 Store', '10 Branches', '50 Users', '25GB Storage', 'Advanced Analytics + Branch Targets', 'Warehouse + Restock Transfers', 'Priority Support', 'API Access'];
+      case 'ENTERPRISE': return ['Unlimited Stores', '25 Branches per Store', '200 Users', '100GB Storage', 'Custom Reports + Integrations', 'Audit Log + Advanced Security', 'White-label Options', '24/7 Dedicated Support'];
+      default: return ['1 Store', '3 Branches', '10 Users', '5GB Storage', 'Core POS + Daily Sales Reports', 'Inventory Management', 'Email Support'];
     }
   };
 

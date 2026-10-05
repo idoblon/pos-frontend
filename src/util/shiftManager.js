@@ -8,7 +8,10 @@ class ShiftManager {
   constructor() {
     this.shiftCheckInterval = null;
     this.endShiftPromise = null;
-    this.SHIFT_DURATION_HOURS = 10;
+    // Standard shift length is 9h everywhere else in the system
+    // (ShiftInformation STANDARD_SHIFT_HOURS, staffing threshold 540min,
+    // OperationsCenter rule) — keep this in sync.
+    this.SHIFT_DURATION_HOURS = 9;
     this.CHECK_INTERVAL_MS = 60000; // Check every minute
   }
 
@@ -70,10 +73,13 @@ class ShiftManager {
   }
 
   /**
-   * Check if shift has exceeded 10 hours
+   * Check if shift has exceeded the standard 9 hours
    */
   checkShiftDuration(dispatch, shift) {
-    const startTime = new Date(shift.startTime || localStorage.getItem('currentShiftStart'));
+    // Backend shape uses shiftStart/shiftEnd; accept legacy startTime too.
+    const rawStart = shift?.shiftStart ?? shift?.startTime ?? localStorage.getItem('currentShiftStart');
+    const startTime = new Date(rawStart);
+    if (!rawStart || isNaN(startTime.getTime())) return;
     const now = new Date();
     const hoursWorked = (now - startTime) / (1000 * 60 * 60);
     
@@ -87,12 +93,12 @@ class ShiftManager {
   }
 
   /**
-   * Handle overtime alert when shift exceeds 10 hours
+   * Handle overtime alert when shift exceeds the standard 9 hours
    */
   handleOvertimeAlert(dispatch, shift, hoursWorked) {
     
     // Show browser notification if permission granted
-    if (Notification.permission === 'granted') {
+    if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Shift Overtime Alert', {
         body: `Your shift has exceeded ${this.SHIFT_DURATION_HOURS} hours (${hoursWorked.toFixed(1)}h). Consider ending your shift.`,
         icon: '/favicon.svg'

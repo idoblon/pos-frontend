@@ -3,10 +3,10 @@ import api from '@/util/api';
 class EmailService {
   getPlanPrice(plan) {
     switch (plan) {
-      case 'BASIC': return '3,500';
-      case 'PROFESSIONAL': return '7,000';
-      case 'ENTERPRISE': return '10,000';
-      default: return '3,500';
+      case 'BASIC': return '75,000';
+      case 'PROFESSIONAL': return '135,000';
+      case 'ENTERPRISE': return '210,000';
+      default: return '75,000';
     }
   }
 

@@ -6,9 +6,9 @@ import api from "@/util/api";
 import paymentNotificationService from "@/services/paymentNotificationService";
 
 const PLANS = {
-  BASIC: 3500,
-  PROFESSIONAL: 7000,
-  ENTERPRISE: 10000,
+  BASIC: 75000,
+  PROFESSIONAL: 135000,
+  ENTERPRISE: 210000,
 };
 
 export default function StorePaymentPage() {
@@ -183,9 +183,9 @@ export default function StorePaymentPage() {
               <div>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "4px" }}>Subscription Plan</label>
                 <select name="plan" value={formData.plan} onChange={handleChange} style={{ ...inputStyle, background: "white" }}>
-                  <option value="BASIC">Basic — रु 3,500/year</option>
-                  <option value="PROFESSIONAL">Professional — रु 7,000/year</option>
-                  <option value="ENTERPRISE">Enterprise — रु 10,000/year</option>
+                  <option value="BASIC">Basic — रु 75,000/year</option>
+                  <option value="PROFESSIONAL">Professional — रु 135,000/year</option>
+                  <option value="ENTERPRISE">Enterprise — रु 210,000/year</option>
                 </select>
               </div>
             </div>

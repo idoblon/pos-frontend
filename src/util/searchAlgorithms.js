@@ -48,6 +48,7 @@ export function levenshtein(a = "", b = "") {
 // SCORES: exact SKU/ID=100, prefix=80, substring=60, fuzzy(lev<=2)=40-dist*10
 // ------------------------------------------------------------
 export function scoreProduct(query, p) {
+  if (!p) return 0; // null-guard: callers map raw lists that may hold nulls
   const q = normalizeText(query);
   if (!q) return 1; // empty query = show all
   const name = normalizeText(p.name);
@@ -86,13 +87,14 @@ export function scoreProduct(query, p) {
 // algorithm wiring for POS checkout search.
 // ------------------------------------------------------------
 export function fuzzySearchProducts(products = [], query = "", limit = 200) {
+  const topK = Math.max(1, Math.floor(Number(limit) || 200));
   const q = normalizeText(query);
-  if (!q) return (products || []).slice(0, limit);
+  if (!q) return (products || []).slice(0, topK);
   return (products || [])
     .map((p) => ({ p, score: scoreProduct(q, p) }))
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score) // ALGORITHM: Descending Sort for ranking
-    .slice(0, limit)
+    .slice(0, topK)
     .map((r) => r.p);
 }
 
@@ -103,8 +105,9 @@ export function fuzzySearchProducts(products = [], query = "", limit = 200) {
 // keys: e.g. [(c)=>c.fullName,(c)=>c.email,(c)=>c.phone]
 // ------------------------------------------------------------
 export function fuzzySearchByKeys(items = [], query = "", keyFns = [], limit = 500) {
+  const topK = Math.max(1, Math.floor(Number(limit) || 500));
   const q = normalizeText(query);
-  if (!q) return (items || []).slice(0, limit);
+  if (!q) return (items || []).slice(0, topK);
   const scored = [];
   for (const item of items || []) {
     let best = 0;
@@ -127,5 +130,5 @@ export function fuzzySearchByKeys(items = [], query = "", keyFns = [], limit = 5
     if (best > 0) scored.push({ item, score: best });
   }
   // ALGORITHM: Descending Sort for ranking + Top-K
-  return scored.sort((a, b) => b.score - a.score).slice(0, limit).map((r) => r.item);
+  return scored.sort((a, b) => b.score - a.score).slice(0, topK).map((r) => r.item);
 }

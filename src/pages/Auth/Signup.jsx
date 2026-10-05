@@ -25,20 +25,20 @@ const SUBSCRIPTION_PLANS = [
   { 
     value: "BASIC", 
     label: "Basic", 
-    price: "रु 3,500/year",
-    features: ["1 Store", "3 Branches", "10 Users", "Basic Support"]
+    price: "रु 75,000/year",
+    features: ["1 Store", "3 Branches", "10 Users", "5GB Storage", "Core POS + Daily Sales Reports", "Inventory Management", "Email Support"]
   },
   { 
     value: "PROFESSIONAL", 
     label: "Professional", 
-    price: "रु 7,000/year",
-    features: ["1 Store", "10 Branches", "50 Users", "Priority Support", "Advanced Reports"]
+    price: "रु 135,000/year",
+    features: ["1 Store", "10 Branches", "50 Users", "25GB Storage", "Advanced Analytics + Branch Targets", "Warehouse + Restock Transfers", "Priority Support", "API Access"]
   },
   { 
     value: "ENTERPRISE", 
     label: "Enterprise", 
-    price: "रु 10,000/year",
-    features: ["Unlimited Stores", "Unlimited Branches", "Unlimited Users", "24/7 Support", "Custom Features"]
+    price: "रु 210,000/year",
+    features: ["Unlimited Stores", "25 Branches per Store", "200 Users", "100GB Storage", "Custom Reports + Integrations", "Audit Log + Advanced Security", "White-label Options", "24/7 Dedicated Support"]
   },
 ];
 
@@ -374,12 +374,12 @@ const Signup = () => {
                     <div style={{
                       marginTop: "8px",
                       padding: "6px",
-                      background: "#fef3c7",
+                      background: "#f0fdf4",
                       borderRadius: "4px",
                       fontSize: "10px",
-                      color: "#92400e"
+                      color: "#166534"
                     }}>
-                      Need more branches? Add रु 500/branch/year extra
+                      Fixed limits included — Basic: 3 branches · Professional: 10 branches · Enterprise: 25/store. Need more? Choose a higher plan.
                     </div>
                   </div>
                 ))}

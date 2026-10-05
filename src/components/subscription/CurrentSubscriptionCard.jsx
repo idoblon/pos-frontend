@@ -20,6 +20,7 @@ import {
   normalizeSubscriptionRecord
 } from '@/util/subscriptionUtils';
 import { toast } from 'sonner';
+import StorageUsageBar from '@/components/subscription/StorageUsageBar';
 
 const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
   const [subscription, setSubscription] = useState(null);
@@ -114,9 +115,10 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
   }
 
   const planKey = String(subscription.subscriptionPlan || subscription.plan || 'BASIC').toUpperCase();
+  const storeId = subscription.storeId ?? subscription.store?.id ?? subscription.store?._id ?? subscription.id ?? subscription._id;
   const plan = SUBSCRIPTION_PLANS[planKey] || {
     name: planKey || 'Basic',
-    price: 3500,
+    price: 75000,
     color: '#059669',
     features: ['POS Access', 'Store Management']
   };
@@ -306,6 +308,11 @@ const CurrentSubscriptionCard = ({ onRenewClick, onUpgradeClick }) => {
               NPR {Math.round(plan.price / 12).toLocaleString('en-IN')}/month
             </p>
           </div>
+        </div>
+
+        {/* Storage consumption */}
+        <div style={{ marginBottom: '24px' }}>
+          <StorageUsageBar storeId={storeId} plan={planKey} />
         </div>
 
         {/* Plan Features */}

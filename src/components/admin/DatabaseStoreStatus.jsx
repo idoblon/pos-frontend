@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Database, CheckCircle, AlertCircle, Store, Users, Building2 } from "lucide-react";
 import { getAllStores } from "@/Redux Toolkit/Features/Store/storeThunk";
@@ -8,7 +8,7 @@ export default function DatabaseStoreStatus() {
   const { stores, loading, error } = useSelector((s) => s.store);
   const [connectionStatus, setConnectionStatus] = useState("checking");
 
-  const checkDatabaseConnection = async () => {
+  const checkDatabaseConnection = useCallback(async () => {
     try {
       setConnectionStatus("checking");
       await dispatch(getAllStores()).unwrap();
@@ -17,11 +17,11 @@ export default function DatabaseStoreStatus() {
       console.error("Database connection failed:", error);
       setConnectionStatus("disconnected");
     }
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     queueMicrotask(() => { checkDatabaseConnection(); });
-  }, []);
+  }, [checkDatabaseConnection]);
 
   const getConnectionStatusDisplay = () => {
     switch (connectionStatus) {

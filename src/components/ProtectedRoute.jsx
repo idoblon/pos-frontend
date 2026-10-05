@@ -115,8 +115,30 @@ const getUserDashboard = (role) => {
     'ROLE_BRANCH_CASHIER': '/cashier',
     'ROLE_USER': '/'
   };
-  
-  return dashboardMap[role] || '/login';
+
+  // Unknown roles land on the public landing page (never /login: an
+  // authenticated session sent to /login would bounce dashboard → guard →
+  // login in a loop).
+  return dashboardMap[role] || '/';
 };
+
+// Lightweight per-route role guard for use INSIDE an already-protected tree
+// (the outer ProtectedRoute handles auth + store/payment validation, so this
+// intentionally performs no API calls and shows no spinner — it only narrows
+// which levels of the hierarchy may enter). Because hasPermission is
+// hierarchical, allowedRoles lists the LOWEST permitted level, e.g.
+// ["ROLE_STORE_ADMIN"] admits ROLE_ADMIN + ROLE_STORE_ADMIN only.
+export function RoleOnlyRoute({ children, allowedRoles }) {
+  const { isAuthenticated, user } = useSelector((s) => s.auth);
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  const userBackendRole = mapToBackendRole(user?.role);
+  const allowedBackendRoles = (allowedRoles || []).map((role) => mapToBackendRole(role));
+  if (!hasPermission(userBackendRole, allowedBackendRoles)) {
+    return <Navigate to={getUserDashboard(user?.role)} replace />;
+  }
+  return children;
+}
 
 export default ProtectedRoute;

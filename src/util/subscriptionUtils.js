@@ -1,24 +1,26 @@
 // Subscription utility functions
+// Canonical limits/features mirror src/util/subscriptionPlans.js.
+// Prices are NPR per year.
 export const SUBSCRIPTION_PLANS = {
   BASIC: {
     name: 'Basic',
-    price: 3500,
+    price: 75000,
     duration: 365, // days
-    features: ['1 Branch', '5 Users', 'Basic Reports', 'Email Support'],
+    features: ['1 Store', '3 Branches', '10 Users', '5GB Storage', 'Core POS + Daily Sales Reports', 'Inventory Management', 'Email Support'],
     color: '#059669'
   },
   PROFESSIONAL: {
     name: 'Professional', 
-    price: 7000,
+    price: 135000,
     duration: 365,
-    features: ['5 Branches', '25 Users', 'Advanced Reports', 'Priority Support', 'Analytics'],
+    features: ['1 Store', '10 Branches', '50 Users', '25GB Storage', 'Advanced Analytics + Branch Targets', 'Warehouse + Restock Transfers', 'Priority Support', 'API Access'],
     color: '#3b82f6'
   },
   ENTERPRISE: {
     name: 'Enterprise',
-    price: 10000,
+    price: 210000,
     duration: 365,
-    features: ['Unlimited Branches', 'Unlimited Users', 'Custom Reports', '24/7 Support', 'API Access'],
+    features: ['Unlimited Stores', '25 Branches per Store', '200 Users', '100GB Storage', 'Custom Reports + Integrations', 'Audit Log + Advanced Security', 'White-label Options', '24/7 Dedicated Support'],
     color: '#7c3aed'
   }
 };

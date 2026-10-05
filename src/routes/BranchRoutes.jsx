@@ -14,7 +14,9 @@ import BranchRegister from "@/pages/branch/BranchRegister";
 
 const BranchRoutes = () => (
   <Routes>
-    {/* Full-screen register — no BranchLayout wrapper */}
+    {/* Full-screen register (sales till) — no BranchLayout wrapper.
+        Every branch-tree role runs the till daily, so this stays open to the
+        whole tree (including ROLE_BRANCH_MANAGER). */}
     <Route path="register" element={<BranchRegister />} />
 
     <Route element={<BranchLayout />}>

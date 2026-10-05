@@ -8,16 +8,22 @@ import { Label } from '@/components/ui/label';
 import api from '@/util/api';
 import posLogo from '@/logo/pos.png';
 
-const PLAN_PRICE = { BASIC: '3,500', PROFESSIONAL: '7,000', ENTERPRISE: '10,000' };
+const PLAN_PRICE = { BASIC: '75,000', PROFESSIONAL: '135,000', ENTERPRISE: '210,000' };
+
+// Test credential helpers are dev-only: never prefill or display them in
+// production builds (import.meta.env.DEV is false in `npm run build`).
+const SHOW_TEST_HELPERS = import.meta.env.DEV === true;
 
 function EsewaForm({ onPay, loading, error }) {
-  const [esewaId, setEsewaId] = useState('9806800001');
-  const [mpin, setMpin] = useState('1122');
+  const [esewaId, setEsewaId] = useState(SHOW_TEST_HELPERS ? '9806800001' : '');
+  const [mpin, setMpin] = useState(SHOW_TEST_HELPERS ? '1122' : '');
   return (
     <div className="space-y-3">
+      {SHOW_TEST_HELPERS && (
       <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
         🧪 Test: ID <strong>9806800001</strong>, MPIN <strong>1122</strong>
       </div>
+      )}
       <div className="space-y-1">
         <Label>eSewa ID</Label>
         <Input value={esewaId} onChange={e => setEsewaId(e.target.value)} placeholder="9806800001" />
@@ -37,13 +43,15 @@ function EsewaForm({ onPay, loading, error }) {
 }
 
 function KhaltiForm({ onPay, loading, error }) {
-  const [mobile, setMobile] = useState('9800000001');
-  const [otp, setOtp] = useState('987654');
+  const [mobile, setMobile] = useState(SHOW_TEST_HELPERS ? '9800000001' : '');
+  const [otp, setOtp] = useState(SHOW_TEST_HELPERS ? '987654' : '');
   return (
     <div className="space-y-3">
+      {SHOW_TEST_HELPERS && (
       <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs text-purple-800">
         🧪 Test: Mobile <strong>9800000001</strong>, OTP <strong>987654</strong>
       </div>
+      )}
       <div className="space-y-1">
         <Label>Mobile Number</Label>
         <Input value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, ''))} placeholder="9800000001" maxLength={10} />
@@ -75,29 +83,28 @@ export default function PaymentRequired() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
+    const fetchStatus = async (em) => {
+      try {
+        const res = await api.get('/api/admin/store-payment/status', { params: { email: em } });
+        if (res.data.status === 'PAID') {
+          localStorage.removeItem('pendingPaymentEmail');
+          navigate('/store-admin');
+          return;
+        }
+        setStoreInfo(res.data);
+      } catch {
+        setError('Unable to load payment info. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
     const urlEmail = searchParams.get('email');
     const authData = getAuthData();
     const resolvedEmail = urlEmail || authData.email || localStorage.getItem('pendingPaymentEmail');
     if (!resolvedEmail) { navigate('/login'); return; }
     setEmail(resolvedEmail);
     fetchStatus(resolvedEmail);
-  }, []);
-
-  const fetchStatus = async (em) => {
-    try {
-      const res = await api.get('/api/admin/store-payment/status', { params: { email: em } });
-      if (res.data.status === 'PAID') {
-        localStorage.removeItem('pendingPaymentEmail');
-        navigate('/store-admin');
-        return;
-      }
-      setStoreInfo(res.data);
-    } catch {
-      setError('Unable to load payment info. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [navigate, searchParams]);
 
   const handlePay = async (method, transactionId) => {
     setError('');
@@ -143,7 +150,7 @@ export default function PaymentRequired() {
   }
 
   const plan = storeInfo?.plan || 'BASIC';
-  const price = PLAN_PRICE[plan] || '3,500';
+  const price = PLAN_PRICE[plan] || '75,000';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 flex items-center justify-center p-4">

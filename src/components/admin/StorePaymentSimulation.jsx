@@ -28,10 +28,10 @@ export default function StorePaymentSimulation() {
 
   const getPlanPrice = (plan) => {
     switch(plan) {
-      case 'BASIC': return 3500;
-      case 'PROFESSIONAL': return 7000;
-      case 'ENTERPRISE': return 10000;
-      default: return 3500;
+      case 'BASIC': return 75000;
+      case 'PROFESSIONAL': return 135000;
+      case 'ENTERPRISE': return 210000;
+      default: return 75000;
     }
   };
 

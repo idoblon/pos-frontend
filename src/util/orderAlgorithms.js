@@ -9,10 +9,12 @@
 // Higher = serve first. WORLDWIDE USE: kitchen display + hold resume.
 // ------------------------------------------------------------
 export function orderPriorityScore({ createdAt, totalAmount = 0, nowMs = Date.now() }) {
-  // Guard: missing/invalid dates score by value only (no NaN ordering)
+  // Guard: missing/invalid dates score by value only (no NaN ordering).
+  // Value contribution is capped so huge tickets can't swamp waiting time.
   const t = new Date(createdAt).getTime();
   const ageMin = Number.isFinite(t) ? Math.max(0, (nowMs - t) / 60000) : 0;
-  return ageMin * 0.6 + (Number(totalAmount) || 0) / 1000;
+  const valueRank = Math.min((Number(totalAmount) || 0) / 1000, 50);
+  return ageMin * 0.6 + valueRank * 0.4;
 }
 
 export function sortByPriority(orders = [], nowMs = Date.now()) {
@@ -27,10 +29,13 @@ export function sortByPriority(orders = [], nowMs = Date.now()) {
 // USE: z = (x - mean)/std. |z| >= 3 = anomaly (refund abuse, void spike).
 // ------------------------------------------------------------
 export function meanStd(values = []) {
-  const n = values.length;
+  // Coerce + drop non-numeric entries: without this, one string revenue
+  // poisons the sum (concatenation) and every downstream z-score is NaN.
+  const nums = (values || []).map(Number).filter(Number.isFinite);
+  const n = nums.length;
   if (!n) return { mean: 0, std: 0 };
-  const mean = values.reduce((a, v) => a + v, 0) / n;
-  const variance = values.reduce((a, v) => a + (v - mean) ** 2, 0) / n;
+  const mean = nums.reduce((a, v) => a + v, 0) / n;
+  const variance = nums.reduce((a, v) => a + (v - mean) ** 2, 0) / n;
   return { mean, std: Math.sqrt(variance) };
 }
 

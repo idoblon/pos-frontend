@@ -344,7 +344,7 @@ export default function StoreWarehouseInventory() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
         <div style={{ ...s.card, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Package size={20} color="#059669" />
+            <Package size={20} color="#1a1d23" />
             <div>
               <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>Total Items</p>
               <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700 }}>{filtered?.length || 0}</p>
@@ -382,10 +382,10 @@ export default function StoreWarehouseInventory() {
         </div>
         <div style={{ ...s.card, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Package size={20} color="#3b82f6" />
+            <Package size={20} color="#1a1d23" />
             <div>
               <p style={{ margin: 0, fontSize: 11, color: "#8a909c" }}>Total Value</p>
-              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700, color: "#3b82f6" }}>रु {totalValue.toFixed(2)}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700, color: "#1a1d23" }}>रु {totalValue.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -506,11 +506,11 @@ export default function StoreWarehouseInventory() {
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                         {activeTab === "warehouse" && (
                           <button 
-                            style={{ ...s.iconBtn, borderColor: "#3b82f6", background: "#eff6ff" }} 
+                            style={s.iconBtn} 
                             onClick={() => openDistribute(item)}
                             title="Distribute to Branch"
                           >
-                            <Send size={13} color="#3b82f6" />
+                            <Send size={13} color="#1a1d23" />
                           </button>
                         )}
                         <button style={s.iconBtn} onClick={() => openEdit(item)}>
@@ -616,7 +616,7 @@ export default function StoreWarehouseInventory() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setDistributeDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" style={{ background: "#3b82f6", color: "white", border: "none" }}>
+              <Button type="submit" style={{ background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>
                 <Send size={14} style={{ marginRight: 6 }} /> Distribute
               </Button>
             </div>

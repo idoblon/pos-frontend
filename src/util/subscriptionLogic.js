@@ -1,7 +1,11 @@
+// Canonical plan definitions (flat pricing — no paid add-ons).
+// Branch/user/storage limits are hard caps; exceeding them requires a plan
+// upgrade, never a per-unit payment.
+
 export const SUBSCRIPTION_PLANS = {
   BASIC: {
     name: "Basic",
-    basePrice: 3500,
+    basePrice: 75000,
     currency: "रु",
     billing: "year",
     included: {
@@ -11,34 +15,19 @@ export const SUBSCRIPTION_PLANS = {
       storage: "5GB",
       support: "Email"
     },
-    addOns: {
-      extraBranch: {
-        price: 500,
-        name: "Additional Branch",
-        description: "Per branch beyond the included limit (yearly)"
-      },
-      extraUser: {
-        price: 100,
-        name: "Additional User", 
-        description: "Per user beyond the included limit (yearly)"
-      },
-      extraStorage: {
-        price: 200,
-        name: "Extra Storage",
-        description: "Per GB beyond the included limit (yearly)"
-      }
-    },
     features: [
-      "Basic POS System",
-      "Inventory Management", 
-      "Sales Reports",
+      "1 Store · 3 Branches · 10 Users",
+      "5GB Storage",
+      "Core POS System",
+      "Inventory Management",
+      "Daily Sales + Shift Reports",
       "Email Support"
     ]
   },
   PROFESSIONAL: {
     name: "Professional",
-    basePrice: 7000,
-    currency: "रु", 
+    basePrice: 135000,
+    currency: "रु",
     billing: "year",
     included: {
       stores: 1,
@@ -47,36 +36,21 @@ export const SUBSCRIPTION_PLANS = {
       storage: "25GB",
       support: "Priority"
     },
-    addOns: {
-      extraBranch: {
-        price: 400,
-        name: "Additional Branch",
-        description: "Per branch beyond the included limit (yearly)"
-      },
-      extraUser: {
-        price: 80,
-        name: "Additional User",
-        description: "Per user beyond the included limit (yearly)"
-      },
-      extraStorage: {
-        price: 150,
-        name: "Extra Storage", 
-        description: "Per GB beyond the included limit (yearly)"
-      }
-    },
     features: [
+      "1 Store · 10 Branches · 50 Users",
+      "25GB Storage",
       "Advanced POS System",
-      "Multi-location Management",
-      "Advanced Analytics",
+      "Multi-location + Warehouse Transfers",
+      "Advanced Analytics + Branch Targets",
       "Priority Support",
       "API Access"
     ]
   },
   ENTERPRISE: {
     name: "Enterprise",
-    basePrice: 10000,
+    basePrice: 210000,
     currency: "रु",
-    billing: "year", 
+    billing: "year",
     included: {
       stores: "unlimited",
       branches: 25,
@@ -84,100 +58,61 @@ export const SUBSCRIPTION_PLANS = {
       storage: "100GB",
       support: "24/7 Dedicated"
     },
-    addOns: {
-      extraBranch: {
-        price: 300,
-        name: "Additional Branch",
-        description: "Per branch beyond the included limit (yearly)"
-      },
-      extraUser: {
-        price: 50,
-        name: "Additional User",
-        description: "Per user beyond the included limit (yearly)"
-      },
-      extraStorage: {
-        price: 100,
-        name: "Extra Storage",
-        description: "Per GB beyond the included limit (yearly)"
-      }
-    },
     features: [
+      "Unlimited Stores · 25 Branches/Store · 200 Users",
+      "100GB Storage",
       "Complete POS Suite",
-      "Unlimited Stores",
-      "Custom Integrations", 
+      "Custom Reports + Integrations",
       "24/7 Dedicated Support",
-      "Advanced Security",
+      "Advanced Security + Audit Log",
       "White-label Options"
     ]
   }
 };
 
-export const calculateSubscriptionCost = (plan, usage) => {
+// Flat cost: every plan bills its base price regardless of usage within limits.
+export const calculateSubscriptionCost = (plan) => {
   const planDetails = SUBSCRIPTION_PLANS[plan];
-  if (!planDetails) return { total: 0, breakdown: [] };
+  if (!planDetails) return { total: 0, breakdown: [], currency: "रु" };
 
-  let total = planDetails.basePrice;
-  const breakdown = [{
-    item: `${planDetails.name} Plan Base`,
-    quantity: 1,
-    unitPrice: planDetails.basePrice,
-    totalPrice: planDetails.basePrice
-  }];
-
-  // Calculate extra branches
-  if (usage.branches > planDetails.included.branches) {
-    const extraBranches = usage.branches - planDetails.included.branches;
-    const branchCost = extraBranches * planDetails.addOns.extraBranch.price;
-    total += branchCost;
-    breakdown.push({
-      item: "Extra Branches",
-      quantity: extraBranches,
-      unitPrice: planDetails.addOns.extraBranch.price,
-      totalPrice: branchCost
-    });
-  }
-
-  // Calculate extra users
-  if (usage.users > planDetails.included.users) {
-    const extraUsers = usage.users - planDetails.included.users;
-    const userCost = extraUsers * planDetails.addOns.extraUser.price;
-    total += userCost;
-    breakdown.push({
-      item: "Extra Users",
-      quantity: extraUsers,
-      unitPrice: planDetails.addOns.extraUser.price,
-      totalPrice: userCost
-    });
-  }
-
-  // Calculate extra storage
-  if (usage.storage > parseInt(planDetails.included.storage)) {
-    const extraStorage = usage.storage - parseInt(planDetails.included.storage);
-    const storageCost = extraStorage * planDetails.addOns.extraStorage.price;
-    total += storageCost;
-    breakdown.push({
-      item: "Extra Storage",
-      quantity: extraStorage,
-      unitPrice: planDetails.addOns.extraStorage.price,
-      totalPrice: storageCost
-    });
-  }
-
-  return { total, breakdown, currency: planDetails.currency };
+  return {
+    total: planDetails.basePrice,
+    breakdown: [{
+      item: `${planDetails.name} Plan (flat yearly)`,
+      quantity: 1,
+      unitPrice: planDetails.basePrice,
+      totalPrice: planDetails.basePrice
+    }],
+    currency: planDetails.currency
+  };
 };
 
-export const getRecommendedPlan = (usage) => {
-  const plans = Object.keys(SUBSCRIPTION_PLANS);
-  let recommendedPlan = "BASIC";
-  let lowestCost = Infinity;
-
-  plans.forEach(plan => {
-    const cost = calculateSubscriptionCost(plan, usage);
-    if (cost.total < lowestCost) {
-      lowestCost = cost.total;
-      recommendedPlan = plan;
+// Does a usage profile fit inside a plan's hard caps?
+export const planFitsUsage = (plan, usage = {}) => {
+  const planDetails = SUBSCRIPTION_PLANS[plan];
+  if (!planDetails) return false;
+  const num = (v, fallback = 1) => {
+    if (typeof v === "string") {
+      const parsed = parseFloat(v);
+      return Number.isFinite(parsed) ? parsed : fallback;
     }
-  });
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+  const branches = num(usage.branches);
+  const users = num(usage.users);
+  const storage = num(usage.storage);
+  const includedBranches = planDetails.included.branches === "unlimited" ? Infinity : planDetails.included.branches;
+  const includedUsers = planDetails.included.users === "unlimited" ? Infinity : planDetails.included.users;
+  const includedStorage = parseFloat(planDetails.included.storage);
+  return branches <= includedBranches && users <= includedUsers && storage <= includedStorage;
+};
 
-  return recommendedPlan;
+// Smallest plan whose hard caps fit the requested usage.
+export const getRecommendedPlan = (usage = {}) => {
+  const order = ["BASIC", "PROFESSIONAL", "ENTERPRISE"];
+  for (const plan of order) {
+    if (planFitsUsage(plan, usage)) return plan;
+  }
+  return "ENTERPRISE";
 };

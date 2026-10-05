@@ -82,7 +82,7 @@ export default function EmailPaymentTest() {
     
     try {
       const paymentDetails = {
-        amount: 7000, // PROFESSIONAL plan
+        amount: 135000, // PROFESSIONAL plan
         method: 'Online Payment',
         transactionId: `TEST_TXN${Date.now()}`
       };
@@ -173,7 +173,7 @@ export default function EmailPaymentTest() {
           <p style={{ margin: '0 0 4px' }}><strong>Store:</strong> {sampleStoreRequest.storeName}</p>
           <p style={{ margin: '0 0 4px' }}><strong>Owner:</strong> {sampleStoreRequest.ownerName}</p>
           <p style={{ margin: '0 0 4px' }}><strong>Email:</strong> {sampleStoreRequest.email}</p>
-          <p style={{ margin: 0 }}><strong>Plan:</strong> {sampleStoreRequest.subscriptionPlan} - Rs.7,000/year</p>
+          <p style={{ margin: 0 }}><strong>Plan:</strong> {sampleStoreRequest.subscriptionPlan} - Rs.135,000/year</p>
         </div>
       </div>
 

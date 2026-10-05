@@ -45,7 +45,7 @@ const OrderHistory = () => {
         dispatch(getRefundsByCashier(cashierId));
       }
     });
-  }, [dispatch]);
+  }, [dispatch, user?.id]);
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 bg-card border-b">

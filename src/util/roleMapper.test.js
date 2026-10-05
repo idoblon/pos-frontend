@@ -66,6 +66,13 @@ describe('getAllowedRoutes', () => {
     expect(getAllowedRoutes('ROLE_BRANCH_CASHIER')).toEqual(['/cashier']);
   });
 
+  it('mirrors the App.jsx tree guards (store roles reach /branch)', () => {
+    expect(getAllowedRoutes('ROLE_STORE_ADMIN')).toEqual(['/store-admin', '/branch', '/cashier']);
+    expect(getAllowedRoutes('ROLE_STORE_MANAGER')).toEqual(['/store-admin', '/branch', '/cashier']);
+    expect(getAllowedRoutes('ROLE_BRANCH_MANAGER')).toEqual(['/branch', '/cashier']);
+    expect(getAllowedRoutes('ROLE_ADMIN')).toEqual(['/admin', '/store-admin', '/branch', '/cashier']);
+  });
+
   it('returns an empty list (deny) for unknown roles', () => {
     expect(getAllowedRoutes('ROLE_HACKER')).toEqual([]);
     expect(getAllowedRoutes(undefined)).toEqual([]);

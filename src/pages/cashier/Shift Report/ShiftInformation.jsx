@@ -1,6 +1,6 @@
 import { useSelector } from "react-redux";
 import { Card, CardContent } from "@/components/ui/card";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Clock } from "lucide-react";
 
 const STANDARD_SHIFT_HOURS = 9;
@@ -51,7 +51,7 @@ const ShiftInformation = () => {
     expectedEndTime: null,
   });
 
-  const calculateMetrics = () => {
+  const calculateMetrics = useCallback(() => {
     if (shiftData?.shiftStart) {
       const rawStart = parseShiftTime(shiftData.shiftStart);
       const todayStart = new Date();
@@ -70,14 +70,14 @@ const ShiftInformation = () => {
         expectedEndTime: expectedEnd,
       });
     }
-  };
+  }, [shiftData]);
 
   // Recalculate every minute so duration stays live
   useEffect(() => {
     queueMicrotask(() => calculateMetrics());
     const interval = setInterval(calculateMetrics, 60000);
     return () => clearInterval(interval);
-  }, [shiftData]);
+  }, [calculateMetrics]);
 
   return (
     <div className="space-y-4">

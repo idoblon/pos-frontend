@@ -22,8 +22,10 @@ export function optimizeStaffing({ salesByHour = [], salesPerCashier = 5000 }) {
 // overtime from avg shift length trend.
 // ------------------------------------------------------------
 export function predictOvertime({ openMinutes = 0, avgShiftMinutes = 480, thresholdMinutes = 540 }) {
-  const willOvertime = Number(openMinutes) >= Number(thresholdMinutes);
-  const risk = Number(openMinutes) / Number(thresholdMinutes);
+  const threshold = Number(thresholdMinutes) > 0 ? Number(thresholdMinutes) : 540;
+  const open = Number(openMinutes) || 0;
+  const willOvertime = open >= threshold;
+  const risk = open / threshold;
   return {
     willOvertime,
     risk: Number(risk.toFixed(2)),

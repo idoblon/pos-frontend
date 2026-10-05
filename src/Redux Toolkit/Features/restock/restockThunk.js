@@ -127,12 +127,6 @@ export const fulfillRestockRequest = createAsyncThunk(
       
       return res.data;
     } catch (error) {
-      console.error("❌ FRONTEND DEBUG - Fulfill request failed:", error);
-      console.error("❌ FRONTEND DEBUG - Error response:", error.response);
-      console.error("❌ FRONTEND DEBUG - Error status:", error.response?.status);
-      console.error("❌ FRONTEND DEBUG - Error data:", error.response?.data);
-      console.error("❌ FRONTEND DEBUG - Error message:", error.message);
-      console.error("❌ FRONTEND DEBUG - Error config:", error.config);
       return rejectWithValue(error.response?.data?.message || "Failed to fulfill request");
     }
   }

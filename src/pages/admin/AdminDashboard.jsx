@@ -156,7 +156,7 @@ export default function AdminDashboard() {
   const subscriptionRevenue = useMemo(() => {
     if (subscriptionStats?.totalRevenue > 0) return subscriptionStats.totalRevenue;
     // Fallback: sum plan prices from store data
-    const PRICES = { BASIC: 3500, PROFESSIONAL: 7000, ENTERPRISE: 10000 };
+    const PRICES = { BASIC: 75000, PROFESSIONAL: 135000, ENTERPRISE: 210000 };
     return realStores.reduce((sum, s) => sum + (PRICES[s.subscriptionPlan] || 0), 0);
   }, [subscriptionStats, realStores]);
 

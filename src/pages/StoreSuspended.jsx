@@ -17,19 +17,19 @@ const StoreSuspended = () => {
   const storeName = userData?.storeName || 'Your Store';
 
   useEffect(() => {
+    const loadSuspensionDetails = async () => {
+      try {
+        const data = secureStorage.getUserData();
+        const accessValidation = await validateUserAccess(data);
+        if (accessValidation.suspensionDetails) {
+          setSuspensionInfo(accessValidation.suspensionDetails);
+        }
+      } catch (error) {
+        console.error('Failed to load suspension details:', error);
+      }
+    };
     loadSuspensionDetails();
   }, []);
-
-  const loadSuspensionDetails = async () => {
-    try {
-      const accessValidation = await validateUserAccess(userData);
-      if (accessValidation.suspensionDetails) {
-        setSuspensionInfo(accessValidation.suspensionDetails);
-      }
-    } catch (error) {
-      console.error('Failed to load suspension details:', error);
-    }
-  };
 
   const handleLogout = () => {
     dispatch(logout());

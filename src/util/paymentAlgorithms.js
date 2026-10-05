@@ -33,7 +33,9 @@ export function isValidCardLuhn(number = "") {
 // ------------------------------------------------------------
 export function backoffDelayMs(failCount = 0, baseMs = 1000, capMs = 30000) {
   const n = Math.max(0, Number(failCount) || 0);
-  return Math.min(Number(capMs), Number(baseMs) * 2 ** n);
+  const base = Number(baseMs) > 0 ? Number(baseMs) : 1000;
+  const cap = Number(capMs) > 0 ? Number(capMs) : 30000;
+  return Math.min(cap, base * 2 ** n);
 }
 
 // ------------------------------------------------------------
@@ -42,8 +44,12 @@ export function backoffDelayMs(failCount = 0, baseMs = 1000, capMs = 30000) {
 // WORLDWIDE USE: OTP resend + API throttling.
 // ------------------------------------------------------------
 export function tokenBucketTake({ tokens, lastRefillMs, nowMs = Date.now(), capacity = 5, refillPerSec = 0.2 }) {
+  const cap = Number(capacity) > 0 ? Number(capacity) : 5;
+  const rate = Number(refillPerSec) > 0 ? Number(refillPerSec) : 0.2;
+  const current = Number(tokens);
+  const start = Number.isFinite(current) ? current : cap;
   const elapsed = Math.max(0, (nowMs - Number(lastRefillMs || nowMs)) / 1000);
-  const refilled = Math.min(Number(capacity), Number(tokens) + elapsed * Number(refillPerSec));
+  const refilled = Math.min(cap, start + elapsed * rate);
   if (refilled < 1) return { allowed: false, tokens: refilled, lastRefillMs: nowMs };
   return { allowed: true, tokens: refilled - 1, lastRefillMs: nowMs };
 }

@@ -39,10 +39,10 @@ export default function PaymentIntegration({ subscription, onPaymentSuccess, onC
   });
 
   const plan = {
-    BASIC: { name: "Basic", price: 3500 },
-    PROFESSIONAL: { name: "Professional", price: 7000 },
-    ENTERPRISE: { name: "Enterprise", price: 10000 }
-  }[subscription?.plan] || { name: "Basic", price: 3500 };
+    BASIC: { name: "Basic", price: 75000 },
+    PROFESSIONAL: { name: "Professional", price: 135000 },
+    ENTERPRISE: { name: "Enterprise", price: 210000 }
+  }[subscription?.plan] || { name: "Basic", price: 75000 };
 
   const handleInputChange = (field, value) => {
     setPaymentData(prev => ({ ...prev, [field]: value }));

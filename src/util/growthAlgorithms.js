@@ -9,10 +9,17 @@
 // INPUT: usage {branches, users, storageGB}, plans ordered BASIC<PRO<ENTERPRISE>.
 // ------------------------------------------------------------
 const ORDER = ["BASIC", "PROFESSIONAL", "ENTERPRISE"];
+// Stored plan values sometimes use the short "PRO" alias.
+const normalizePlan = (plan) => {
+  const upper = String(plan || "").toUpperCase();
+  if (upper === "PRO") return "PROFESSIONAL";
+  return upper;
+};
 export function recommendUpsell({ currentPlan, usage = {}, limitsByPlan = {} }) {
-  const i = ORDER.indexOf(currentPlan);
+  const plan = normalizePlan(currentPlan);
+  const i = ORDER.indexOf(plan);
   if (i < 0 || i === ORDER.length - 1) return null;
-  const lim = limitsByPlan[currentPlan] || {};
+  const lim = limitsByPlan[currentPlan] || limitsByPlan[plan] || {};
   const hot = ["branches", "users", "storageGB"].some((k) => {
     const l = Number(lim[k]) || 0;
     if (!l) return false;
@@ -27,7 +34,8 @@ export function recommendUpsell({ currentPlan, usage = {}, limitsByPlan = {} }) 
 // ------------------------------------------------------------
 export function forecastMRR({ mrrHistory = [], window = 3 }) {
   if (!mrrHistory.length) return 0;
-  const n = Math.min(window, mrrHistory.length);
+  const w = Math.max(1, Math.floor(Number(window) || 3));
+  const n = Math.min(w, mrrHistory.length);
   const s = mrrHistory.slice(-n).reduce((a, v) => a + (Number(v) || 0), 0);
   return Math.round(s / n);
 }

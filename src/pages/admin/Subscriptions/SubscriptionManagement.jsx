@@ -24,6 +24,7 @@ import {
   SUBSCRIPTION_PLANS_FALLBACK,
 } from "@/util/subscriptionPlans";
 import subscriptionService from "@/services/subscriptionService";
+import StorageUsageBar from "@/components/subscription/StorageUsageBar";
 import api from "@/util/api";
 
 // Canonical admin endpoints (backend SubscriptionChangeRequestController).
@@ -136,7 +137,7 @@ function ActionDialog({ title, label, placeholder, confirmText, onConfirm, onClo
   );
 }
 
-function StoreSubscriptionCard({ store, plans, planSource, onMarkPaid, onApprove, onReject, onSuspend, onReactivate, onRenew }) {
+function StoreSubscriptionCard({ store, plans, onMarkPaid, onApprove, onReject, onSuspend, onReactivate, onRenew }) {
   const planDetails = plans[store.plan] || plans.BASIC || SUBSCRIPTION_PLANS_FALLBACK.BASIC;
   const pendingRequest = store.upgradeRequest;
   const daysUntilExpiry = store.expiryDate
@@ -190,9 +191,6 @@ function StoreSubscriptionCard({ store, plans, planSource, onMarkPaid, onApprove
           </div>
           <div style={{ textAlign: "right", fontSize: 13, color: "#6b7280", fontWeight: 600 }}>
             {planDetails.price}
-            {planSource === "fallback" && (
-              <div style={{ fontSize: 10, color: "#b45309" }}>demo prices</div>
-            )}
           </div>
         </div>
 
@@ -305,6 +303,10 @@ function StoreSubscriptionCard({ store, plans, planSource, onMarkPaid, onApprove
           <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1a1d23" }}>{store.users || 0}</p>
           <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6b7280" }}>Users</p>
         </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <StorageUsageBar storeId={store.rawId ?? store.id} plan={store.plan} compact />
       </div>
     </div>
   );
@@ -533,7 +535,7 @@ export default function SubscriptionManagement() {
           </h1>
           <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
             Review store-admin plan change requests and accept paid upgrades
-            {planSource === "fallback" && " — demo prices (backend unreachable)"}
+            {planSource === "fallback" && " — offline (plan limits may be stale)"}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -591,7 +593,6 @@ export default function SubscriptionManagement() {
               key={store.id}
               store={store}
               plans={plans}
-              planSource={planSource}
               onMarkPaid={markPaid}
               onApprove={approveUpgrade}
               onReject={rejectUpgrade}

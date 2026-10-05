@@ -23,6 +23,9 @@ import { queueOfflineOrder } from "@/util/offlineOrderQueue";
 import { makeChangeGreedy } from "@/util/cartAlgorithms";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+// Test credential helpers are dev-only: never prefill or display them in
+// production builds (import.meta.env.DEV is false in `npm run build`).
+const SHOW_TEST_HELPERS = import.meta.env.DEV === true;
 const checkoutKey = () => globalThis.crypto?.randomUUID?.() || `checkout-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const PAYMENT_METHODS = [
@@ -62,11 +65,12 @@ function SuccessScreen({ receiptNumber, receiptTotal, receiptMessage, loading, o
 
 // ─── eSewa Form ───────────────────────────────────────────────────────────────
 function EsewaForm({ onConfirm, loading, error }) {
-  const [esewaId, setEsewaId] = useState("9806800001");
-  const [mpin, setMpin] = useState("1122");
+  const [esewaId, setEsewaId] = useState(SHOW_TEST_HELPERS ? "9806800001" : "");
+  const [mpin, setMpin] = useState(SHOW_TEST_HELPERS ? "1122" : "");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {SHOW_TEST_HELPERS && (
       <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: 14 }}>
         <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#166534" }}>🧪 eSewa Test Credentials</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -83,6 +87,7 @@ function EsewaForm({ onConfirm, loading, error }) {
           ))}
         </div>
       </div>
+      )}
       <div>
         <Label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>eSewa ID <span style={{ color: "#ef4444" }}>*</span></Label>
         <Input value={esewaId} onChange={(e) => setEsewaId(e.target.value)} placeholder="9806800001" style={{ marginTop: 4 }} />
@@ -102,11 +107,12 @@ function EsewaForm({ onConfirm, loading, error }) {
 
 // ─── Khalti Form ─────────────────────────────────────────────────────────────
 function KhaltiForm({ onConfirm, loading, error }) {
-  const [mobile, setMobile] = useState("9800000001");
-  const [token, setToken] = useState("987654");
+  const [mobile, setMobile] = useState(SHOW_TEST_HELPERS ? "9800000001" : "");
+  const [token, setToken] = useState(SHOW_TEST_HELPERS ? "987654" : "");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {SHOW_TEST_HELPERS && (
       <div style={{ background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 10, padding: 14 }}>
         <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#5C2D91" }}>🧪 Khalti Test Credentials</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
@@ -122,6 +128,7 @@ function KhaltiForm({ onConfirm, loading, error }) {
           ))}
         </div>
       </div>
+      )}
       <div>
         <Label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Registered Mobile <span style={{ color: "#ef4444" }}>*</span></Label>
         <Input value={mobile} maxLength={10} onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))} placeholder="9800000001" style={{ marginTop: 4 }} />
@@ -161,6 +168,7 @@ function CardForm({ onConfirm, loading, error }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {SHOW_TEST_HELPERS && (
       <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
         <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#1a1d23" }}>🧪 Stripe Test Card</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
@@ -176,6 +184,7 @@ function CardForm({ onConfirm, loading, error }) {
           ))}
         </div>
       </div>
+      )}
       <div>
         <Label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Cardholder Name <span style={{ color: "#ef4444" }}>*</span></Label>
         <input value={cardHolder} onChange={(e) => { setCardHolder(e.target.value.toUpperCase()); setCardError(""); }}

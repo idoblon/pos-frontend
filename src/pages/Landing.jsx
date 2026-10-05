@@ -98,25 +98,25 @@ const Landing = () => {
   const plans = [
     {
       name: "Basic",
-      price: "रु 3,500",
+      price: "रु 75,000",
       period: "/year",
-      description: "Perfect for small single-branch stores",
-      features: ["1 Store", "3 Branches", "10 Users", "5GB Storage", "Basic POS System", "Sales Reports", "Email Support"],
+      description: "Perfect for small single-store starters",
+      features: ["1 Store", "3 Branches", "10 Users", "5GB Storage", "Core POS System", "Daily Sales + Shift Reports", "Inventory Management", "Email Support"],
     },
     {
       name: "Professional",
-      price: "रु 7,000",
+      price: "रु 135,000",
       period: "/year",
       description: "For growing businesses with multiple locations",
-      features: ["1 Store", "10 Branches", "50 Users", "25GB Storage", "Advanced Analytics", "Priority Support", "API Access"],
+      features: ["1 Store", "10 Branches", "50 Users", "25GB Storage", "Advanced Analytics + Targets", "Warehouse + Restock Transfers", "Priority Support", "API Access"],
       highlight: true,
     },
     {
       name: "Enterprise",
-      price: "रु 10,000",
+      price: "रु 210,000",
       period: "/year",
-      description: "Full-scale operations with maximum capacity",
-      features: ["Unlimited Stores", "25 Branches", "200 Users", "100GB Storage", "Custom Reports", "24/7 Dedicated Support", "White-label Options"],
+      description: "Full-scale chains with maximum capacity",
+      features: ["Unlimited Stores", "25 Branches per Store", "200 Users", "100GB Storage", "Custom Reports + Integrations", "Audit Log + Advanced Security", "24/7 Dedicated Support", "White-label Options"],
     },
   ];
 

@@ -16,23 +16,22 @@ const ViewCustomerDialog = ({ open, onClose, customer }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const fetchCustomerOrders = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/api/orders/customer/${customer.id}`);
+        setOrders(response.data);
+      } catch (error) {
+        console.error("Failed to fetch customer orders:", error);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
     if (open && customer) {
       fetchCustomerOrders();
     }
   }, [open, customer]);
-
-  const fetchCustomerOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get(`/api/orders/customer/${customer.id}`);
-      setOrders(response.data);
-    } catch (error) {
-      console.error("Failed to fetch customer orders:", error);
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!customer) return null;
 

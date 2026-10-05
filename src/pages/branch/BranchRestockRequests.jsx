@@ -47,6 +47,8 @@ export default function BranchRestockRequests() {
   const [restockForm, setRestockForm] = useState({ productId: "", quantity: 50, notes: "" });
   const [submitting, setSubmitting] = useState(false);
 
+  const hasProfile = Boolean(userProfile?.id ?? userProfile);
+
   useEffect(() => {
     const token = secureStorage.getToken();
     if (!token) {
@@ -54,9 +56,9 @@ export default function BranchRestockRequests() {
       navigate('/login');
       return;
     }
-    if (!userProfile) dispatch(getUserProfile());
+    if (!hasProfile) dispatch(getUserProfile());
     if (branchId) dispatch(getRestockRequestsByBranch({ branchId }));
-  }, [dispatch, branchId, navigate]);
+  }, [dispatch, branchId, navigate, hasProfile]);
 
   useEffect(() => {
     if (storeId) dispatch(getProductsByStore(storeId));

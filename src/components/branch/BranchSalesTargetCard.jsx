@@ -40,7 +40,7 @@ export default function BranchSalesTargetCard() {
     const listedBranch = (branches || []).find((item) => String(item?.id ?? item?._id) === String(branchId));
     const targetBranch = listedBranch || branch;
     return { sales, target: Math.max(0, Number(targetBranch?.monthlySalesTarget) || 0) };
-  }, [branch?.monthlySalesTarget, branchId, branches, orders]);
+  }, [branch, branchId, branches, orders]);
 
   if (!branchId) return null;
   if (!target) return <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Monthly sales target not set</p><p className="mt-1 text-xs">Ask your store admin to set this branch’s target.</p></div>;
