@@ -122,8 +122,24 @@ export const getStoreByAdmin = createAsyncThunk(
       const headers = getAuthHeaders();
       const res = await api.get(`/api/stores/admin`, { headers });
       return res.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to fetch admin store");
+    } catch (firstError) {
+      // Previously registered stores may have store_admin_id NULL (the
+      // back-link was only added to newer flows), so /api/stores/admin fails
+      // with "No store found for current admin". GET /api/stores returns the
+      // caller's own store for non-admin roles, so resolve through it
+      // instead of failing every store-admin page.
+      try {
+        const headers = getAuthHeaders();
+        const res = await api.get(`/api/stores`, { headers });
+        const raw = res.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : raw?.content || raw?.data || raw?.stores || [];
+        const own = (Array.isArray(list) ? list : []).filter((s) => !s?.isRegistrationOnly)[0]
+          || list[0];
+        if (own) return own;
+      } catch { /* fall through to the original error below */ }
+      return rejectWithValue(firstError.response?.data?.message || "Failed to fetch admin store");
     }
   },
 );

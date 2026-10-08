@@ -27,6 +27,20 @@ export const PLAN_LIMITS = {
   ENTERPRISE: { stores: "unlimited", branches: 25, users: 200, storage: "100GB", storageGB: 100, support: "24/7 Dedicated" },
 };
 
+// Premium feature flags per plan — mirrors backend SubscriptionPlanCatalog.
+// Unknown plans fall back to BASIC (most restrictive).
+export const PLAN_FEATURES = {
+  BASIC: { advancedAnalytics: false, warehouseTransfers: false, auditLog: false, apiAccess: false, whiteLabel: false },
+  PROFESSIONAL: { advancedAnalytics: true, warehouseTransfers: true, auditLog: false, apiAccess: true, whiteLabel: false },
+  ENTERPRISE: { advancedAnalytics: true, warehouseTransfers: true, auditLog: true, apiAccess: true, whiteLabel: true },
+};
+
+/** Whether a plan includes a premium feature (unknown plan/feature → false). */
+export const hasPlanFeature = (plan, feature) => {
+  const upper = String(plan || "BASIC").toUpperCase();
+  return Boolean((PLAN_FEATURES[upper] || PLAN_FEATURES.BASIC)[feature]);
+};
+
 // Fallback catalog for showcase/demo when the backend is unreachable.
 // Live truth comes from GET /api/admin/plans (single source with backend
 // SubscriptionPlanCatalog). Amounts are NPR per year.
@@ -84,8 +98,18 @@ export const fetchSubscriptionPlans = async () => {
       for (const [key, p] of Object.entries(serverPlans)) {
         const upper = String(key).toUpperCase();
         if (!plans[upper]) continue;
-        if (p.maxBranches != null) plans[upper].maxBranches = p.maxBranches;
-        if (p.maxUsers != null) plans[upper].maxUsers = p.maxUsers;
+        // Live server limits land under `live` so marketing bullets in
+        // `features` are never overwritten.
+        const live = plans[upper].live || {};
+        if (p.maxBranches != null) live.maxBranches = p.maxBranches;
+        if (p.maxUsers != null) live.maxUsers = p.maxUsers;
+        if (p.maxStores != null) live.maxStores = p.maxStores;
+        if (p.storageGB != null) live.storageGB = p.storageGB;
+        if (p.supportTier != null) live.supportTier = p.supportTier;
+        if (p.features && typeof p.features === "object" && !Array.isArray(p.features)) {
+          live.features = { ...(live.features || {}), ...p.features };
+        }
+        plans[upper].live = live;
         plans[upper].currency = p.currency || "NPR";
         plans[upper].billing = p.billing || "yearly";
       }

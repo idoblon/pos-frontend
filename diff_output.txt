@@ -1,0 +1,2049 @@
+diff --git a/src/pages/admin/AdminDashboard.jsx b/src/pages/admin/AdminDashboard.jsx
+index b7d1bc9..b543f99 100644
+--- a/src/pages/admin/AdminDashboard.jsx
++++ b/src/pages/admin/AdminDashboard.jsx
+@@ -1,7 +1,7 @@
+ import React, { useEffect, useMemo, useRef, useState } from "react";
+ import { useDispatch, useSelector } from "react-redux";
+ import {
+-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
++  Tooltip,
+   ResponsiveContainer, PieChart, Pie, Cell,
+ } from "recharts";
+ import { Store, Users, AlertTriangle } from "lucide-react";
+@@ -11,9 +11,25 @@ import subscriptionService from "@/services/subscriptionService";
+ import api from "@/util/api";
+ import { getAuthHeaders } from "@/util/getAuthHeader";
+ import { getSubscriptionExpiryDate } from "@/util/subscriptionUtils";
++import { normalizeStoreType } from "@/util/storeTypes";
+ 
+ const ROLE_COLORS = ["#1a1d23", "#3d3d3d", "#6b6b6b", "#9e9e9e"];
+ 
++// Unique platform identity, but strictly in SYSTEM colors:
++// --chart-1..5 grayscale ramp + --primary near-black + --destructive for risk.
++// (index.css: chart-1 #d4d4d4 → chart-5 #262626, primary #1a1d23.)
++const TYPE_COLORS = {
++  RETAIL: "#262626",
++  WHOLESALE: "#525252",
++  RESTAURANT: "#1a1d23",
++  PHARMACY: "#404040",
++  GROCERY: "#737373",
++  ELECTRONICS: "#0a0a0a",
++  PLANT: "#a3a3a3",
++};
++const typeColor = (t) => TYPE_COLORS[normalizeStoreType(t)] || "#9ca3af";
++const storeTypeOf = (s) => normalizeStoreType(s?.storeType || s?.type) || "UNKNOWN";
++
+ function getCollection(value) {
+   if (Array.isArray(value)) return value;
+   if (!value || typeof value !== "object") return [];
+@@ -171,23 +187,6 @@ export default function AdminDashboard() {
+   const expiringCount = subscriptionStats?.expiringCount ?? expiringSubscriptions;
+ 
+   // ── Chart data ────────────────────────────────────────────────────
+-  const storePerformanceData = useMemo(() =>
+-    realStores
+-      .map((store) => {
+-        const id = String(getStoreId(store) || "");
+-        const m = storeMetrics[id] || {};
+-        return {
+-          name: getStoreName(store).slice(0, 12),
+-          orders: toNumber(m.orders),
+-          revenue: toNumber(m.revenue),
+-        };
+-      })
+-      .filter((d) => d.name)
+-      .sort((a, b) => b.orders - a.orders)
+-      .slice(0, 6),
+-    [storeMetrics, realStores],
+-  );
+-
+   const storeStatusData = useMemo(() => {
+     const counts = realStores.reduce((acc, s) => {
+       const key = String(s.status || "ACTIVE").toUpperCase();
+@@ -220,6 +219,82 @@ export default function AdminDashboard() {
+ 
+   const statsLoading = storesLoading || subscriptionStats === null;
+ 
++  // ── Unique platform intelligence (client-side, no new APIs) ─────────────
++  const platformGmv = useMemo(
++    () => Object.values(storeMetrics).reduce((sum, m) => sum + toNumber(m.revenue), 0),
++    [storeMetrics],
++  );
++  const platformOrders = useMemo(
++    () => Object.values(storeMetrics).reduce((sum, m) => sum + toNumber(m.orders), 0),
++    [storeMetrics],
++  );
++  const totalBranches = useMemo(
++    () => Object.values(storeMetrics).reduce((sum, m) => sum + toNumber(m.branchCount), 0),
++    [storeMetrics],
++  );
++
++  const typeMixData = useMemo(() => {
++    const counts = {};
++    realStores.forEach((s) => {
++      const t = storeTypeOf(s);
++      counts[t] = (counts[t] || 0) + 1;
++    });
++    return Object.entries(counts)
++      .map(([name, value]) => ({ name, value, color: typeColor(name) }))
++      .sort((a, b) => b.value - a.value);
++  }, [realStores]);
++
++  const planMixData = useMemo(() => {
++    const counts = {};
++    realStores.forEach((s) => {
++      const p = String(s.subscriptionPlan || "UNKNOWN").toUpperCase();
++      counts[p] = (counts[p] || 0) + 1;
++    });
++    const colors = { BASIC: "#a3a3a3", PROFESSIONAL: "#525252", ENTERPRISE: "#1a1d23" };
++    return Object.entries(counts).map(([name, value]) => ({
++      name, value, color: colors[name] || "#9ca3af",
++    }));
++  }, [realStores]);
++
++  const trialFunnel = useMemo(() => {
++    const t = { TRIAL: 0, CONVERTED: 0, EXPIRED: 0 };
++    realStores.forEach((s) => {
++      const k = String(s.trialStatus || s.trial_status || "NONE").toUpperCase();
++      if (t[k] !== undefined) t[k] += 1;
++    });
++    const total = t.TRIAL + t.CONVERTED + t.EXPIRED;
++    return { ...t, total, conversion: total ? Math.round((t.CONVERTED / total) * 100) : 0 };
++  }, [realStores]);
++
++  const leaderboard = useMemo(() =>
++    realStores
++      .map((s) => {
++        const sid = String(getStoreId(s) || "");
++        const m = storeMetrics[sid] || {};
++        return { store: s, revenue: toNumber(m.revenue), orders: toNumber(m.orders) };
++      })
++      .sort((a, b) => b.revenue - a.revenue)
++      .slice(0, 5),
++    [realStores, storeMetrics],
++  );
++
++  const riskQueue = useMemo(() => {
++    const now = new Date();
++    const out = [];
++    realStores.forEach((s) => {
++      const status = String(s.status || "").toUpperCase();
++      const trial = String(s.trialStatus || s.trial_status || "").toUpperCase();
++      const exp = getSubscriptionExpiryDate(s);
++      if (status === "SUSPENDED") out.push({ store: s, reason: "Suspended", tone: "#991b1b", bg: "#fef2f2" });
++      else if (trial === "EXPIRED") out.push({ store: s, reason: "Trial expired", tone: "#991b1b", bg: "#fef2f2" });
++      else if (exp > now && exp <= new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000))
++        out.push({ store: s, reason: `Plan ends ${exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}`, tone: "#404040", bg: "#f5f5f5" });
++      else if (status === "INACTIVE" || status === "PENDING" || status === "PAYMENT_PENDING")
++        out.push({ store: s, reason: status.replace("_", " "), tone: "#6b7280", bg: "#f9fafb" });
++    });
++    return out.slice(0, 6);
++  }, [realStores]);
++
+   return (
+     <div style={{
+       padding: 24,
+@@ -233,15 +308,122 @@ export default function AdminDashboard() {
+     }}>
+ 
+       {/* Header */}
+-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
++      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+         <div>
++          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
++            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#1a1d23" }} />
++            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", color: "#6b7280" }}>SYSTEM DASHBOARD · LIVE</span>
++          </div>
+           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#1a1d23", letterSpacing: "-0.3px" }}>
+-            System Dashboard
++            Network overview
+           </h1>
+           <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+-            Live overview of your entire POS network
++            {totalStores} stores · {totalBranches} branches · every vertical, plan and trial in one glance
+           </p>
+         </div>
++        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
++          {typeMixData.map((t) => (
++            <span key={t.name} style={{
++              fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 20,
++              background: "white", border: "1px solid #e5e7eb", color: "#1a1d23",
++            }}>
++              <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: t.color, marginRight: 6 }} />
++              {t.name} · {t.value}
++            </span>
++          ))}
++        </div>
++      </div>
++
++      {/* Platform strip */}
++      <div style={{
++        background: "white", border: "1px solid #e5e7eb", borderRadius: 12,
++        display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))",
++      }}>
++        {[
++          { label: "Platform GMV", value: formatMoney(platformGmv) },
++          { label: "Platform orders", value: platformOrders.toLocaleString("en-IN") },
++          { label: "Active stores", value: `${activeStores}/${totalStores}` },
++          { label: "Trial conversion", value: `${trialFunnel.conversion}%` },
++        ].map((k, i) => (
++          <div key={k.label} style={{
++            padding: "16px 20px",
++            borderLeft: i === 0 ? "none" : "1px solid #f3f4f6",
++          }}>
++            <p style={{ margin: 0, fontSize: 11, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{k.label}</p>
++            <p style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 800, color: "#1a1d23", letterSpacing: "-0.5px" }}>
++              {statsLoading ? "—" : k.value}
++            </p>
++          </div>
++        ))}
++      </div>
++
++      {/* Network by vertical */}
++      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16 }}>
++        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: 24 }}>
++          <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700 }}>Stores by vertical</p>
++          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#6b7280" }}>One system shade per type</p>
++          {typeMixData.length > 0 ? (
++            <>
++              <ResponsiveContainer width="100%" height={170}>
++                <PieChart>
++                  <Pie data={typeMixData} cx="50%" cy="50%" innerRadius={48} outerRadius={75} paddingAngle={3} dataKey="value">
++                    {typeMixData.map((e) => <Cell key={e.name} fill={e.color} />)}
++                  </Pie>
++                  <Tooltip formatter={(v, n) => [v, n]} />
++                </PieChart>
++              </ResponsiveContainer>
++              <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
++                {typeMixData.map((e) => (
++                  <span key={e.name} style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "#f8fafc", border: "1px solid #e5e7eb", color: "#1a1d23" }}>
++                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: e.color, marginRight: 6 }} />
++                    {e.name} · {e.value}
++                  </span>
++                ))}
++              </div>
++            </>
++          ) : (
++            <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "40px 0" }}>{storesLoading ? "Loading..." : "No stores yet"}</p>
++          )}
++        </div>
++
++        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: 24 }}>
++          <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700 }}>Trial funnel</p>
++          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#6b7280" }}>{trialFunnel.conversion}% convert to paid</p>
++          {[["Active trials", trialFunnel.TRIAL, "#737373"], ["Converted", trialFunnel.CONVERTED, "#1a1d23"], ["Expired", trialFunnel.EXPIRED, "#dc2626"]].map(([label, v, color]) => (
++            <div key={label} style={{ marginBottom: 12 }}>
++              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
++                <span style={{ color: "#4b5563", fontWeight: 600 }}>{label}</span>
++                <span style={{ fontWeight: 800 }}>{v}</span>
++              </div>
++              <div style={{ height: 8, borderRadius: 8, background: "#f3f4f6" }}>
++                <div style={{ width: trialFunnel.total ? `${Math.round((v / trialFunnel.total) * 100)}%` : "0%", height: "100%", borderRadius: 8, background: color }} />
++              </div>
++            </div>
++          ))}
++          <div style={{ marginTop: 8, background: "#f8fafc", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#4b5563" }}>
++            Plan mix: {planMixData.map((p) => `${p.name} ${p.value}`).join(" · ") || "—"}
++          </div>
++        </div>
++
++        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: 24 }}>
++          <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700 }}>Action queue</p>
++          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#6b7280" }}>{riskQueue.length} stores need attention</p>
++          {riskQueue.length > 0 ? (
++            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 220, overflow: "auto" }}>
++              {riskQueue.map(({ store, reason, tone, bg }) => (
++                <div key={String(getStoreId(store))} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "#f8fafc", border: "1px solid #e5e7eb", borderRadius: 10, padding: "8px 12px" }}>
++                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
++                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: typeColor(storeTypeOf(store)), flexShrink: 0 }} />
++                    <span style={{ fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getStoreName(store)}</span>
++                  </div>
++                  <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 10px", borderRadius: 20, background: bg, color: tone, whiteSpace: "nowrap" }}>{reason}</span>
++                </div>
++              ))}
++            </div>
++          ) : (
++            <p style={{ fontSize: 13, color: "#1a1d23", fontWeight: 700, textAlign: "center", padding: "40px 0" }}>All clear — nothing at risk</p>
++          )}
++        </div>
+       </div>
+ 
+       {/* Stat Cards */}
+@@ -276,37 +458,44 @@ export default function AdminDashboard() {
+         />
+       </div>
+ 
+-      {/* Charts Row 1 */}
++      {/* Rankings + Status */}
+       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: 24 }}>
+-          <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>Store Performance</p>
+-          <p style={{ margin: "0 0 20px", fontSize: 12, color: "#6b7280" }}>Orders per store</p>
+-          {storePerformanceData.length > 0 ? (
+-            <ResponsiveContainer width="100%" height={240}>
+-              <BarChart data={storePerformanceData} barSize={28}>
+-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+-                <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+-                <Tooltip
+-                  content={({ active, payload, label }) => {
+-                    if (!active || !payload?.length) return null;
+-                    return (
+-                      <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+-                        <p style={{ margin: "0 0 4px", fontWeight: 600, fontSize: 13 }}>{label}</p>
+-                        <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Orders: {payload[0]?.value}</p>
+-                        {payload[0]?.payload?.revenue > 0 && (
+-                          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Revenue: {formatMoney(payload[0].payload.revenue)}</p>
+-                        )}
++          <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>Top stores by revenue</p>
++          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#6b7280" }}>Badge shows each store's vertical</p>
++          {leaderboard.length > 0 ? (
++            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
++              {leaderboard.map(({ store, revenue, orders }, i) => {
++                const t = storeTypeOf(store);
++                const max = leaderboard[0]?.revenue || 1;
++                return (
++                  <div key={String(getStoreId(store)) || i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
++                    <span style={{
++                      width: 28, height: 28, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
++                      fontSize: 13, fontWeight: 800, color: "white", background: i === 0 ? "#1a1d23" : "#6b7280",
++                    }}>
++                      {i + 1}
++                    </span>
++                    <div style={{ flex: 1, minWidth: 0 }}>
++                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
++                        <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getStoreName(store)}</span>
++                        <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20, background: "#f5f5f5", color: "#404040", border: "1px solid #e5e7eb" }}>{t}</span>
+                       </div>
+-                    );
+-                  }}
+-                />
+-                <Bar dataKey="orders" fill="#1a1d23" radius={[4, 4, 0, 0]} />
+-              </BarChart>
+-            </ResponsiveContainer>
++                      <div style={{ marginTop: 6, height: 6, borderRadius: 6, background: "#f3f4f6" }}>
++                        <div style={{ width: `${Math.max(4, Math.round((revenue / max) * 100))}%`, height: "100%", borderRadius: 6, background: typeColor(t) }} />
++                      </div>
++                    </div>
++                    <div style={{ textAlign: "right", flexShrink: 0 }}>
++                      <div style={{ fontSize: 13, fontWeight: 800 }}>{formatMoney(revenue)}</div>
++                      <div style={{ fontSize: 11, color: "#6b7280" }}>{orders} orders</div>
++                    </div>
++                  </div>
++                );
++              })}
++            </div>
+           ) : (
+-            <div style={{ height: 240, display: "flex", alignItems: "center", justifyContent: "center" }}>
+-              <p style={{ fontSize: 13, color: "#9ca3af" }}>{storesLoading ? "Loading..." : "No order data available"}</p>
++            <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
++              <p style={{ fontSize: 13, color: "#9ca3af" }}>{storesLoading ? "Loading..." : "No revenue data available"}</p>
+             </div>
+           )}
+         </div>
+@@ -344,7 +533,7 @@ export default function AdminDashboard() {
+         </div>
+       </div>
+ 
+-      {/* Charts Row 2 */}
++      {/* Users + Directory */}
+       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16 }}>
+         <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 12, padding: 24 }}>
+           <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>Users by Role</p>
+@@ -421,7 +610,7 @@ export default function AdminDashboard() {
+                           {trialStatus === "TRIAL" && (
+                             <span title={trialEndsAt ? `Trial ends ${new Date(trialEndsAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}` : "Trial active"} style={{
+                               marginLeft: 6, padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
+-                              background: "#fffbeb", color: "#92400e",
++                              background: "#f5f5f5", color: "#404040",
+                             }}>
+                               TRIAL{trialDaysLeft !== null ? ` · ${trialDaysLeft}d` : ""}
+                             </span>
+diff --git a/src/pages/cashier/CashierDashboardLayout.jsx b/src/pages/cashier/CashierDashboardLayout.jsx
+index eba1926..51b304a 100644
+--- a/src/pages/cashier/CashierDashboardLayout.jsx
++++ b/src/pages/cashier/CashierDashboardLayout.jsx
+@@ -3,23 +3,28 @@ import { useNavigate } from "react-router-dom";
+ import { useDispatch, useSelector } from "react-redux";
+ import { logout } from "@/Redux Toolkit/Features/auth/authSlice";
+ import { getCurrentShiftProgress } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
+-import { 
+-  addToCart, 
+-  updateCartItemQuantity, 
+-  removeFromCart, 
++import { getStoreById } from "@/Redux Toolkit/Features/Store/storeThunk";
++import {
++  addToCart,
++  updateCartItemQuantity,
++  setCartItemField,
++  removeFromCart,
+   clearCart,
+   setSelectedCustomer,
+   setDiscount,
+   setNote,
++  setOrderMeta,
+   selectCartItems,
+   selectSubtotal,
+   selectTax,
+   selectDiscountAmount,
+   selectTotal,
++  selectBulkSavings,
+   selectSelectedCustomer,
+   selectDiscount,
+   selectCartNote,
+   selectHeldOrders,
++  selectOrderMeta,
+   holdOrderRemotely,
+   resumeHeldOrderRemotely,
+   discardHeldOrderRemotely,
+@@ -38,6 +43,27 @@ import ProductSection from "./ProductSection/ProductSection";
+ import ChangePasswordDialog from "./Settings/ChangePasswordDialog";
+ import secureStorage from "@/util/secureStorage";
+ import { getAdminTaxRate, getLowStockThreshold } from "@/util/adminSystemSettings";
++import {
++  RESTAURANT_ORDER_TYPES,
++  freeTable,
++  getBulkRule,
++  getBulkTiers,
++  getEffectivePrice,
++  getModifierOptions,
++  getMoq,
++  getTables,
++  isControlled,
++  isExpired,
++  isNearExpiry,
++  isWeightedProduct,
++  occupyTable,
++  requiresPrescription,
++  resolveStoreType,
++  serialsValid,
++  supportsFeature,
++} from "@/util/storeTypes";
++import { printKitchenTicket } from "@/components/Receipt";
++import useBranchContext from "@/hooks/useBranchContext";
+ import { isPasswordChangeRequired, markPasswordChanged } from "@/util/firstLoginPassword";
+ import "./cashier-styles.css";
+ import OfflineOrderSync from "@/components/OfflineOrderSync";
+@@ -61,7 +87,6 @@ const userData = secureStorage.getUserData();
+     dispatch(getCurrentShiftProgress()).catch(() => undefined);
+     dispatch(fetchHeldOrders()).catch(() => toast.error("Unable to load held orders."));
+   }, [dispatch]);
+-
+   // Redux cart state
+   const cart = useSelector(selectCartItems);
+   const selectedCustomer = useSelector(selectSelectedCustomer);
+@@ -71,9 +96,72 @@ const userData = secureStorage.getUserData();
+   const tax = useSelector(selectTax);
+   const discountAmt = useSelector(selectDiscountAmount);
+   const total = useSelector(selectTotal);
++  const bulkSavings = useSelector(selectBulkSavings);
+   const taxRate = getAdminTaxRate();
+   const lowStockThreshold = getLowStockThreshold();
+   const heldOrders = useSelector(selectHeldOrders);
++  const orderMeta = useSelector(selectOrderMeta);
++  const { store } = useSelector((s) => s.store);
++  const { branchId, storeId } = useBranchContext();
++  // Resolution order: loaded store → user profile (carries storeType from
++  // the backend UserMapper) → session. The store itself is fetched below so
++  // restaurant/pharmacy panels don't silently hide on the terminal.
++  const storeType = resolveStoreType(
++    store,
++    userProfile?.storeType || user?.storeType || userData?.storeType || "",
++  );
++  const isRestaurant = supportsFeature(storeType, "orderType");
++  const isPharmacy = supportsFeature(storeType, "prescription");
++  const isGrocery = normalizeGrocery(storeType);
++  const showRxWarning = cart.some((i) => requiresPrescription(i)) && !selectedCustomer;
++  const showControlledWarning = cart.some((i) => isControlled(i)) && !orderMeta.prescriptionVerified;
++  const nearExpiryInCart = cart.filter((i) => isNearExpiry(i));
++  const [tables, setTables] = useState(() => getTables(branchId));
++  const [showTables, setShowTables] = useState(false);
++  function normalizeGrocery(t) { return t === "GROCERY" || t === "PHARMACY"; }
++
++  useEffect(() => {
++    setTables(getTables(branchId));
++  }, [branchId]);
++
++  // Load the store so store-type panels (tables/KOT, Rx) resolve on the terminal.
++  useEffect(() => {
++    if (storeId && !store) {
++      dispatch(getStoreById(storeId)).catch(() => undefined);
++    }
++  }, [dispatch, storeId, store]);
++
++  const handlePrintKot = () => {
++    if (!cart.length) {
++      toast.error("Cart is empty — nothing to send to kitchen.");
++      return;
++    }
++    const ok = printKitchenTicket({
++      items: cart,
++      tableNumber: orderMeta.tableNumber,
++      orderType: orderMeta.orderType,
++      kitchenNote: orderMeta.kitchenNote,
++    });
++    if (ok) {
++      toast.success("KOT sent to kitchen");
++      if (orderMeta.tableNumber) setTables(occupyTable(branchId, orderMeta.tableNumber));
++    }
++  };
++
++  const handleRxImage = (e) => {
++    const file = e.target.files?.[0];
++    if (!file) return;
++    if (file.size > 3 * 1024 * 1024) {
++      toast.error("Prescription image must be under 3MB");
++      return;
++    }
++    const reader = new FileReader();
++    reader.onloadend = () => {
++      dispatch(setOrderMeta({ prescriptionImage: String(reader.result), prescriptionVerified: false }));
++      toast.success("Prescription attached — pharmacist verification needed");
++    };
++    reader.readAsDataURL(file);
++  };
+ 
+   const fullName = userProfile?.fullName || user?.fullName || userData?.fullName;
+ const email = userProfile?.email || user?.email || userData?.email;
+@@ -93,6 +181,15 @@ const initials = fullName
+ 
+   const handleAddToCart = (product) => {
+     const stock = product.stock || 0;
++
++    // Expired items can never be sold (PHARMACY / GROCERY).
++    if (isExpired(product)) {
++      toast.error(`${product.name} is expired and cannot be sold!`);
++      return;
++    }
++    if (isNearExpiry(product)) {
++      toast.warning(`${product.name} expires soon — FEFO: sell this batch first.`);
++    }
+     
+     // Check if product is out of stock
+     if (stock <= 0) {
+@@ -106,6 +203,10 @@ const initials = fullName
+       toast.warning(`Cannot add more ${product.name}. Only ${stock} available in stock.`);
+       return;
+     }
++    const moq = getMoq(product);
++    if (moq > 1 && !existingItem) {
++      toast.success(`${product.name}: MOQ ${moq} applied (wholesale pack).`);
++    }
+     
+     dispatch(addToCart({ ...product, id: product.id || product._id }));
+   };
+@@ -113,13 +214,22 @@ const initials = fullName
+   const updateQty = useCallback((id, delta) => {
+     const item = cart.find(i => i.id === id);
+     if (item) {
+-      const newQty = item.quantity + delta;
++      const weighted = isWeightedProduct(item);
++      const step = weighted ? 0.5 : 1;
++      const rawQty = Number(item.quantity) + delta * step;
++      const newQty = weighted ? Math.round(rawQty * 100) / 100 : rawQty;
+       const stock = item.stock || 0;
++      const moq = getMoq(item);
+       
+       if (newQty > stock) {
+         toast.warning(`Cannot add more ${item.name}. Only ${stock} available in stock.`);
+         return;
+       }
++      if (newQty < moq && newQty > 0) {
++        toast.warning(`${item.name} has MOQ ${moq} — set to minimum.`);
++        dispatch(updateCartItemQuantity({ id, quantity: moq }));
++        return;
++      }
+       
+       dispatch(updateCartItemQuantity({ id, quantity: newQty }));
+     }
+@@ -269,6 +379,119 @@ const initials = fullName
+             </div>
+           </div>
+ 
++          {isRestaurant && (
++            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 12px", borderBottom: "1px solid #e5e7eb", background: "#f8fafc" }}>
++              <div style={{ display: "flex", gap: 8 }}>
++                <select
++                  aria-label="Order type"
++                  value={orderMeta.orderType}
++                  onChange={(e) => dispatch(setOrderMeta({ orderType: e.target.value }))}
++                  style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 8px", fontSize: 12, background: "white" }}
++                >
++                  <option value="">Order type…</option>
++                  {RESTAURANT_ORDER_TYPES.map((t) => (
++                    <option key={t} value={t}>{t.replace("_", " ")}</option>
++                  ))}
++                </select>
++                <input
++                  aria-label="Table number"
++                  placeholder="Table #"
++                  value={orderMeta.tableNumber}
++                  onChange={(e) => dispatch(setOrderMeta({ tableNumber: e.target.value }))}
++                  style={{ width: 90, border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 8px", fontSize: 12, background: "white" }}
++                />
++                <button
++                  className="cart-btn"
++                  onClick={() => setShowTables((v) => !v)}
++                  title="Table map"
++                  style={{ whiteSpace: "nowrap" }}
++                >
++                  Tables
++                </button>
++              </div>
++              {showTables && (
++                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(52px,1fr))", gap: 6 }}>
++                  {tables.map((t) => (
++                    <button
++                      key={t.id}
++                      onClick={() => {
++                        dispatch(setOrderMeta({ tableNumber: t.id }));
++                        setShowTables(false);
++                      }}
++                      title={`${t.id} · ${t.seats} seats · ${t.status}`}
++                      style={{
++                        padding: "8px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer",
++                        border: orderMeta.tableNumber === t.id ? "2px solid #1a1d23" : "1px solid #e5e7eb",
++                        background: t.status === "OCCUPIED" ? "#fee2e2" : "#ecfdf5",
++                        color: t.status === "OCCUPIED" ? "#991b1b" : "#065f46",
++                      }}
++                    >
++                      {t.id}
++                    </button>
++                  ))}
++                </div>
++              )}
++              <div style={{ display: "flex", gap: 8 }}>
++                <input
++                  aria-label="Kitchen note"
++                  placeholder="Kitchen note (KOT)…"
++                  value={orderMeta.kitchenNote}
++                  onChange={(e) => dispatch(setOrderMeta({ kitchenNote: e.target.value }))}
++                  style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 8px", fontSize: 12, background: "white" }}
++                />
++                <button className="cart-btn" onClick={handlePrintKot} disabled={!cart.length} title="Print kitchen ticket">
++                  KOT
++                </button>
++              </div>
++            </div>
++          )}
++          {isPharmacy && (
++            <div style={{ padding: "8px 12px", borderBottom: "1px solid #e5e7eb", background: "#fffbeb", display: "flex", flexDirection: "column", gap: 6 }}>
++              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
++                <label style={{ fontSize: 11, fontWeight: 700, color: "#92400e" }}>
++                  Rx image
++                  <input type="file" accept="image/*" onChange={handleRxImage} style={{ display: "block", marginTop: 4 }} />
++                </label>
++                {orderMeta.prescriptionImage && (
++                  <img src={orderMeta.prescriptionImage} alt="Prescription" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 8, border: "1px solid #fde68a" }} />
++                )}
++                <label style={{ fontSize: 11, color: "#92400e", display: "flex", alignItems: "center", gap: 4 }}>
++                  <input
++                    type="checkbox"
++                    checked={!!orderMeta.prescriptionVerified}
++                    onChange={(e) => dispatch(setOrderMeta({ prescriptionVerified: e.target.checked }))}
++                  />
++                  Pharmacist verified
++                </label>
++              </div>
++            </div>
++          )}
++          {showRxWarning && (
++            <div style={{ padding: "8px 12px", background: "#fffbeb", borderBottom: "1px solid #fde68a", fontSize: 11, color: "#92400e" }}>
++              Prescription item in cart — select a customer to record who it was dispensed to.
++            </div>
++          )}
++          {showControlledWarning && (
++            <div style={{ padding: "8px 12px", background: "#fee2e2", borderBottom: "1px solid #fecaca", fontSize: 11, color: "#991b1b", fontWeight: 700 }}>
++              Controlled substance in cart — pharmacist verification required before payment.
++            </div>
++          )}
++          {nearExpiryInCart.length > 0 && (
++            <div style={{ padding: "8px 12px", background: "#ffedd5", borderBottom: "1px solid #fed7aa", fontSize: 11, color: "#9a3412" }}>
++              {nearExpiryInCart.length} near-expiry item(s) — FEFO applied, consider markdown.
++              <button
++                className="cart-btn"
++                style={{ marginLeft: 8 }}
++                onClick={() => {
++                  dispatch(setDiscount({ type: "percentage", value: Math.max(Number(discount.value) || 0, 5) }));
++                  toast.success("5% near-expiry markdown applied");
++                }}
++              >
++                Apply 5% markdown
++              </button>
++            </div>
++          )}
++
+           <div className="cart-list">
+             {cart.length === 0 && (
+               <div className="cart-empty">
+@@ -280,19 +503,56 @@ const initials = fullName
+             {cart.map((item) => {
+               const stock = item.stock || 0;
+               const atMaxStock = item.quantity >= stock;
++              const tiers = getBulkTiers(item);
++              const bulk = tiers[tiers.length - 1] || getBulkRule(item);
++              const unitPrice = getEffectivePrice(item, item.quantity || 1);
++              const bulkActive = tiers.some((t) => (item.quantity || 1) >= t.minQty);
++              const weighted = isWeightedProduct(item);
++              const mods = getModifierOptions(item);
++              const needsSerial = !!(item.requiresSerial || item.serialRequired);
++              const serialOk = serialsValid(item);
++              const itemMoq = getMoq(item);
+               
+               return (
+-              <div key={item.id} className="cart-item">
+-                <div className="ci-info">
++              <div key={item.id} className="cart-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
++                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
++                <div className="ci-info" style={{ flex: 1 }}>
+                   <div className="ci-name">{item.name}</div>
+-                  <div className="ci-sku">{item.sku}</div>
++                  <div className="ci-sku">{item.sku}{item.unit && item.unit !== "pcs" ? ` · /${item.unit}` : ""}</div>
++                  {requiresPrescription(item) && (
++                    <div style={{ fontSize: 9, fontWeight: 800, color: "#92400e", marginTop: 2 }}>Rx — prescription item</div>
++                  )}
++                  {isControlled(item) && (
++                    <div style={{ fontSize: 9, fontWeight: 800, color: "#991b1b", marginTop: 2 }}>Controlled — verify ID</div>
++                  )}
++                  {itemMoq > 1 && (
++                    <div style={{ fontSize: 9, color: "#92400e", marginTop: 2 }}>MOQ {itemMoq}</div>
++                  )}
++                  {tiers.length > 0 && (
++                    <div style={{ fontSize: 9, color: bulkActive ? "#065f46" : "#6b7280", marginTop: 2 }}>
++                      {bulkActive ? `Bulk rate applied` : `Bulk: ${tiers.map((t) => `${t.minQty}+ @ ${formatMoney(t.price)}`).join(" · ")}`}
++                    </div>
++                  )}
++                  {isNearExpiry(item) && (
++                    <div style={{ fontSize: 9, color: "#9a3412", marginTop: 2 }}>Expiring soon — FEFO</div>
++                  )}
+                   {stock > 0 && stock <= lowStockThreshold && (
+                     <div style={{ fontSize: 9, color: "#d97706", marginTop: 2 }}>Only {stock} in stock</div>
+                   )}
+                 </div>
+                 <div className="qty-ctrl">
+                   <button className="qty-btn" onClick={() => updateQty(item.id, -1)}>-</button>
+-                  <span className="qty-num">{item.quantity || 1}</span>
++                  {weighted ? (
++                    <input
++                      aria-label={`Quantity for ${item.name}`}
++                      type="number" min={0.01} step={0.5}
++                      value={item.quantity}
++                      onChange={(e) => dispatch(updateCartItemQuantity({ id: item.id, quantity: Number(e.target.value) }))}
++                      style={{ width: 56, textAlign: "center", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, padding: "2px 4px" }}
++                    />
++                  ) : (
++                    <span className="qty-num">{item.quantity || 1}</span>
++                  )}
+                   <button 
+                     className="qty-btn" 
+                     onClick={() => updateQty(item.id, 1)}
+@@ -303,15 +563,69 @@ const initials = fullName
+                   </button>
+                 </div>
+                 <div className="ci-price">
+-                  <div className="ci-unit">{formatMoney(item.price || item.sellingPrice)}</div>
+-                  <div className="ci-total">{formatMoney((item.price || item.sellingPrice) * (item.quantity || 1))}</div>
++                  <div className="ci-unit">{formatMoney(unitPrice)}{weighted ? `/${item.unit}` : ""}</div>
++                  <div className="ci-total">{formatMoney(unitPrice * (item.quantity || 1))}</div>
+                 </div>
+                 <button className="del-btn" aria-label={`Remove ${item.name} from cart`} onClick={() => removeItem(item.id)}><X size={14} /></button>
++                </div>
++                {mods.length > 0 && (
++                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
++                    {mods.map((m) => {
++                      const active = (item.modifiers || []).includes(m);
++                      return (
++                        <button
++                          key={m}
++                          onClick={() => {
++                            const cur = item.modifiers || [];
++                            dispatch(setCartItemField({ id: item.id, field: "modifiers", value: active ? cur.filter((x) => x !== m) : [...cur, m] }));
++                          }}
++                          style={{ fontSize: 10, padding: "2px 8px", borderRadius: 12, cursor: "pointer", border: active ? "2px solid #1a1d23" : "1px solid #e5e7eb", background: active ? "#f5f5f5" : "white" }}
++                        >
++                          {m}
++                        </button>
++                      );
++                    })}
++                  </div>
++                )}
++                {(isRestaurant || isPharmacy) && (
++                  <div style={{ display: "flex", gap: 6 }}>
++                    {isRestaurant && (
++                      <input
++                        placeholder="Kitchen note…"
++                        value={item.kitchenNote || ""}
++                        onChange={(e) => dispatch(setCartItemField({ id: item.id, field: "kitchenNote", value: e.target.value }))}
++                        style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11 }}
++                      />
++                    )}
++                    {isPharmacy && (item.dosage !== undefined || requiresPrescription(item)) && (
++                      <input
++                        placeholder="Dosage…"
++                        value={item.dosage || ""}
++                        onChange={(e) => dispatch(setCartItemField({ id: item.id, field: "dosage", value: e.target.value }))}
++                        style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 11 }}
++                      />
++                    )}
++                  </div>
++                )}
++                {needsSerial && (
++                  <div>
++                    <input
++                      placeholder={`Serials/IMEI (${Math.floor(item.quantity) || 1} needed, comma separated)`}
++                      value={(item.serials || []).join(", ")}
++                      onChange={(e) => dispatch(setCartItemField({ id: item.id, field: "serials", value: String(e.target.value).split(",").map((s) => s.trim()).filter(Boolean) }))}
++                      style={{ width: "100%", border: `1px solid ${serialOk ? "#e5e7eb" : "#fca5a5"}`, borderRadius: 6, padding: "4px 8px", fontSize: 11 }}
++                    />
++                    {!serialOk && <div style={{ fontSize: 10, color: "#991b1b" }}>Enter one unique serial per unit.</div>}
++                  </div>
++                )}
+               </div>
+             )})}
+             {cart.length > 0 && (
+               <div className="cart-foot">
+                 <div className="cf-row"><span className="cf-label">Subtotal</span><span className="cf-val">रु{subtotal.toFixed(2)}</span></div>
++                {bulkSavings > 0 && (
++                  <div className="cf-row"><span className="cf-label">Bulk savings</span><span className="cf-val" style={{ color: "#065f46" }}>-रु{bulkSavings.toFixed(2)}</span></div>
++                )}
+                 <div className="cf-row"><span className="cf-label">Tax ({taxRate}%)</span><span className="cf-val">रु{tax.toFixed(2)}</span></div>
+                 {discountAmt > 0 && (
+                   <div className="cf-row"><span className="cf-label">Discount</span><span className="cf-val" style={{ color: "#e53e3e" }}>-रु{discountAmt.toFixed(2)}</span></div>
+diff --git a/src/pages/cashier/CustomerPaymentSection/PaymentDialog.jsx b/src/pages/cashier/CustomerPaymentSection/PaymentDialog.jsx
+index d34ca32..a7e18fe 100644
+--- a/src/pages/cashier/CustomerPaymentSection/PaymentDialog.jsx
++++ b/src/pages/cashier/CustomerPaymentSection/PaymentDialog.jsx
+@@ -14,10 +14,13 @@ import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/sh
+ import { patchOrder } from "@/Redux Toolkit/Features/order/orderSlice";
+ import {
+   selectCartItems, selectTotal, selectSelectedCustomer,
+-  selectDiscount, selectCartNote, selectTax,
++  selectDiscount, selectCartNote, selectTax, selectOrderMeta,
+ } from "@/Redux Toolkit/Features/Cart/cartSlice";
++import { getEffectivePrice, isControlled, requiresPrescription, serialsValid } from "@/util/storeTypes";
+ import { formatMoney } from "@/util/currency";
+-import { printOrderReceipt } from "@/components/Receipt";
++import { printCareCard, printOrderReceipt, printWarrantyCard } from "@/components/Receipt";
++import useBranchContext from "@/hooks/useBranchContext";
++import { freeTable } from "@/util/storeTypes";
+ import { queueOfflineOrder } from "@/util/offlineOrderQueue";
+ // ALGORITHM NAME: Greedy Change-Making — see src/util/cartAlgorithms.js
+ import { makeChangeGreedy } from "@/util/cartAlgorithms";
+@@ -45,7 +48,7 @@ const CARD_ELEMENT_OPTIONS = {
+ };
+ 
+ // ─── Success Screen ───────────────────────────────────────────────────────────
+-function SuccessScreen({ receiptNumber, receiptTotal, receiptMessage, loading, onPrint, onEmail, onSms, onDone }) {
++function SuccessScreen({ receiptNumber, receiptTotal, receiptMessage, loading, onPrint, onEmail, onSms, onWarranty, onCare, showWarranty, showCare, onDone }) {
+   return (
+     <div style={{ textAlign: "center", padding: "32px 8px" }}>
+       <CheckCircle size={64} style={{ color: "#1a1d23", margin: "0 auto 16px" }} />
+@@ -57,6 +60,12 @@ function SuccessScreen({ receiptNumber, receiptTotal, receiptMessage, loading, o
+         <Button variant="outline" onClick={onEmail} disabled={loading} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}><Mail size={15} />Email</Button>
+         <Button variant="outline" onClick={onSms} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}><MessageSquare size={15} />SMS</Button>
+       </div>
++      {(showWarranty || showCare) && (
++        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
++          {showWarranty && <Button variant="outline" onClick={onWarranty}>Warranty card</Button>}
++          {showCare && <Button variant="outline" onClick={onCare}>Care card</Button>}
++        </div>
++      )}
+       {receiptMessage && <p style={{ color: "#4b5563", fontSize: 12, marginBottom: 12 }}>{receiptMessage}</p>}
+       <Button onClick={onDone} disabled={loading} style={{ width: "100%", background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>Done</Button>
+     </div>
+@@ -216,9 +225,17 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
+   const discount  = useSelector(selectDiscount);
+   const note      = useSelector(selectCartNote);
+   const tax       = useSelector(selectTax);
++  const orderMeta = useSelector(selectOrderMeta);
++  const hasRxItems = cartItems.some((i) => requiresPrescription(i));
++  const hasControlled = cartItems.some((i) => isControlled(i));
++  const hasSerialItems = cartItems.some((i) => i.requiresSerial || i.serialRequired);
++  const hasWarrantyItems = cartItems.some((i) => i.warrantyMonths || i.warranty);
++  const hasCareItems = cartItems.some((i) => i.careInstructions);
++  const { branchId } = useBranchContext();
+ 
+   const [paymentMethod, setPaymentMethod] = useState("CASH");
+   const [amountReceived, setAmountReceived] = useState("");
++  const [emiMonths, setEmiMonths] = useState("");
+   const [idempotencyKey, setIdempotencyKey] = useState(checkoutKey);
+ 
+   const [loading,        setLoading]        = useState(false);
+@@ -288,20 +305,51 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
+   const submitOrder = async (transactionId = null) => {
+     setError("");
+     if (cartItems.length === 0) { setError("Please add items to the cart first."); return; }
++    if (cartItems.some((item) => requiresPrescription(item)) && !customer) {
++      setError("Prescription items require a customer — select a customer before payment.");
++      return;
++    }
++    if (hasControlled && !orderMeta.prescriptionVerified) {
++      setError("Controlled substance in cart — pharmacist verification required.");
++      return;
++    }
++    const badSerial = cartItems.find((item) => !serialsValid(item));
++    if (badSerial) {
++      setError(`Serials missing/invalid for ${badSerial.name} — one unique serial per unit.`);
++      return;
++    }
+     const hasInvalid = cartItems.some((item) => { const pid = Number(item.id ?? item._id); return !Number.isSafeInteger(pid) || pid <= 0; });
+     if (hasInvalid) { setError("Cannot process order with invalid products."); return; }
+     const orderPayload = {
+       customerId: customer?.id || customer?._id || null,
+-      items: cartItems.map((item) => ({ productId: Number(item.id || item._id), quantity: item.quantity || 1, price: item.price || item.sellingPrice })),
++      items: cartItems.map((item) => ({
++        productId: Number(item.id || item._id),
++        quantity: item.quantity || 1,
++        price: getEffectivePrice(item, item.quantity || 1),
++        modifiers: item.modifiers || [],
++        kitchenNote: item.kitchenNote || "",
++        dosage: item.dosage || "",
++        serials: item.serials || [],
++      })),
+       discount: discount.value || 0, discountType: discount.type || "percentage",
+       note: note || "", paymentMethod, amountReceived: paymentMethod === "CASH" ? parseFloat(amountReceived) : total,
+       transactionId, paymentReference: transactionId, tax, total,
++      // Vertical context — backends that don't know these keys ignore them.
++      orderType: orderMeta?.orderType || null,
++      tableNumber: orderMeta?.tableNumber || null,
++      kitchenNote: orderMeta?.kitchenNote || null,
++      prescriptionVerified: orderMeta?.prescriptionVerified || false,
++      emiMonths: emiMonths ? Number(emiMonths) : null,
+     };
+     try {
+       setLoading(true);
+       const response = await api.post("/api/orders", orderPayload, { headers: { "Idempotency-Key": idempotencyKey } });
+-      setCompletedOrder(response.data);
++      setCompletedOrder({ ...response.data, orderType: orderPayload.orderType, tableNumber: orderPayload.tableNumber, emiMonths: orderPayload.emiMonths });
+       setSuccess(true);
++      // Restaurant: free the table once the bill is settled.
++      if (orderPayload.tableNumber && branchId) {
++        try { freeTable(branchId, orderPayload.tableNumber); } catch { /* local-only */ }
++      }
+       dispatch(patchOrder({
+         ...response.data,
+         items: response.data.items?.map((item) => ({ ...item, unitPrice: item.unitPrice || item.price / (item.quantity || 1) })),
+@@ -341,7 +389,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
+   };
+ 
+   const resetState = () => {
+-    setAmountReceived(""); setPaymentMethod("CASH");
++    setAmountReceived(""); setPaymentMethod("CASH"); setEmiMonths("");
+     setSuccess(false); setError(""); setCompletedOrder(null); setReceiptMessage("");
+     setShiftStatus("checking"); setEnabledMethods(null);
+   };
+@@ -354,12 +402,20 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
+ 
+   const printReceipt = () => {
+     const ok = printOrderReceipt(
+-      { ...completedOrder, totalAmount: receiptTotal, paymentType: paymentMethod },
++      { ...completedOrder, totalAmount: receiptTotal, paymentType: paymentMethod, items: completedOrder?.items?.length ? completedOrder.items : cartItems },
+       { onBlocked: () => setReceiptMessage("Allow pop-ups to print this receipt.") },
+     );
+     if (ok) setReceiptMessage("");
+   };
+ 
++  const printWarranty = () => {
++    printWarrantyCard({ items: cartItems, customerName: receiptCustomerName, orderId: receiptNumber });
++  };
++
++  const printCare = () => {
++    printCareCard({ items: cartItems.map((i) => ({ ...i, careInstructions: i.careInstructions || i.product?.careInstructions, guaranteeDays: i.guaranteeDays })), orderId: receiptNumber });
++  };
++
+   const emailReceipt = async () => {
+     if (!customer?.email) { setReceiptMessage("Add a customer email before sending a receipt."); return; }
+     try {
+@@ -384,6 +440,8 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
+             receiptNumber={receiptNumber} receiptTotal={receiptTotal}
+             receiptMessage={receiptMessage} loading={loading}
+             onPrint={printReceipt} onEmail={emailReceipt} onSms={composeSmsReceipt}
++            onWarranty={printWarranty} onCare={printCare}
++            showWarranty={hasWarrantyItems || hasSerialItems} showCare={hasCareItems}
+             onDone={handleClose}
+           />
+         ) : shiftStatus === "none" ? (
+@@ -416,8 +474,50 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
+                     Customer: <strong>{customer.fullName || `${customer.firstName || ""} ${customer.lastName || ""}`.trim()}</strong>
+                   </p>
+                 )}
++                {(orderMeta?.orderType || orderMeta?.tableNumber) && (
++                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
++                    {[orderMeta.orderType?.replace("_", " "), orderMeta.tableNumber ? `Table ${orderMeta.tableNumber}` : null].filter(Boolean).join(" · ")}
++                  </p>
++                )}
++                {hasRxItems && !customer && (
++                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#92400e", fontWeight: 700 }}>
++                    Contains prescription items — add a customer before completing.
++                  </p>
++                )}
++                {hasControlled && !orderMeta.prescriptionVerified && (
++                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#991b1b", fontWeight: 700 }}>
++                    Controlled substance — pharmacist verification required.
++                  </p>
++                )}
++                {hasSerialItems && cartItems.some((i) => !serialsValid(i)) && (
++                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#991b1b", fontWeight: 700 }}>
++                    Missing/invalid serials — one unique serial per unit.
++                  </p>
++                )}
+               </div>
+ 
++              {/* EMI (electronics) — recorded on the order, charged via selected method */}
++              {(paymentMethod === "CARD" || hasSerialItems) && (
++                <div>
++                  <Label className="mb-1 block">EMI plan (optional)</Label>
++                  <select
++                    value={emiMonths}
++                    onChange={(e) => setEmiMonths(e.target.value)}
++                    style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontSize: 13, background: "white" }}
++                  >
++                    <option value="">Full payment</option>
++                    <option value="3">3 months</option>
++                    <option value="6">6 months</option>
++                    <option value="12">12 months</option>
++                  </select>
++                  {emiMonths && (
++                    <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
++                      ≈ {formatMoney(total / Number(emiMonths))} × {emiMonths} months
++                    </p>
++                  )}
++                </div>
++              )}
++
+               {/* Method selector */}
+               <div>
+                 <Label className="mb-2 block">Payment Method</Label>
+diff --git a/src/pages/cashier/ProductSection/ProductSection.jsx b/src/pages/cashier/ProductSection/ProductSection.jsx
+index cdb7c81..d0a081e 100644
+--- a/src/pages/cashier/ProductSection/ProductSection.jsx
++++ b/src/pages/cashier/ProductSection/ProductSection.jsx
+@@ -7,6 +7,7 @@ import ProductCard from "@/components/ProductCard";
+ import useBranchContext from "@/hooks/useBranchContext";
+ // ALGORITHM NAMES in use below: Ranked Fuzzy Match + Levenshtein + Exact fast path
+ import { fuzzySearchProducts } from "@/util/searchAlgorithms";
++import { parseScaleBarcode, sortFefo } from "@/util/storeTypes";
+ 
+ const toCatalogProduct = (row) => ({
+   id: row.id ?? row.productId,
+@@ -20,8 +21,29 @@ const toCatalogProduct = (row) => ({
+   imageUrl: row.image ?? row.productImage ?? null,
+   description: row.description,
+   stock: row.stock ?? row.quantity ?? 0,
++  // Preserve vertical-specific attributes so ProductCard/cart can use them.
++  // Unknown backends simply omit them — all reads are null-safe.
++  ...pickVerticalFields(row),
+ });
+ 
++const pickVerticalFields = (row = {}) => {
++  const out = {};
++  for (const k of [
++    "expiryDate", "expiry", "batchNumber", "batch",
++    "prescriptionRequired", "requiresPrescription", "isControlled", "controlledSubstance", "dosage",
++    "unit", "weight", "weightStep", "moq", "minOrderQty",
++    "requiresSerial", "serialRequired",
++    "warrantyMonths", "warranty",
++    "sizeVariant", "size", "colorVariant", "color", "variants",
++    "bulkMinQty", "bulkPrice", "bulkTiers",
++    "preparationTime", "kitchenStation", "isVeg", "modifiers", "modifierOptions",
++    "careInstructions", "guaranteeDays",
++  ]) {
++    if (row[k] !== undefined && row[k] !== null && row[k] !== "") out[k] = row[k];
++  }
++  return out;
++};
++
+ export default function ProductSection({ onAddToCart }) {
+   const dispatch = useDispatch();
+   const [searchTerm, setSearchTerm] = useState("");
+@@ -116,15 +138,17 @@ export default function ProductSection({ onAddToCart }) {
+       imageUrl: image,
+       description: productDetails.description || productDetails.desciption,
+       stock: inv.quantity || 0,
++      ...pickVerticalFields({ ...productDetails, ...inv }),
+     };
+   });
+ 
+   const serverProducts = (catalog || []).map(toCatalogProduct);
+-  const source = catalog !== null ? serverProducts : legacyProducts;
++  const source = sortFefo(catalog !== null ? serverProducts : legacyProducts);
+ 
+   // Server already filters on q; filter client-side too for the legacy path
+   // (and as a fast echo while the debounced server query is in flight).
+   // ALGORITHM NAME: Rank + Filter + Top-K Sort (Best-match first) — see searchAlgorithms.js
++  // FEFO secondary sort keeps earliest-expiry batch first for perishables.
+   const query = searchTerm.trim();
+   const filtered = catalog !== null && debouncedSearch === searchTerm.trim()
+     ? source
+@@ -134,8 +158,22 @@ export default function ProductSection({ onAddToCart }) {
+ 
+   const handleSearchKeyDown = (event) => {
+     // Barcode-scanner / SKU fast path: exact match adds to cart on Enter.
++    // Weighted scale barcodes (2.....) resolve SKU + weight automatically.
+     if (event.key !== "Enter" || !searchTerm.trim()) return;
+-    const q = searchTerm.trim().toLowerCase();
++    const raw = searchTerm.trim();
++    const q = raw.toLowerCase();
++    const scale = parseScaleBarcode(raw);
++    if (scale) {
++      const match = source.find((product) =>
++        String(product.sku || "").replace(/^0+/, "").toLowerCase() === String(scale.sku).toLowerCase() ||
++        String(product.sku || "").toLowerCase() === q,
++      );
++      if (match) {
++        onAddToCart({ ...match, quantity: scale.weightKg, weightKg: scale.weightKg });
++        setSearchTerm("");
++        return;
++      }
++    }
+     const exactProduct = filtered.find((product) =>
+       product.sku?.toLowerCase() === q || String(product.id) === q,
+     ) ?? source.find((product) =>
+diff --git a/src/pages/storeAdmin/Products/ProductManagement.jsx b/src/pages/storeAdmin/Products/ProductManagement.jsx
+index 48300a3..43a08bf 100644
+--- a/src/pages/storeAdmin/Products/ProductManagement.jsx
++++ b/src/pages/storeAdmin/Products/ProductManagement.jsx
+@@ -10,6 +10,7 @@ import {
+ import { addInventoryItem } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
+ import { getCategoriesByStore } from "@/Redux Toolkit/Features/category/categoryThunk";
+ import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
++import { getStoreByAdmin, getStoreById } from "@/Redux Toolkit/Features/Store/storeThunk";
+ import {
+   Dialog,
+   DialogContent,
+@@ -22,6 +23,12 @@ import { Input } from "@/components/ui/input";
+ import { Button } from "@/components/ui/button";
+ import { toast } from "sonner";
+ import secureStorage from "@/util/secureStorage";
++import ExpiryAlerts from "@/components/ExpiryAlerts";
++import {
++  PRODUCT_UNITS,
++  resolveStoreType,
++  supportsFeature,
++} from "@/util/storeTypes";
+ 
+ const EMPTY_FORM = {
+   name: "",
+@@ -32,6 +39,30 @@ const EMPTY_FORM = {
+   description: "",
+   image: "",
+   initialStock: "",
++  // Vertical-specific (all optional — backend ignores unknown fields safely)
++  expiryDate: "",
++  batchNumber: "",
++  prescriptionRequired: false,
++  isControlled: false,
++  dosage: "",
++  unit: "pcs",
++  weight: "",
++  weightStep: "",
++  moq: "",
++  requiresSerial: false,
++  warrantyMonths: "",
++  sizeVariant: "",
++  colorVariant: "",
++  variantsJson: "",
++  bulkMinQty: "",
++  bulkPrice: "",
++  bulkTiersJson: "",
++  preparationTime: "",
++  kitchenStation: "",
++  modifiers: "",
++  isVeg: false,
++  careInstructions: "",
++  guaranteeDays: "",
+ };
+ 
+ const s = {
+@@ -125,6 +156,32 @@ export default function ProductManagement() {
+ 
+   const { products, loading } = useSelector((st) => st.product);
+   const { categories } = useSelector((st) => st.category);
++  const { store } = useSelector((st) => st.store);
++  const storeType = resolveStoreType(
++    store,
++    userProfile?.storeType || user?.storeType || userData?.storeType || "",
++  );
++  const showExpiry = supportsFeature(storeType, "expiry");
++  const showBatch = supportsFeature(storeType, "batch");
++  const showPrescription = supportsFeature(storeType, "prescription");
++  const showDosage = supportsFeature(storeType, "dosage");
++  const showControlled = supportsFeature(storeType, "controlled");
++  const showUnit = supportsFeature(storeType, "unit");
++  const showWeight = supportsFeature(storeType, "weight");
++  const showMoq = supportsFeature(storeType, "moq");
++  const showSerial = supportsFeature(storeType, "serial");
++  const showWarranty = supportsFeature(storeType, "warranty");
++  const showVariants = supportsFeature(storeType, "variants");
++  const showBulk = supportsFeature(storeType, "bulk");
++  const showRestaurant = supportsFeature(storeType, "orderType") || supportsFeature(storeType, "prepTime");
++  const showModifiers = supportsFeature(storeType, "modifiers");
++  const showCare = supportsFeature(storeType, "care");
++  const showGuarantee = supportsFeature(storeType, "guarantee");
++  const showWastage = supportsFeature(storeType, "wastage");
++  const showVerticalSection =
++    showExpiry || showBatch || showPrescription || showDosage || showControlled || showUnit || showWeight ||
++    showMoq || showSerial || showWarranty || showVariants || showBulk || showRestaurant || showModifiers ||
++    showCare || showGuarantee;
+ 
+   const [search, setSearch] = useState("");
+   const [dialogOpen, setDialogOpen] = useState(false);
+@@ -135,6 +192,15 @@ export default function ProductManagement() {
+   const [imageFile, setImageFile] = useState(null);
+   const [imagePreview, setImagePreview] = useState(null);
+ 
++  useEffect(() => {
++    // Admin endpoint first; direct store fetch as backup — both fill s.store.
++    dispatch(getStoreByAdmin())
++      .unwrap?.()
++      .catch(() => {
++        if (storeId) dispatch(getStoreById(storeId)).catch(() => undefined);
++      });
++  }, [dispatch, storeId]);
++
+   useEffect(() => {
+     if (!storeId) {
+       toast.error("Store ID not found. Fetching user profile...");
+@@ -167,6 +233,7 @@ export default function ProductManagement() {
+ 
+   const openEdit = (p) => {
+     setEditing(p);
++    const stringify = (v) => (Array.isArray(v) ? JSON.stringify(v, null, 1) : typeof v === "string" ? v : "");
+     setForm({
+       name: p.name ?? "",
+       sku: p.sku ?? "",
+@@ -176,6 +243,29 @@ export default function ProductManagement() {
+       description: p.description || p.desciption || "",
+       image: p.image || p.imageUrl || "",
+       initialStock: "",
++      expiryDate: (p.expiryDate || p.expiry || "").slice?.(0, 10) || "",
++      batchNumber: p.batchNumber || p.batch || "",
++      prescriptionRequired: p.prescriptionRequired ?? p.requiresPrescription ?? false,
++      isControlled: p.isControlled ?? p.controlledSubstance ?? false,
++      dosage: p.dosage || "",
++      unit: p.unit || "pcs",
++      weight: p.weight ?? "",
++      weightStep: p.weightStep ?? "",
++      moq: p.moq ?? p.minOrderQty ?? "",
++      requiresSerial: p.requiresSerial ?? p.serialRequired ?? false,
++      warrantyMonths: p.warrantyMonths ?? p.warranty ?? "",
++      sizeVariant: p.sizeVariant || p.size || "",
++      colorVariant: p.colorVariant || p.color || "",
++      variantsJson: stringify(p.variants),
++      bulkMinQty: p.bulkMinQty ?? "",
++      bulkPrice: p.bulkPrice ?? "",
++      bulkTiersJson: stringify(p.bulkTiers),
++      preparationTime: p.preparationTime ?? "",
++      kitchenStation: p.kitchenStation || "",
++      modifiers: Array.isArray(p.modifiers) ? p.modifiers.join(", ") : p.modifiers || p.modifierOptions || "",
++      isVeg: p.isVeg ?? false,
++      careInstructions: p.careInstructions || "",
++      guaranteeDays: p.guaranteeDays ?? "",
+     });
+     setImageFile(null);
+     setImagePreview(p.image || p.imageUrl || null);
+@@ -260,6 +350,25 @@ export default function ProductManagement() {
+     }
+ 
+ 
++    const parseJsonArray = (raw, label) => {
++      if (!raw || !String(raw).trim()) return null;
++      try {
++        const v = JSON.parse(String(raw));
++        if (!Array.isArray(v)) {
++          toast.error(`${label} must be a JSON array`);
++          return "invalid";
++        }
++        return v;
++      } catch {
++        toast.error(`${label} is not valid JSON`);
++        return "invalid";
++      }
++    };
++    const bulkTiers = parseJsonArray(form.bulkTiersJson, "Bulk tiers");
++    if (bulkTiers === "invalid") return;
++    const variants = parseJsonArray(form.variantsJson, "Variants");
++    if (variants === "invalid") return;
++
+     const dto = {
+       ...form,
+       sellingPrice: sellingPrice,
+@@ -267,7 +376,33 @@ export default function ProductManagement() {
+       categoryId: form.categoryId ? parseInt(form.categoryId) : null,
+       storeId: parseInt(storeId),
+       store: { id: parseInt(storeId) },
++      // Normalize optional vertical fields: empty string -> null so backend ignores them
++      expiryDate: form.expiryDate || null,
++      batchNumber: form.batchNumber?.trim() || null,
++      dosage: form.dosage?.trim() || null,
++      unit: form.unit || null,
++      weight: form.weight === "" ? null : Number(form.weight),
++      weightStep: form.weightStep === "" ? null : Number(form.weightStep),
++      moq: form.moq === "" ? null : Number(form.moq),
++      minOrderQty: form.moq === "" ? null : Number(form.moq),
++      warrantyMonths: form.warrantyMonths === "" ? null : Number(form.warrantyMonths),
++      warranty: form.warrantyMonths === "" ? null : Number(form.warrantyMonths),
++      bulkMinQty: form.bulkMinQty === "" ? null : Number(form.bulkMinQty),
++      bulkPrice: form.bulkPrice === "" ? null : Number(form.bulkPrice),
++      bulkTiers,
++      variants,
++      preparationTime: form.preparationTime === "" ? null : Number(form.preparationTime),
++      sizeVariant: form.sizeVariant?.trim() || null,
++      colorVariant: form.colorVariant?.trim() || null,
++      kitchenStation: form.kitchenStation?.trim() || null,
++      modifiers: form.modifiers ? String(form.modifiers).split(",").map((s) => s.trim()).filter(Boolean) : null,
++      careInstructions: form.careInstructions?.trim() || null,
++      guaranteeDays: form.guaranteeDays === "" ? null : Number(form.guaranteeDays),
+     };
++    delete dto.variantsJson;
++    delete dto.bulkTiersJson;
++    delete dto.initialStock;
++    if (!showExpiry) delete dto.expiryDate;
+ 
+ 
+     if (imageFile) {
+@@ -367,6 +502,26 @@ export default function ProductManagement() {
+     setDeleteDialogOpen(false);
+   };
+ 
++  const handleWastage = (p) => {
++    const qty = Number(window.prompt(`Wastage qty for ${p.name} (damaged/expired):`, "1"));
++    if (!Number.isFinite(qty) || qty <= 0) return;
++    const reason = window.prompt("Reason (damaged / expired / spoiled):", "damaged") || "wastage";
++    try {
++      const key = "pos_wastage_log";
++      const log = JSON.parse(localStorage.getItem(key) || "[]");
++      log.unshift({
++        productId: p.id || p._id,
++        name: p.name,
++        sku: p.sku,
++        qty,
++        reason,
++        at: new Date().toISOString(),
++      });
++      localStorage.setItem(key, JSON.stringify(log.slice(0, 500)));
++    } catch { /* log is best-effort */ }
++    toast.success(`Recorded ${qty} × ${p.name} as ${reason}. Adjust stock in Inventory.`);
++  };
++
+   return (
+     <div style={s.page}>
+       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+@@ -375,7 +530,7 @@ export default function ProductManagement() {
+             Product Management
+           </h1>
+           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>
+-            Manage your store's product catalog
++            Manage your store's product catalog{storeType ? ` · ${storeType}` : ""}
+           </p>
+         </div>
+         <button style={s.addBtn} onClick={openAdd}>
+@@ -383,6 +538,8 @@ export default function ProductManagement() {
+         </button>
+       </div>
+ 
++      {(showExpiry || showWastage) && <ExpiryAlerts products={productList} />}
++
+       <div style={s.card}>
+         <div style={s.cardHeader}>
+           <span style={{ fontSize: 13, fontWeight: 600 }}>
+@@ -475,6 +632,9 @@ export default function ProductManagement() {
+                       <td style={{ ...s.td, textAlign: "right" }}>
+                         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                           <button style={s.iconBtn} onClick={() => openEdit(p)}><Pencil size={13} color="#6b7280" /></button>
++                          {showWastage && (
++                            <button style={s.iconBtn} title="Record wastage" onClick={() => handleWastage(p)}>W</button>
++                          )}
+                           <button style={{ ...s.iconBtn, borderColor: "#fecaca" }} onClick={() => openDelete(p)}><Trash2 size={13} color="#e53e3e" /></button>
+                         </div>
+                       </td>
+@@ -581,6 +741,278 @@ export default function ProductManagement() {
+               />
+             </div>
+ 
++            {showVerticalSection && (
++              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
++                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
++                  {storeType ? `${storeType} fields` : "Store-type fields"}
++                </p>
++                {(showExpiry || showBatch) && (
++                  <div className="grid grid-cols-2 gap-4">
++                    {showExpiry && (
++                      <div className="space-y-1.5">
++                        <Label>Expiry date</Label>
++                        <Input
++                          type="date"
++                          value={form.expiryDate}
++                          onChange={(e) => setForm((f) => ({ ...f, expiryDate: e.target.value }))}
++                        />
++                      </div>
++                    )}
++                    {showBatch && (
++                      <div className="space-y-1.5">
++                        <Label>Batch no.</Label>
++                        <Input
++                          value={form.batchNumber}
++                          onChange={(e) => setForm((f) => ({ ...f, batchNumber: e.target.value }))}
++                          placeholder="B-001"
++                        />
++                      </div>
++                    )}
++                  </div>
++                )}
++                {showPrescription && (
++                  <div className="space-y-2">
++                    <label className="flex items-center gap-2 text-sm text-slate-700">
++                      <input
++                        type="checkbox"
++                        checked={!!form.prescriptionRequired}
++                        onChange={(e) => setForm((f) => ({ ...f, prescriptionRequired: e.target.checked }))}
++                      />
++                      Prescription required
++                    </label>
++                    {showControlled && (
++                      <label className="flex items-center gap-2 text-sm text-slate-700">
++                        <input
++                          type="checkbox"
++                          checked={!!form.isControlled}
++                          onChange={(e) => setForm((f) => ({ ...f, isControlled: e.target.checked }))}
++                        />
++                        Controlled substance (extra verification)
++                      </label>
++                    )}
++                    {showDosage && (
++                      <div className="space-y-1.5">
++                        <Label>Dosage / usage (printed on label)</Label>
++                        <Input
++                          value={form.dosage}
++                          onChange={(e) => setForm((f) => ({ ...f, dosage: e.target.value }))}
++                          placeholder="1 tab twice daily after meals"
++                        />
++                      </div>
++                    )}
++                  </div>
++                )}
++                {(showUnit || showWeight || showMoq) && (
++                  <div className="grid grid-cols-2 gap-4">
++                    {showUnit && (
++                      <div className="space-y-1.5">
++                        <Label>Unit</Label>
++                        <select
++                          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
++                          value={form.unit}
++                          onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
++                        >
++                          {PRODUCT_UNITS.map((u) => (
++                            <option key={u} value={u}>{u}</option>
++                          ))}
++                        </select>
++                      </div>
++                    )}
++                    {showWeight && (
++                      <div className="space-y-1.5">
++                        <Label>Weight</Label>
++                        <Input
++                          type="number" min={0} step="0.01"
++                          value={form.weight}
++                          onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))}
++                          placeholder="e.g. 500"
++                        />
++                      </div>
++                    )}
++                    {showWeight && (
++                      <div className="space-y-1.5">
++                        <Label>Scale step (kg/L)</Label>
++                        <Input
++                          type="number" min={0} step="0.01"
++                          value={form.weightStep}
++                          onChange={(e) => setForm((f) => ({ ...f, weightStep: e.target.value }))}
++                          placeholder="0.5"
++                        />
++                      </div>
++                    )}
++                    {showMoq && (
++                      <div className="space-y-1.5">
++                        <Label>MOQ (min order qty)</Label>
++                        <Input
++                          type="number" min={0}
++                          value={form.moq}
++                          onChange={(e) => setForm((f) => ({ ...f, moq: e.target.value }))}
++                          placeholder="e.g. 12"
++                        />
++                      </div>
++                    )}
++                  </div>
++                )}
++                {(showSerial || showWarranty) && (
++                  <div className="grid grid-cols-2 gap-4">
++                    {showSerial && (
++                      <label className="flex items-center gap-2 text-sm text-slate-700">
++                        <input
++                          type="checkbox"
++                          checked={!!form.requiresSerial}
++                          onChange={(e) => setForm((f) => ({ ...f, requiresSerial: e.target.checked }))}
++                        />
++                        Track serial / IMEI
++                      </label>
++                    )}
++                    {showWarranty && (
++                      <div className="space-y-1.5">
++                        <Label>Warranty (months)</Label>
++                        <Input
++                          type="number" min={0}
++                          value={form.warrantyMonths}
++                          onChange={(e) => setForm((f) => ({ ...f, warrantyMonths: e.target.value }))}
++                          placeholder="12"
++                        />
++                      </div>
++                    )}
++                  </div>
++                )}
++                {showVariants && (
++                  <div className="space-y-3">
++                    <div className="grid grid-cols-2 gap-4">
++                      <div className="space-y-1.5">
++                        <Label>Size</Label>
++                        <Input
++                          value={form.sizeVariant}
++                          onChange={(e) => setForm((f) => ({ ...f, sizeVariant: e.target.value }))}
++                          placeholder="M / 42 / 15-inch"
++                        />
++                      </div>
++                      <div className="space-y-1.5">
++                        <Label>Color</Label>
++                        <Input
++                          value={form.colorVariant}
++                          onChange={(e) => setForm((f) => ({ ...f, colorVariant: e.target.value }))}
++                          placeholder="Black"
++                        />
++                      </div>
++                    </div>
++                    <div className="space-y-1.5">
++                      <Label>Variant matrix (JSON, optional)</Label>
++                      <textarea
++                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-xs font-mono"
++                        rows={2}
++                        value={form.variantsJson}
++                        onChange={(e) => setForm((f) => ({ ...f, variantsJson: e.target.value }))}
++                        placeholder='[{"sku":"SH-M-BLK","size":"M","color":"Black","price":999,"stock":10}]'
++                      />
++                      <p className="text-[11px] text-gray-500">Each variant can carry its own SKU / price / stock. Leave empty to use Size+Color above.</p>
++                    </div>
++                  </div>
++                )}
++                {showBulk && (
++                  <div className="space-y-3">
++                    <div className="grid grid-cols-2 gap-4">
++                      <div className="space-y-1.5">
++                        <Label>Bulk min qty (legacy)</Label>
++                        <Input
++                          type="number" min={0}
++                          value={form.bulkMinQty}
++                          onChange={(e) => setForm((f) => ({ ...f, bulkMinQty: e.target.value }))}
++                          placeholder="e.g. 10"
++                        />
++                      </div>
++                      <div className="space-y-1.5">
++                        <Label>Bulk price (रु)</Label>
++                        <Input
++                          type="number" min={0} step="0.01"
++                          value={form.bulkPrice}
++                          onChange={(e) => setForm((f) => ({ ...f, bulkPrice: e.target.value }))}
++                          placeholder="Wholesale rate"
++                        />
++                      </div>
++                    </div>
++                    <div className="space-y-1.5">
++                      <Label>Bulk tiers (JSON, optional — wins over legacy)</Label>
++                      <textarea
++                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-xs font-mono"
++                        rows={2}
++                        value={form.bulkTiersJson}
++                        onChange={(e) => setForm((f) => ({ ...f, bulkTiersJson: e.target.value }))}
++                        placeholder='[{"minQty":10,"price":900},{"minQty":50,"price":850}]'
++                      />
++                    </div>
++                  </div>
++                )}
++                {showRestaurant && (
++                  <div className="grid grid-cols-2 gap-4">
++                    <div className="space-y-1.5">
++                      <Label>Prep time (min)</Label>
++                      <Input
++                        type="number" min={0}
++                        value={form.preparationTime}
++                        onChange={(e) => setForm((f) => ({ ...f, preparationTime: e.target.value }))}
++                        placeholder="15"
++                      />
++                    </div>
++                    <div className="space-y-1.5">
++                      <Label>Kitchen station</Label>
++                      <Input
++                        value={form.kitchenStation}
++                        onChange={(e) => setForm((f) => ({ ...f, kitchenStation: e.target.value }))}
++                        placeholder="Grill / Bar"
++                      />
++                    </div>
++                    <label className="flex items-center gap-2 text-sm text-slate-700 col-span-2">
++                      <input
++                        type="checkbox"
++                        checked={!!form.isVeg}
++                        onChange={(e) => setForm((f) => ({ ...f, isVeg: e.target.checked }))}
++                      />
++                      Vegetarian item
++                    </label>
++                    {showModifiers && (
++                      <div className="space-y-1.5 col-span-2">
++                        <Label>Modifiers (comma separated)</Label>
++                        <Input
++                          value={form.modifiers}
++                          onChange={(e) => setForm((f) => ({ ...f, modifiers: e.target.value }))}
++                          placeholder="Extra cheese, No onion, Less spicy"
++                        />
++                      </div>
++                    )}
++                  </div>
++                )}
++                {showCare && (
++                  <div className="grid grid-cols-2 gap-4">
++                    <div className="space-y-1.5 col-span-2">
++                      <Label>Care instructions</Label>
++                      <Input
++                        value={form.careInstructions}
++                        onChange={(e) => setForm((f) => ({ ...f, careInstructions: e.target.value }))}
++                        placeholder="Indirect sunlight, water weekly"
++                      />
++                    </div>
++                    {showGuarantee && (
++                      <div className="space-y-1.5">
++                        <Label>Survival guarantee (days)</Label>
++                        <Input
++                          type="number" min={0}
++                          value={form.guaranteeDays}
++                          onChange={(e) => setForm((f) => ({ ...f, guaranteeDays: e.target.value }))}
++                          placeholder="30"
++                        />
++                      </div>
++                    )}
++                  </div>
++                )}
++                {showWastage && (
++                  <p className="text-[11px] text-gray-500">Tip: record damage/expired write-offs from Inventory → adjust stock with reason “wastage”.</p>
++                )}
++              </div>
++            )}
++
+             {!editing && (
+               <div className="space-y-1.5">
+                 <Label>Initial Warehouse Stock (Optional)</Label>
+diff --git a/src/pages/storeAdmin/Settings/StoreProfile.jsx b/src/pages/storeAdmin/Settings/StoreProfile.jsx
+index 8046864..af042b1 100644
+--- a/src/pages/storeAdmin/Settings/StoreProfile.jsx
++++ b/src/pages/storeAdmin/Settings/StoreProfile.jsx
+@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
+ import { toast } from "sonner";
+ import { Store as StoreIcon, Save } from "lucide-react";
+ import { getStoreByAdmin, updateStore } from "@/Redux Toolkit/Features/Store/storeThunk";
++import { STORE_TYPES, normalizeStoreType } from "@/util/storeTypes";
+ 
+ const inputStyle = {
+   width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb",
+@@ -43,6 +44,10 @@ export default function StoreProfile() {
+       toast.error("Store not loaded yet");
+       return;
+     }
++    if (!form.type) {
++      toast.error("Please select a store type");
++      return;
++    }
+     setSaving(true);
+     try {
+       const result = await dispatch(updateStore({
+@@ -54,7 +59,7 @@ export default function StoreProfile() {
+           phone: form.phone,
+           contact: { address: form.address, email: form.email, phone: form.phone },
+           description: form.description,
+-          storeType: form.type,
++          storeType: normalizeStoreType(form.type) || form.type,
+         },
+       }));
+       if (result.meta.requestStatus === "fulfilled") {
+@@ -101,7 +106,19 @@ export default function StoreProfile() {
+           </div>
+           <div>
+             <label style={labelStyle}>Store type</label>
+-            <input style={inputStyle} value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} placeholder="RETAIL" />
++            <select
++              style={inputStyle}
++              value={form.type}
++              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
++              required
++            >
++              <option value="">Select store type</option>
++              {STORE_TYPES.map((t) => (
++                <option key={t.value} value={t.value}>
++                  {t.label}
++                </option>
++              ))}
++            </select>
+           </div>
+           <div>
+             <label style={labelStyle}>Description</label>
+diff --git a/src/pages/storeAdmin/StoreDashboard.jsx b/src/pages/storeAdmin/StoreDashboard.jsx
+index 044b797..fff9a01 100644
+--- a/src/pages/storeAdmin/StoreDashboard.jsx
++++ b/src/pages/storeAdmin/StoreDashboard.jsx
+@@ -1,6 +1,8 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useDispatch, useSelector } from "react-redux";
++import { Link } from "react-router-dom";
+ import { GitBranch, Package, Users, Tag, Banknote, CreditCard, Smartphone } from "lucide-react";
++import { toast } from "sonner";
+ import {
+   AreaChart,
+   Area,
+@@ -14,6 +16,25 @@ import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk"
+ import { getProductsByStore } from "@/Redux Toolkit/Features/product/productThunk";
+ import { findStoreEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
+ import { getCategoriesByStore } from "@/Redux Toolkit/Features/category/categoryThunk";
++import {
++  getStoreByAdmin,
++  getStoreById,
++  updateStore,
++} from "@/Redux Toolkit/Features/Store/storeThunk";
++import ExpiryAlerts from "@/components/ExpiryAlerts";
++import {
++  getBulkTiers,
++  getModifierOptions,
++  getMoq,
++  inferStoreType,
++  isControlled,
++  isExpired,
++  isNearExpiry,
++  isWeightedProduct,
++  requiresPrescription,
++  resolveStoreType,
++  STORE_TYPES,
++} from "@/util/storeTypes";
+ import api from "@/util/api";
+ import secureStorage from "@/util/secureStorage";
+ 
+@@ -60,8 +81,18 @@ export default function StoreDashboard() {
+   const { products } = useSelector((s) => s.product);
+   const { employees } = useSelector((s) => s.employee);
+   const { categories } = useSelector((s) => s.category);
++  const { store } = useSelector((s) => s.store);
++  // Resolution order: admin store endpoint → user profile (carries
++  // storeType from the backend UserMapper) → session → direct store fetch.
++  const storeType = resolveStoreType(
++    store,
++    userProfile?.storeType || user?.storeType || userData?.storeType || "",
++  );
+ 
+   const [allOrders, setAllOrders] = useState([]);
++  // One-time store-type setup for stores registered before types existed.
++  const [setupType, setSetupType] = useState("");
++  const [savingType, setSavingType] = useState(false);
+ 
+   // Start of current calendar month — resets naturally on the 1st
+   const monthStart = useMemo(() => {
+@@ -77,6 +108,10 @@ export default function StoreDashboard() {
+     dispatch(getProductsByStore(storeId));
+     dispatch(findStoreEmployee({ storeId }));
+     dispatch(getCategoriesByStore({ storeId }));
++    // Admin endpoint first; direct store fetch as backup — both fill s.store.
++    dispatch(getStoreByAdmin())
++      .unwrap()
++      .catch(() => dispatch(getStoreById(storeId)).catch(() => undefined));
+   }, [dispatch, storeId]);
+ 
+   // Fetch this store's monthly orders in one call (previously one call per
+@@ -152,6 +187,48 @@ export default function StoreDashboard() {
+     return totals;
+   }, [monthlyOrders]);
+ 
++  // ── Per-store-type operations insights (client-side, catalog + orders) ──
++  const productList = useMemo(
++    () => (Array.isArray(products) ? products : products?.content || []),
++    [products],
++  );
++
++  const ops = useMemo(() => {
++    const expired = productList.filter(isExpired);
++    const nearExpiry = productList.filter((p) => isNearExpiry(p));
++    const rx = productList.filter(requiresPrescription);
++    const controlled = productList.filter(isControlled);
++    const weighted = productList.filter(isWeightedProduct);
++    const serialized = productList.filter((p) => p.requiresSerial || p.serialRequired);
++    const warranty = productList.filter((p) => p.warrantyMonths || p.warranty);
++    const bulk = productList.filter((p) => getBulkTiers(p).length > 0);
++    const moq = productList.filter((p) => getMoq(p) > 0);
++    const variants = productList.filter(
++      (p) => (Array.isArray(p.variants) && p.variants.length > 0) || p.sizeVariant || p.colorVariant,
++    );
++    const modifiers = productList.filter((p) => getModifierOptions(p).length > 0);
++    const prep = productList.filter((p) => p.preparationTime);
++    const care = productList.filter((p) => p.careInstructions);
++    const guarantee = productList.filter((p) => p.guaranteeDays);
++    const orderTypes = { DINE_IN: 0, TAKEAWAY: 0, DELIVERY: 0 };
++    const tables = new Set();
++    monthlyOrders.forEach((o) => {
++      const t = String(o.orderType || "").toUpperCase();
++      if (orderTypes[t] !== undefined) orderTypes[t] += 1;
++      if (o.tableNumber) tables.add(String(o.tableNumber));
++    });
++    let wastageEntries = 0;
++    try {
++      const log = JSON.parse(localStorage.getItem("pos_wastage_log") || "[]");
++      wastageEntries = Array.isArray(log) ? log.length : 0;
++    } catch { wastageEntries = 0; }
++    return {
++      expired, nearExpiry, rx, controlled, weighted, serialized, warranty,
++      bulk, moq, variants, modifiers, prep, care, guarantee,
++      orderTypes, tablesUsed: tables.size, wastageEntries,
++    };
++  }, [productList, monthlyOrders]);
++
+   const summaryStats = [
+     {
+       label: "Total Branches",
+@@ -187,6 +264,145 @@ export default function StoreDashboard() {
+ 
+   const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+ 
++  // ── Unique panel per store type (system colors only) ──
++  const verticalPanel = useMemo(() => {
++    const kpi = (label, value, alert = false) => ({ label, value, alert });
++    const act = (to, label) => ({ to, label });
++    switch (storeType) {
++      case "RESTAURANT":
++        return {
++          title: "Restaurant operations", badge: "RESTAURANT",
++          kpis: [
++            kpi("Dine-in orders", ops.orderTypes.DINE_IN),
++            kpi("Takeaway", ops.orderTypes.TAKEAWAY),
++            kpi("Delivery", ops.orderTypes.DELIVERY),
++            kpi("Tables served", ops.tablesUsed),
++            kpi("Timed menu items", ops.prep.length),
++            kpi("Items with modifiers", ops.modifiers.length),
++          ],
++          actions: [act("operations", "Live tables & KOT"), act("products", "Menu & modifiers"), act("reports", "Sales reports")],
++          expiryAlerts: false,
++        };
++      case "PHARMACY":
++        return {
++          title: "Pharmacy operations", badge: "PHARMACY",
++          kpis: [
++            kpi("Rx SKUs", ops.rx.length),
++            kpi("Controlled", ops.controlled.length, ops.controlled.length > 0),
++            kpi("Expired (blocked)", ops.expired.length, ops.expired.length > 0),
++            kpi("Near expiry ≤30d", ops.nearExpiry.length, ops.nearExpiry.length > 0),
++          ],
++          actions: [act("products", "Rx catalog"), act("inventory", "Batches & FEFO"), act("reports", "Sales reports")],
++          expiryAlerts: true,
++        };
++      case "GROCERY":
++        return {
++          title: "Grocery operations", badge: "GROCERY",
++          kpis: [
++            kpi("Weighted SKUs", ops.weighted.length),
++            kpi("Bulk tiers", ops.bulk.length),
++            kpi("Near expiry ≤30d", ops.nearExpiry.length, ops.nearExpiry.length > 0),
++            kpi("Expired (blocked)", ops.expired.length, ops.expired.length > 0),
++            kpi("Wastage entries", ops.wastageEntries),
++          ],
++          actions: [act("products", "Catalog & units"), act("inventory", "Stock & wastage"), act("reports", "Sales reports")],
++          expiryAlerts: true,
++        };
++      case "ELECTRONICS":
++        return {
++          title: "Electronics operations", badge: "ELECTRONICS",
++          kpis: [
++            kpi("Serialized SKUs", ops.serialized.length),
++            kpi("Warranty SKUs", ops.warranty.length),
++            kpi("Bulk tiers", ops.bulk.length),
++            kpi("Variants", ops.variants.length),
++          ],
++          actions: [act("products", "Serials & warranty"), act("inventory", "Stock levels"), act("reports", "Sales reports")],
++          expiryAlerts: false,
++        };
++      case "WHOLESALE":
++        return {
++          title: "Wholesale operations", badge: "WHOLESALE",
++          kpis: [
++            kpi("Bulk-tier SKUs", ops.bulk.length),
++            kpi("MOQ SKUs", ops.moq.length),
++            kpi("Weighted SKUs", ops.weighted.length),
++            kpi("Variants", ops.variants.length),
++          ],
++          actions: [act("products", "Tiers & MOQ"), act("inventory", "Stock levels"), act("reports", "Sales reports")],
++          expiryAlerts: false,
++        };
++      case "PLANT":
++        return {
++          title: "Nursery operations", badge: "PLANT",
++          kpis: [
++            kpi("Care-card SKUs", ops.care.length),
++            kpi("Guarantee SKUs", ops.guarantee.length),
++            kpi("Variants", ops.variants.length),
++            kpi("Bulk tiers", ops.bulk.length),
++          ],
++          actions: [act("products", "Care & guarantee"), act("inventory", "Stock levels"), act("reports", "Sales reports")],
++          expiryAlerts: false,
++        };
++      case "RETAIL":
++        return {
++          title: "Retail operations", badge: "RETAIL",
++          kpis: [
++            kpi("Variant SKUs", ops.variants.length),
++            kpi("Warranty SKUs", ops.warranty.length),
++            kpi("Bulk tiers", ops.bulk.length),
++            kpi("Categories", categories?.length ?? 0),
++          ],
++          actions: [act("products", "Variants & warranty"), act("inventory", "Stock levels"), act("reports", "Sales reports")],
++          expiryAlerts: false,
++        };
++      default:
++        return {
++          title: "Store operations", badge: "SET STORE TYPE",
++          kpis: [
++            kpi("Products", productList.length),
++            kpi("Near expiry ≤30d", ops.nearExpiry.length, ops.nearExpiry.length > 0),
++            kpi("Expired (blocked)", ops.expired.length, ops.expired.length > 0),
++          ],
++          actions: [act("profile", "Set store type"), act("products", "Catalog"), act("reports", "Sales reports")],
++          expiryAlerts: false,
++        };
++    }
++  }, [storeType, ops, productList.length, categories?.length]);
++
++  // Best-guess type for old stores with nothing saved — advisory only.
++  const inferredType = useMemo(() => inferStoreType(productList), [productList]);
++
++  useEffect(() => {
++    if (!storeType && inferredType && !setupType) {
++      setSetupType(inferredType);
++    }
++  }, [storeType, inferredType, setupType]);
++
++  const handleSaveStoreType = async () => {
++    const targetId = store?._id || store?.id || storeId;
++    if (!setupType) {
++      toast.error("Please choose a store type");
++      return;
++    }
++    if (!targetId) {
++      toast.error("Store not loaded yet — please retry in a moment");
++      return;
++    }
++    setSavingType(true);
++    try {
++      const result = await dispatch(updateStore({ id: targetId, storeData: { storeType: setupType } }));
++      if (result.meta.requestStatus === "fulfilled") {
++        toast.success(`Store type set to ${setupType} — dashboard updated`);
++        dispatch(getStoreByAdmin()).catch(() => undefined);
++      } else {
++        toast.error(result.payload || "Failed to save store type");
++      }
++    } finally {
++      setSavingType(false);
++    }
++  };
++
+   return (
+     <div
+       style={{
+@@ -206,8 +422,91 @@ export default function StoreDashboard() {
+           Dashboard
+         </h1>
+         <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>
+-          {monthLabel} — month-to-date overview
++          {monthLabel} — month-to-date overview{storeType ? ` · ${storeType}` : ""}
++        </p>
++      </div>
++
++      {/* One-time setup for stores registered before types existed */}
++      {!storeType && (
++        <div style={{ ...card, border: "2px solid #1a1d23" }}>
++          <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700 }}>
++            What kind of store is this?
++          </p>
++          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#6b7280" }}>
++            Your store was registered before store types existed. Pick one to unlock
++            its tailored dashboard, product fields and checkout flow.
++            {inferredType
++              ? ` Your catalog looks like a ${inferredType} — confirm or change it below.`
++              : " Choose the closest match below."}
++          </p>
++          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
++            <select
++              aria-label="Store type"
++              value={setupType}
++              onChange={(e) => setSetupType(e.target.value)}
++              style={{ flex: 1, minWidth: 200, border: "1px solid #e5e7eb", borderRadius: 8, padding: "9px 12px", fontSize: 13, background: "white" }}
++            >
++              <option value="">Select store type…</option>
++              {STORE_TYPES.map((t) => (
++                <option key={t.value} value={t.value}>
++                  {t.label}{t.value === inferredType ? " (detected)" : ""}
++                </option>
++              ))}
++            </select>
++            <button
++              onClick={handleSaveStoreType}
++              disabled={savingType}
++              style={{
++                padding: "9px 20px", borderRadius: 8, border: "none",
++                background: "#1a1d23", color: "white",
++                fontSize: 13, fontWeight: 700,
++                cursor: savingType ? "not-allowed" : "pointer",
++                opacity: savingType ? 0.6 : 1,
++              }}
++            >
++              {savingType ? "Saving…" : "Save & unlock dashboard"}
++            </button>
++          </div>
++        </div>
++      )}
++
++      {/* Unique per-store-type operations panel */}
++      <div style={card}>
++        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
++          <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{verticalPanel.title}</p>
++          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", padding: "3px 12px", borderRadius: 20, background: "#1a1d23", color: "white" }}>
++            {verticalPanel.badge}
++          </span>
++        </div>
++        <p style={{ margin: "0 0 16px", fontSize: 11, color: "#8a909c" }}>
++          Live from your catalog{verticalPanel.badge === "RESTAURANT" ? " and this month's orders" : ""} — unique to this store type
+         </p>
++        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: verticalPanel.expiryAlerts ? 12 : 0 }}>
++          {verticalPanel.kpis.map(({ label, value, alert }) => (
++            <div key={label} style={{
++              padding: 14, borderRadius: 8, background: alert ? "#fef2f2" : "#f5f5f5",
++              border: `1px solid ${alert ? "#fecaca" : "#e2e5e9"}`,
++            }}>
++              <p style={{ margin: 0, fontSize: 11, color: alert ? "#991b1b" : "#8a909c", fontWeight: alert ? 700 : 400 }}>{label}</p>
++              <p style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 800, color: alert ? "#991b1b" : "#1a1d23" }}>{value}</p>
++            </div>
++          ))}
++        </div>
++        {verticalPanel.expiryAlerts && <ExpiryAlerts products={productList} compact />}
++        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
++          {verticalPanel.actions.map(({ to, label }) => (
++            <Link
++              key={to}
++              to={to}
++              style={{
++                fontSize: 12, fontWeight: 700, padding: "8px 16px", borderRadius: 8,
++                background: "#1a1d23", color: "white", textDecoration: "none",
++              }}
++            >
++              {label}
++            </Link>
++          ))}
++        </div>
+       </div>
+ 
+       {/* Summary Stats */}

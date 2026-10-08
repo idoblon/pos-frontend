@@ -19,6 +19,8 @@ import {
   deleteBranch,
 } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
+import { PLAN_LIMITS } from "@/util/subscriptionPlans";
 import {
   Dialog,
   DialogContent,
@@ -149,6 +151,14 @@ export default function BranchManagement() {
     localStorage.getItem("storeId");
 
   const { branches, loading } = useSelector((st) => st.branch);
+  const { store } = useSelector((st) => st.store);
+
+  // Subscription branch cap: BASIC 3, PROFESSIONAL 10, ENTERPRISE 25.
+  // Unknown plan → no client-side block (the backend still enforces).
+  const plan = String(store?.subscriptionPlan || "").toUpperCase();
+  const branchLimit = PLAN_LIMITS[plan]?.branches ?? null;
+  const usedBranches = branches?.length ?? 0;
+  const atBranchLimit = branchLimit != null && usedBranches >= branchLimit;
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -194,6 +204,8 @@ export default function BranchManagement() {
 
 
     dispatch(getBranchesByStore(storeId));
+    // Load the store for its subscription plan (drives the branch cap meter).
+    dispatch(getStoreByAdmin()).catch(() => undefined);
   }, [dispatch, storeId]);
 
   const filtered = branches?.filter(
@@ -205,6 +217,10 @@ export default function BranchManagement() {
   );
 
   const openAdd = () => {
+    if (atBranchLimit) {
+      toast.error(`Branch limit reached for the ${plan} plan (${usedBranches}/${branchLimit}). Upgrade your subscription to add more branches.`);
+      return;
+    }
     setEditing(null);
     setForm(EMPTY_FORM);
     setDialogOpen(true);
@@ -301,6 +317,12 @@ export default function BranchManagement() {
     const monthlySalesTarget = form.monthlySalesTarget === "" ? 0 : Number(form.monthlySalesTarget);
     if (!Number.isFinite(monthlySalesTarget) || monthlySalesTarget < 0) {
       toast.error("Monthly sales target must be zero or greater, or left blank.");
+      return;
+    }
+
+    // Client-side plan guard (the backend re-checks on every create).
+    if (!editing && atBranchLimit) {
+      toast.error(`Branch limit reached for the ${plan} plan (${usedBranches}/${branchLimit}). Upgrade your subscription to add more branches.`);
       return;
     }
 
@@ -408,10 +430,20 @@ export default function BranchManagement() {
             Branch Management
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>
-            Manage all branches of your store
+            {branchLimit != null
+              ? `${usedBranches} of ${branchLimit} branches used · ${plan} plan`
+              : "Manage all branches of your store"}
           </p>
         </div>
-        <button style={s.addBtn} onClick={openAdd}>
+        <button
+          style={{
+            ...s.addBtn,
+            opacity: atBranchLimit ? 0.5 : 1,
+            cursor: atBranchLimit ? "not-allowed" : "pointer",
+          }}
+          onClick={openAdd}
+          title={atBranchLimit ? `Branch limit reached (${usedBranches}/${branchLimit}) — upgrade to add more` : "Add a new branch"}
+        >
           <Plus size={14} /> Add Branch
         </button>
       </div>

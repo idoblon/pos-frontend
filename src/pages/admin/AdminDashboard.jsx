@@ -46,6 +46,28 @@ function getStoreId(store) { return store?.id || store?._id; }
 function getStoreName(store) { return store?.brand || store?.name || store?.storeName || "Store"; }
 function formatMoney(amount) { return `रु ${toNumber(amount).toLocaleString("en-IN")}`; }
 
+// Backend sometimes returns a paginated wrapper ({ content: [...] },
+// { data: [...] }) instead of a bare array. Normalize so the dashboard
+// never crashes / shows empty just because of the envelope shape.
+function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== "object") return [];
+  const nested = [value.data, value.items, value.results, value.content, value.stores, value.users]
+    .find(Array.isArray);
+  return nested || [];
+}
+
+function safeAuthHeaders() {
+  try {
+    return getAuthHeaders();
+  } catch {
+    // No token in storage (e.g. fresh tab — token lives in sessionStorage).
+    // Return empty headers and let the `api` interceptor attach/refresh
+    // the token instead of throwing and killing the whole metrics effect.
+    return { "Content-Type": "application/json" };
+  }
+}
+
 function StatCard({ title, value, subtitle, icon, loading }) {
   return (
     <div style={{
@@ -73,12 +95,22 @@ function StatCard({ title, value, subtitle, icon, loading }) {
 export default function AdminDashboard() {
   const dispatch = useDispatch();
 
-  const { stores, loading: storesLoading } = useSelector((s) => s.store);
-  const { users, loading: usersLoading } = useSelector((s) => s.user);
+  const { stores: storesRaw, loading: storesLoading, error: storesError } = useSelector((s) => s.store);
+  const { users: usersRaw, loading: usersLoading, error: usersError } = useSelector((s) => s.user);
+  // Normalize envelopes: backend may return { content: [...] } etc.
+  const stores = useMemo(() => asArray(storesRaw), [storesRaw]);
+  const users = useMemo(() => asArray(usersRaw), [usersRaw]);
 
   const [subscriptionStats, setSubscriptionStats] = useState(null);
+  const [subscriptionError, setSubscriptionError] = useState(null);
   const [storeMetrics, setStoreMetrics] = useState({});
+  const [metricsError, setMetricsError] = useState(null);
+  // Server-aggregated fallback (backend: AdminReportsController
+  // GET /api/admin/reports/overview). Single call — used for GMV/orders
+  // when the per-store fan-out is unreachable. Silent on failure.
+  const [overview, setOverview] = useState(null);
   const hasFetchedStats = useRef(false);
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
   // Fetch stores and users once on mount
   useEffect(() => {
@@ -92,7 +124,25 @@ export default function AdminDashboard() {
     hasFetchedStats.current = true;
     subscriptionService.getSubscriptionStats()
       .then((stats) => setSubscriptionStats(stats || {}))
-      .catch(() => setSubscriptionStats({}));
+      .catch((err) => {
+        setSubscriptionError(err?.response?.data?.message || err?.message || "Failed to fetch subscription stats");
+        setSubscriptionStats({});
+      });
+  }, []);
+
+  // Server-aggregated overview as a resilient fallback (one request
+  // instead of 2N per-store requests). Never blocks the dashboard.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get("/api/admin/reports/overview");
+        if (!cancelled) setOverview(res.data || null);
+      } catch {
+        if (!cancelled) setOverview(null);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Real stores: exclude registration-only ghost entries
@@ -112,11 +162,16 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!realStores.length) return;
     let cancelled = false;
-    const headers = getAuthHeaders();
+    const headers = safeAuthHeaders();
+    let failed = 0;
+    let firstError = null;
 
     Promise.all(
       realStores.map(async (store) => {
         const storeId = getStoreId(store);
+        if (storeId == null || String(storeId).startsWith("registration-")) {
+          return [String(storeId), { branchCount: 0, orders: 0, revenue: 0 }];
+        }
         try {
           const [branchRes, analyticsRes] = await Promise.all([
             api.get(`/api/branches/store/${storeId}`, { headers }),
@@ -129,7 +184,11 @@ export default function AdminDashboard() {
             orders: toNumber(summary.totalOrders),
             revenue: toNumber(summary.totalSales),
           }];
-        } catch {
+        } catch (err) {
+          failed += 1;
+          if (!firstError) {
+            firstError = err?.response?.data?.message || err?.message || `Failed to load metrics for store ${storeId}`;
+          }
           return [String(storeId), {
             branchCount: 0,
             orders: toNumber(store.totalOrders),
@@ -138,7 +197,10 @@ export default function AdminDashboard() {
         }
       }),
     ).then((entries) => {
-      if (!cancelled) setStoreMetrics(Object.fromEntries(entries));
+      if (cancelled) return;
+      setStoreMetrics(Object.fromEntries(entries));
+      // Only flag when EVERY store failed — partial failures still render.
+      setMetricsError(failed > 0 && failed >= realStores.length ? firstError : null);
     });
 
     return () => { cancelled = true; };
@@ -220,14 +282,18 @@ export default function AdminDashboard() {
   const statsLoading = storesLoading || subscriptionStats === null;
 
   // ── Unique platform intelligence (client-side, no new APIs) ─────────────
-  const platformGmv = useMemo(
+  // Prefer the server-aggregated overview when the per-store fan-out failed
+  // (e.g. backend reachable for reports but branch/analytics denied).
+  const clientGmv = useMemo(
     () => Object.values(storeMetrics).reduce((sum, m) => sum + toNumber(m.revenue), 0),
     [storeMetrics],
   );
-  const platformOrders = useMemo(
+  const clientOrders = useMemo(
     () => Object.values(storeMetrics).reduce((sum, m) => sum + toNumber(m.orders), 0),
     [storeMetrics],
   );
+  const platformGmv = overview != null ? toNumber(overview.totalSales ?? overview.netSales) : clientGmv;
+  const platformOrders = overview != null ? toNumber(overview.orderCount) : clientOrders;
   const totalBranches = useMemo(
     () => Object.values(storeMetrics).reduce((sum, m) => sum + toNumber(m.branchCount), 0),
     [storeMetrics],
@@ -333,6 +399,38 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {/* Load-error banner: previously the dashboard failed silently
+          ("No stores yet") when the API was down. Surface the cause. */}
+      {(storesError || usersError || metricsError || subscriptionError) && !storesLoading && (
+        <div style={{
+          background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12,
+          padding: "14px 18px", display: "flex", gap: 12, alignItems: "flex-start",
+        }}>
+          <span style={{ flexShrink: 0, marginTop: 1 }}>
+            {React.createElement(AlertTriangle, { size: 18, color: "#991b1b" })}
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#991b1b" }}>
+              Couldn't load dashboard data from {apiBase}
+            </p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#7f1d1d" }}>
+              {[storesError && `Stores: ${storesError}`,
+                usersError && `Users: ${usersError}`,
+                metricsError && `Metrics: ${metricsError}`,
+                subscriptionError && `Subscriptions: ${subscriptionError}`]
+                .filter(Boolean).join(" · ")}
+              {" "}· Is the backend running? Check VITE_API_BASE_URL and that you're logged in as ADMIN.
+            </p>
+            <button
+              onClick={() => { dispatch(getAllStores()); dispatch(getAllUsers()); }}
+              style={{ marginTop: 8, fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 8, background: "#991b1b", color: "white", border: "none", cursor: "pointer" }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Platform strip */}
       <div style={{

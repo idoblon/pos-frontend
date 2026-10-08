@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import secureStorage from "@/util/secureStorage";
 import { getLowStockThreshold } from "@/util/adminSystemSettings";
+import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
+import { hasPlanFeature } from "@/util/subscriptionPlans";
 
 const s = {
   page: { padding: 24, display: "flex", flexDirection: "column", gap: 20, fontFamily: "'DM Sans','Inter',sans-serif", color: "#1a1d23", background: "#f5f5f5", minHeight: "100%" },
@@ -46,6 +48,12 @@ export default function StoreWarehouseInventory() {
   const { inventory, loading } = useSelector((st) => st.inventory);
   const { branches } = useSelector((st) => st.branch);
   const { products } = useSelector((st) => st.product);
+  const { store } = useSelector((st) => st.store);
+
+  // Warehouse distribution is a PROFESSIONAL+ feature. Unknown plan → the
+  // backend still enforces on every transfer; this is an early hint only.
+  const plan = String(store?.subscriptionPlan || "").toUpperCase();
+  const canDistribute = !plan || hasPlanFeature(plan, "warehouseTransfers");
 
   const [activeTab, setActiveTab] = useState("warehouse");
   const [search, setSearch] = useState("");
@@ -68,6 +76,7 @@ export default function StoreWarehouseInventory() {
       dispatch(getInventoryByStore({ storeId }));
       dispatch(getBranchesByStore(storeId));
       dispatch(getProductsByStore(storeId));
+      dispatch(getStoreByAdmin()).catch(() => undefined);
     }
   }, [dispatch, storeId]);
 
@@ -131,6 +140,10 @@ export default function StoreWarehouseInventory() {
   };
 
   const openDistribute = (item) => {
+    if (!canDistribute) {
+      toast.error(`Warehouse distribution needs the Professional plan or higher (current: ${plan || "BASIC"}). Upgrade to move stock from the warehouse.`);
+      return;
+    }
     setSelected(item);
     setDistributeForm({ branchId: "", quantity: "" });
     setDistributeDialogOpen(true);
@@ -210,6 +223,12 @@ export default function StoreWarehouseInventory() {
 
     if (!selected) {
       toast.error("No item selected");
+      return;
+    }
+
+    // Client-side plan guard (the backend re-checks on every transfer).
+    if (!canDistribute) {
+      toast.error(`Warehouse distribution needs the Professional plan or higher (current: ${plan || "BASIC"}).`);
       return;
     }
 
@@ -505,10 +524,10 @@ export default function StoreWarehouseInventory() {
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
                         {activeTab === "warehouse" && (
-                          <button 
-                            style={s.iconBtn} 
+                          <button
+                            style={{ ...s.iconBtn, opacity: canDistribute ? 1 : 0.45 }}
                             onClick={() => openDistribute(item)}
-                            title="Distribute to Branch"
+                            title={canDistribute ? "Distribute to Branch" : "Professional+ feature — upgrade to distribute stock"}
                           >
                             <Send size={13} color="#1a1d23" />
                           </button>

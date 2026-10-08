@@ -4,6 +4,8 @@ import { Plus, Search, Users, Pencil, Trash2, UserCircle, Clock, Mail } from "lu
 import { findStoreEmployee, createStoreEmpoyee, updateEmpoyee, deleteEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { getUserProfile } from "@/Redux Toolkit/Features/user/userThunk";
+import { getStoreByAdmin } from "@/Redux Toolkit/Features/Store/storeThunk";
+import { PLAN_LIMITS } from "@/util/subscriptionPlans";
 import { getShiftsByBranch } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -161,6 +163,16 @@ export default function EmployeeManagement() {
   
   const { employees, loading } = useSelector((st) => st.employee);
   const { branches } = useSelector((st) => st.branch);
+  const { store } = useSelector((st) => st.store);
+
+  // Subscription seat cap: BASIC 10, PROFESSIONAL 50, ENTERPRISE 200.
+  // The list below hides the store admin, but seats count every login —
+  // the backend re-checks on every create, this is an early hint only.
+  // Unknown plan → no client-side block.
+  const plan = String(store?.subscriptionPlan || "").toUpperCase();
+  const userLimit = PLAN_LIMITS[plan]?.users ?? null;
+  const usedSeats = employees?.length ?? 0;
+  const atUserLimit = userLimit != null && usedSeats >= userLimit;
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -200,6 +212,8 @@ export default function EmployeeManagement() {
     }
     dispatch(findStoreEmployee({ storeId }));
     dispatch(getBranchesByStore(storeId));
+    // Load the store for its subscription plan (drives the seat cap meter).
+    dispatch(getStoreByAdmin()).catch(() => undefined);
   }, [dispatch, storeId]);
 
   useEffect(() => {
@@ -236,7 +250,13 @@ export default function EmployeeManagement() {
     }
   );
 
-  const openAdd = () => { setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true); };
+  const openAdd = () => {
+    if (atUserLimit) {
+      toast.error(`User limit reached for the ${plan} plan (${usedSeats}/${userLimit} seats). Upgrade your subscription to add more staff.`);
+      return;
+    }
+    setEditing(null); setForm(EMPTY_FORM); setDialogOpen(true);
+  };
   const openEdit = (e) => { 
     setEditing(e); 
     setForm({ 
@@ -261,6 +281,12 @@ export default function EmployeeManagement() {
     // Validate branchId for branch-level roles
     if ((form.role === "ROLE_BRANCH_MANAGER" || form.role === "ROLE_BRANCH_CASHIER") && !form.branchId) {
       toast.error("Please select a branch for this role");
+      return;
+    }
+
+    // Client-side plan guard (the backend re-checks on every create).
+    if (!editing && atUserLimit) {
+      toast.error(`User limit reached for the ${plan} plan (${usedSeats}/${userLimit} seats). Upgrade your subscription to add more staff.`);
       return;
     }
     
@@ -366,9 +392,19 @@ export default function EmployeeManagement() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px" }}>Employee Management</h1>
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>Manage your store staff and roles</p>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a909c" }}>
+            {userLimit != null
+              ? `${usedSeats} of ${userLimit} seats used · ${plan} plan`
+              : "Manage your store staff and roles"}
+          </p>
         </div>
-        <button style={s.addBtn} onClick={openAdd}><Plus size={14} /> Add Employee</button>
+        <button
+          style={{ ...s.addBtn, opacity: atUserLimit ? 0.5 : 1, cursor: atUserLimit ? "not-allowed" : "pointer" }}
+          onClick={openAdd}
+          title={atUserLimit ? `User limit reached (${usedSeats}/${userLimit}) — upgrade to add more` : "Add a new employee"}
+        >
+          <Plus size={14} /> Add Employee
+        </button>
       </div>
 
       {/* Total Working Hours (TWH) Section */}
