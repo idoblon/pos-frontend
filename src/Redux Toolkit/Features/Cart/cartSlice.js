@@ -1,5 +1,6 @@
 import { createSlice} from "@reduxjs/toolkit"
 import { getAdminTaxRate } from "@/util/adminSystemSettings";
+import { getBulkSavings, getEffectivePrice, getMoq, isWeightedProduct } from "@/util/storeTypes";
 import api from "@/util/api";
 
 const initialState = {
@@ -10,6 +11,32 @@ const initialState = {
   paymentMethod: "cash",
   currentOrder: null,
   heldOrders: [],
+  // Restaurant / vertical order context (optional — omitted when empty)
+  orderMeta: {
+    orderType: "",
+    tableNumber: "",
+    kitchenNote: "",
+    prescriptionImage: "",
+    prescriptionVerified: false,
+    emiMonths: "",
+  },
+};
+
+const emptyOrderMeta = () => ({
+  orderType: "",
+  tableNumber: "",
+  kitchenNote: "",
+  prescriptionImage: "",
+  prescriptionVerified: false,
+  emiMonths: "",
+});
+
+const normalizeQty = (product, qty) => {
+  const n = Number(qty);
+  if (!Number.isFinite(n)) return 1;
+  // Weighted goods (kg/L) allow decimals; everything else stays integer.
+  if (isWeightedProduct(product)) return Math.max(0.01, Math.round(n * 100) / 100);
+  return Math.max(1, Math.floor(n));
 };
 
 const cartSlice = createSlice({
@@ -20,24 +47,43 @@ const cartSlice = createSlice({
       const product = action.payload;
       const stock = product.stock || 0;
       if (stock <= 0) return;
+      const step = isWeightedProduct(product) ? Number(product.weightStep || 0.5) || 0.5 : 1;
       const existingItem = state.items.find((item) => item.id === product.id);
       if (existingItem) {
-        if (existingItem.quantity >= stock) return;
-        existingItem.quantity += 1;
+        const next = normalizeQty(product, Number(existingItem.quantity) + step);
+        if (next > stock) return;
+        existingItem.quantity = next;
       } else {
-        state.items.push({ ...product, quantity: 1 });
+        const moq = getMoq(product);
+        const initialQty = moq > 0 ? Math.min(moq, stock) : normalizeQty(product, action.payload.quantity || step);
+        state.items.push({
+          ...product,
+          quantity: initialQty,
+          modifiers: [],
+          kitchenNote: "",
+          dosage: "",
+          serials: [],
+        });
       }
     },
     updateCartItemQuantity: (state, action) => {
       const { id, quantity } = action.payload;
-      if (quantity <= 0) {
+      if (Number(quantity) <= 0) {
         state.items = state.items.filter((item) => item.id !== id);
       } else {
         const item = state.items.find((item) => item.id === id);
         if (item) {
           const stock = item.stock || 0;
-          item.quantity = quantity > stock ? stock : quantity;
+          const q = normalizeQty(item, quantity);
+          item.quantity = q > stock ? stock : q;
         }
+      }
+    },
+    setCartItemField: (state, action) => {
+      const { id, field, value } = action.payload;
+      const item = state.items.find((item) => item.id === id);
+      if (item && ["modifiers", "kitchenNote", "dosage", "serials"].includes(field)) {
+        item[field] = value;
       }
     },
     removeFromCart: (state, action) => {
@@ -50,6 +96,7 @@ const cartSlice = createSlice({
       state.discount = { type: "percentage", value: 0 };
       state.paymentMethod = "cash";
       state.currentOrder = null;
+      state.orderMeta = emptyOrderMeta();
     },
     holdCurrentOrder: (state) => {
       if (!state.items.length) return;
@@ -60,11 +107,13 @@ const cartSlice = createSlice({
         selectedCustomer: state.selectedCustomer,
         note: state.note,
         discount: state.discount,
+        orderMeta: state.orderMeta,
       });
       state.items = [];
       state.selectedCustomer = null;
       state.note = "";
       state.discount = { type: "percentage", value: 0 };
+      state.orderMeta = emptyOrderMeta();
     },
     restoreHeldOrder: (state, action) => {
       const heldOrder = state.heldOrders.find((order) => order.id === action.payload);
@@ -73,6 +122,7 @@ const cartSlice = createSlice({
       state.selectedCustomer = heldOrder.selectedCustomer;
       state.note = heldOrder.note;
       state.discount = heldOrder.discount;
+      state.orderMeta = { ...emptyOrderMeta(), ...(heldOrder.orderMeta || {}) };
       state.heldOrders = state.heldOrders.filter((order) => order.id !== action.payload);
     },
     discardHeldOrder: (state, action) => {
@@ -99,6 +149,9 @@ const cartSlice = createSlice({
     setCurrentOrder: (state, action) => {
       state.currentOrder = action.payload;
     },
+    setOrderMeta: (state, action) => {
+      state.orderMeta = { ...state.orderMeta, ...action.payload };
+    },
     resetOrder: (state) => {
       state.items = [];
       state.selectedCustomer = null;
@@ -106,11 +159,13 @@ const cartSlice = createSlice({
       state.discount = { type: "percentage", value: 0 };
       state.paymentMethod = "cash";
       state.currentOrder = null;
+      state.orderMeta = emptyOrderMeta();
     },
   },
 });
 
 export const selectCartItems = (state) => state.cart.items;
+export const selectOrderMeta = (state) => state.cart.orderMeta || emptyOrderMeta();
 export const selectCartItemsCount = (state) => state.cart.items.length;
 export const selectSelectedCustomer = (state) => state.cart.selectedCustomer;
 export const selectCartNote = (state) => state.cart.note;
@@ -120,7 +175,11 @@ export const selectCurrentOrder = (state) => state.cart.currentOrder;
 export const selectHeldOrders = (state) => state.cart.heldOrders;
 
 export const selectSubtotal = (state) => {
-  return state.cart.items.reduce((total, item) => total + (item.price || item.sellingPrice || 0) * item.quantity, 0);
+  // Bulk tier wins when quantity threshold is met (WHOLESALE/GROCERY/RETAIL/ELECTRONICS).
+  return state.cart.items.reduce(
+    (total, item) => total + getEffectivePrice(item, item.quantity) * (item.quantity || 1),
+    0,
+  );
 };
 
 export const selectDiscountAmount = (state) => {
@@ -149,9 +208,13 @@ export const selectTotal = (state) => {
   return Math.max(0, subtotal + tax - discountAmount);
 };
 
+export const selectBulkSavings = (state) =>
+  state.cart.items.reduce((sum, item) => sum + getBulkSavings(item, item.quantity || 1), 0);
+
 export const {
   addToCart,
   updateCartItemQuantity,
+  setCartItemField,
   removeFromCart,
   clearCart,
   setSelectedCustomer,
@@ -159,6 +222,7 @@ export const {
   setDiscount,
   setPaymentMethod,
   setCurrentOrder,
+  setOrderMeta,
   resetOrder,
   holdCurrentOrder,
   restoreHeldOrder,
@@ -171,12 +235,24 @@ export const holdOrderRemotely = (context = {}) => async (dispatch, getState) =>
   const cart = getState().cart;
   if (!cart.items.length) return null;
   const response = await api.post("/api/orders/held", {
-    items: cart.items.map((item) => ({ productId: item.id || item._id, quantity: item.quantity || 1, price: item.price || item.sellingPrice })),
+    items: cart.items.map((item) => ({
+      productId: item.id || item._id,
+      quantity: item.quantity || 1,
+      price: getEffectivePrice(item, item.quantity || 1),
+      modifiers: item.modifiers || [],
+      kitchenNote: item.kitchenNote || "",
+      dosage: item.dosage || "",
+      serials: item.serials || [],
+    })),
     customerId: cart.selectedCustomer?.id || cart.selectedCustomer?._id || null,
     selectedCustomer: cart.selectedCustomer,
     note: cart.note,
     discount: cart.discount.value,
     discountType: cart.discount.type,
+    orderType: cart.orderMeta?.orderType || null,
+    tableNumber: cart.orderMeta?.tableNumber || null,
+    kitchenNote: cart.orderMeta?.kitchenNote || null,
+    prescriptionVerified: cart.orderMeta?.prescriptionVerified || false,
     ...context,
   });
   dispatch(clearCart());

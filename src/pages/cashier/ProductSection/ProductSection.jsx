@@ -7,6 +7,7 @@ import ProductCard from "@/components/ProductCard";
 import useBranchContext from "@/hooks/useBranchContext";
 // ALGORITHM NAMES in use below: Ranked Fuzzy Match + Levenshtein + Exact fast path
 import { fuzzySearchProducts } from "@/util/searchAlgorithms";
+import { parseScaleBarcode, sortFefo } from "@/util/storeTypes";
 
 const toCatalogProduct = (row) => ({
   id: row.id ?? row.productId,
@@ -20,7 +21,28 @@ const toCatalogProduct = (row) => ({
   imageUrl: row.image ?? row.productImage ?? null,
   description: row.description,
   stock: row.stock ?? row.quantity ?? 0,
+  // Preserve vertical-specific attributes so ProductCard/cart can use them.
+  // Unknown backends simply omit them — all reads are null-safe.
+  ...pickVerticalFields(row),
 });
+
+const pickVerticalFields = (row = {}) => {
+  const out = {};
+  for (const k of [
+    "expiryDate", "expiry", "batchNumber", "batch",
+    "prescriptionRequired", "requiresPrescription", "isControlled", "controlledSubstance", "dosage",
+    "unit", "weight", "weightStep", "moq", "minOrderQty",
+    "requiresSerial", "serialRequired",
+    "warrantyMonths", "warranty",
+    "sizeVariant", "size", "colorVariant", "color", "variants",
+    "bulkMinQty", "bulkPrice", "bulkTiers",
+    "preparationTime", "kitchenStation", "isVeg", "modifiers", "modifierOptions",
+    "careInstructions", "guaranteeDays",
+  ]) {
+    if (row[k] !== undefined && row[k] !== null && row[k] !== "") out[k] = row[k];
+  }
+  return out;
+};
 
 export default function ProductSection({ onAddToCart }) {
   const dispatch = useDispatch();
@@ -116,15 +138,17 @@ export default function ProductSection({ onAddToCart }) {
       imageUrl: image,
       description: productDetails.description || productDetails.desciption,
       stock: inv.quantity || 0,
+      ...pickVerticalFields({ ...productDetails, ...inv }),
     };
   });
 
   const serverProducts = (catalog || []).map(toCatalogProduct);
-  const source = catalog !== null ? serverProducts : legacyProducts;
+  const source = sortFefo(catalog !== null ? serverProducts : legacyProducts);
 
   // Server already filters on q; filter client-side too for the legacy path
   // (and as a fast echo while the debounced server query is in flight).
   // ALGORITHM NAME: Rank + Filter + Top-K Sort (Best-match first) — see searchAlgorithms.js
+  // FEFO secondary sort keeps earliest-expiry batch first for perishables.
   const query = searchTerm.trim();
   const filtered = catalog !== null && debouncedSearch === searchTerm.trim()
     ? source
@@ -134,8 +158,22 @@ export default function ProductSection({ onAddToCart }) {
 
   const handleSearchKeyDown = (event) => {
     // Barcode-scanner / SKU fast path: exact match adds to cart on Enter.
+    // Weighted scale barcodes (2.....) resolve SKU + weight automatically.
     if (event.key !== "Enter" || !searchTerm.trim()) return;
-    const q = searchTerm.trim().toLowerCase();
+    const raw = searchTerm.trim();
+    const q = raw.toLowerCase();
+    const scale = parseScaleBarcode(raw);
+    if (scale) {
+      const match = source.find((product) =>
+        String(product.sku || "").replace(/^0+/, "").toLowerCase() === String(scale.sku).toLowerCase() ||
+        String(product.sku || "").toLowerCase() === q,
+      );
+      if (match) {
+        onAddToCart({ ...match, quantity: scale.weightKg, weightKg: scale.weightKg });
+        setSearchTerm("");
+        return;
+      }
+    }
     const exactProduct = filtered.find((product) =>
       product.sku?.toLowerCase() === q || String(product.id) === q,
     ) ?? source.find((product) =>

@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { Store as StoreIcon, Save } from "lucide-react";
 import { getStoreByAdmin, updateStore } from "@/Redux Toolkit/Features/Store/storeThunk";
+import { STORE_TYPES, normalizeStoreType } from "@/util/storeTypes";
 
 const inputStyle = {
   width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb",
@@ -43,6 +44,10 @@ export default function StoreProfile() {
       toast.error("Store not loaded yet");
       return;
     }
+    if (!form.type) {
+      toast.error("Please select a store type");
+      return;
+    }
     setSaving(true);
     try {
       const result = await dispatch(updateStore({
@@ -54,7 +59,7 @@ export default function StoreProfile() {
           phone: form.phone,
           contact: { address: form.address, email: form.email, phone: form.phone },
           description: form.description,
-          storeType: form.type,
+          storeType: normalizeStoreType(form.type) || form.type,
         },
       }));
       if (result.meta.requestStatus === "fulfilled") {
@@ -101,7 +106,19 @@ export default function StoreProfile() {
           </div>
           <div>
             <label style={labelStyle}>Store type</label>
-            <input style={inputStyle} value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} placeholder="RETAIL" />
+            <select
+              style={inputStyle}
+              value={form.type}
+              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+              required
+            >
+              <option value="">Select store type</option>
+              {STORE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label style={labelStyle}>Description</label>

@@ -10,16 +10,7 @@ import { Check } from "lucide-react";
 import api from "@/util/api";
 import emailService from "@/services/emailService";
 import { trialSignup } from "@/Redux Toolkit/Features/auth/authThunk";
-
-const STORE_TYPES = [
-  { value: "RETAIL", label: "Retail" },
-  { value: "WHOLESALE", label: "Wholesale" },
-  { value: "RESTAURANT", label: "Restaurant" },
-  { value: "PHARMACY", label: "Pharmacy" },
-  { value: "GROCERY", label: "Grocery" },
-  { value: "ELECTRONICS", label: "Electronics" },
-  { value: "PLANT", label: "Plant" },
-];
+import { STORE_TYPES } from "@/util/storeTypes";
 
 const SUBSCRIPTION_PLANS = [
   { 
@@ -80,6 +71,11 @@ const Signup = () => {
 
     if (!formData.storeName || formData.storeName.trim() === "") {
       setPasswordError("Store name is required");
+      return;
+    }
+
+    if (!formData.storeType) {
+      setPasswordError("Please select a store type");
       return;
     }
 
@@ -297,6 +293,7 @@ const Signup = () => {
                       name="storeType"
                       value={formData.storeType}
                       onChange={handleChange}
+                      required
                       className={fieldCls}
                     >
                       <option value="">Select store type</option>

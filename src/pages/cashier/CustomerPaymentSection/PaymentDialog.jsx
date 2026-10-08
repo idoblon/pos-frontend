@@ -14,10 +14,13 @@ import { startShift, getCurrentShiftProgress } from "@/Redux Toolkit/Features/sh
 import { patchOrder } from "@/Redux Toolkit/Features/order/orderSlice";
 import {
   selectCartItems, selectTotal, selectSelectedCustomer,
-  selectDiscount, selectCartNote, selectTax,
+  selectDiscount, selectCartNote, selectTax, selectOrderMeta,
 } from "@/Redux Toolkit/Features/Cart/cartSlice";
+import { getEffectivePrice, isControlled, requiresPrescription, serialsValid } from "@/util/storeTypes";
 import { formatMoney } from "@/util/currency";
-import { printOrderReceipt } from "@/components/Receipt";
+import { printCareCard, printOrderReceipt, printWarrantyCard } from "@/components/Receipt";
+import useBranchContext from "@/hooks/useBranchContext";
+import { freeTable } from "@/util/storeTypes";
 import { queueOfflineOrder } from "@/util/offlineOrderQueue";
 // ALGORITHM NAME: Greedy Change-Making — see src/util/cartAlgorithms.js
 import { makeChangeGreedy } from "@/util/cartAlgorithms";
@@ -45,7 +48,7 @@ const CARD_ELEMENT_OPTIONS = {
 };
 
 // ─── Success Screen ───────────────────────────────────────────────────────────
-function SuccessScreen({ receiptNumber, receiptTotal, receiptMessage, loading, onPrint, onEmail, onSms, onDone }) {
+function SuccessScreen({ receiptNumber, receiptTotal, receiptMessage, loading, onPrint, onEmail, onSms, onWarranty, onCare, showWarranty, showCare, onDone }) {
   return (
     <div style={{ textAlign: "center", padding: "32px 8px" }}>
       <CheckCircle size={64} style={{ color: "#1a1d23", margin: "0 auto 16px" }} />
@@ -57,6 +60,12 @@ function SuccessScreen({ receiptNumber, receiptTotal, receiptMessage, loading, o
         <Button variant="outline" onClick={onEmail} disabled={loading} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}><Mail size={15} />Email</Button>
         <Button variant="outline" onClick={onSms} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}><MessageSquare size={15} />SMS</Button>
       </div>
+      {(showWarranty || showCare) && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+          {showWarranty && <Button variant="outline" onClick={onWarranty}>Warranty card</Button>}
+          {showCare && <Button variant="outline" onClick={onCare}>Care card</Button>}
+        </div>
+      )}
       {receiptMessage && <p style={{ color: "#4b5563", fontSize: 12, marginBottom: 12 }}>{receiptMessage}</p>}
       <Button onClick={onDone} disabled={loading} style={{ width: "100%", background: "linear-gradient(135deg,#1a1d23,#4a4d55)", color: "white", border: "none" }}>Done</Button>
     </div>
@@ -216,9 +225,17 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const discount  = useSelector(selectDiscount);
   const note      = useSelector(selectCartNote);
   const tax       = useSelector(selectTax);
+  const orderMeta = useSelector(selectOrderMeta);
+  const hasRxItems = cartItems.some((i) => requiresPrescription(i));
+  const hasControlled = cartItems.some((i) => isControlled(i));
+  const hasSerialItems = cartItems.some((i) => i.requiresSerial || i.serialRequired);
+  const hasWarrantyItems = cartItems.some((i) => i.warrantyMonths || i.warranty);
+  const hasCareItems = cartItems.some((i) => i.careInstructions);
+  const { branchId } = useBranchContext();
 
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [amountReceived, setAmountReceived] = useState("");
+  const [emiMonths, setEmiMonths] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState(checkoutKey);
 
   const [loading,        setLoading]        = useState(false);
@@ -288,20 +305,51 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   const submitOrder = async (transactionId = null) => {
     setError("");
     if (cartItems.length === 0) { setError("Please add items to the cart first."); return; }
+    if (cartItems.some((item) => requiresPrescription(item)) && !customer) {
+      setError("Prescription items require a customer — select a customer before payment.");
+      return;
+    }
+    if (hasControlled && !orderMeta.prescriptionVerified) {
+      setError("Controlled substance in cart — pharmacist verification required.");
+      return;
+    }
+    const badSerial = cartItems.find((item) => !serialsValid(item));
+    if (badSerial) {
+      setError(`Serials missing/invalid for ${badSerial.name} — one unique serial per unit.`);
+      return;
+    }
     const hasInvalid = cartItems.some((item) => { const pid = Number(item.id ?? item._id); return !Number.isSafeInteger(pid) || pid <= 0; });
     if (hasInvalid) { setError("Cannot process order with invalid products."); return; }
     const orderPayload = {
       customerId: customer?.id || customer?._id || null,
-      items: cartItems.map((item) => ({ productId: Number(item.id || item._id), quantity: item.quantity || 1, price: item.price || item.sellingPrice })),
+      items: cartItems.map((item) => ({
+        productId: Number(item.id || item._id),
+        quantity: item.quantity || 1,
+        price: getEffectivePrice(item, item.quantity || 1),
+        modifiers: item.modifiers || [],
+        kitchenNote: item.kitchenNote || "",
+        dosage: item.dosage || "",
+        serials: item.serials || [],
+      })),
       discount: discount.value || 0, discountType: discount.type || "percentage",
       note: note || "", paymentMethod, amountReceived: paymentMethod === "CASH" ? parseFloat(amountReceived) : total,
       transactionId, paymentReference: transactionId, tax, total,
+      // Vertical context — backends that don't know these keys ignore them.
+      orderType: orderMeta?.orderType || null,
+      tableNumber: orderMeta?.tableNumber || null,
+      kitchenNote: orderMeta?.kitchenNote || null,
+      prescriptionVerified: orderMeta?.prescriptionVerified || false,
+      emiMonths: emiMonths ? Number(emiMonths) : null,
     };
     try {
       setLoading(true);
       const response = await api.post("/api/orders", orderPayload, { headers: { "Idempotency-Key": idempotencyKey } });
-      setCompletedOrder(response.data);
+      setCompletedOrder({ ...response.data, orderType: orderPayload.orderType, tableNumber: orderPayload.tableNumber, emiMonths: orderPayload.emiMonths });
       setSuccess(true);
+      // Restaurant: free the table once the bill is settled.
+      if (orderPayload.tableNumber && branchId) {
+        try { freeTable(branchId, orderPayload.tableNumber); } catch { /* local-only */ }
+      }
       dispatch(patchOrder({
         ...response.data,
         items: response.data.items?.map((item) => ({ ...item, unitPrice: item.unitPrice || item.price / (item.quantity || 1) })),
@@ -341,7 +389,7 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
   };
 
   const resetState = () => {
-    setAmountReceived(""); setPaymentMethod("CASH");
+    setAmountReceived(""); setPaymentMethod("CASH"); setEmiMonths("");
     setSuccess(false); setError(""); setCompletedOrder(null); setReceiptMessage("");
     setShiftStatus("checking"); setEnabledMethods(null);
   };
@@ -354,10 +402,18 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
 
   const printReceipt = () => {
     const ok = printOrderReceipt(
-      { ...completedOrder, totalAmount: receiptTotal, paymentType: paymentMethod },
+      { ...completedOrder, totalAmount: receiptTotal, paymentType: paymentMethod, items: completedOrder?.items?.length ? completedOrder.items : cartItems },
       { onBlocked: () => setReceiptMessage("Allow pop-ups to print this receipt.") },
     );
     if (ok) setReceiptMessage("");
+  };
+
+  const printWarranty = () => {
+    printWarrantyCard({ items: cartItems, customerName: receiptCustomerName, orderId: receiptNumber });
+  };
+
+  const printCare = () => {
+    printCareCard({ items: cartItems.map((i) => ({ ...i, careInstructions: i.careInstructions || i.product?.careInstructions, guaranteeDays: i.guaranteeDays })), orderId: receiptNumber });
   };
 
   const emailReceipt = async () => {
@@ -384,6 +440,8 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
             receiptNumber={receiptNumber} receiptTotal={receiptTotal}
             receiptMessage={receiptMessage} loading={loading}
             onPrint={printReceipt} onEmail={emailReceipt} onSms={composeSmsReceipt}
+            onWarranty={printWarranty} onCare={printCare}
+            showWarranty={hasWarrantyItems || hasSerialItems} showCare={hasCareItems}
             onDone={handleClose}
           />
         ) : shiftStatus === "none" ? (
@@ -416,7 +474,49 @@ const PaymentDialog = ({ open, onClose, onOrderComplete }) => {
                     Customer: <strong>{customer.fullName || `${customer.firstName || ""} ${customer.lastName || ""}`.trim()}</strong>
                   </p>
                 )}
+                {(orderMeta?.orderType || orderMeta?.tableNumber) && (
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
+                    {[orderMeta.orderType?.replace("_", " "), orderMeta.tableNumber ? `Table ${orderMeta.tableNumber}` : null].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+                {hasRxItems && !customer && (
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#92400e", fontWeight: 700 }}>
+                    Contains prescription items — add a customer before completing.
+                  </p>
+                )}
+                {hasControlled && !orderMeta.prescriptionVerified && (
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#991b1b", fontWeight: 700 }}>
+                    Controlled substance — pharmacist verification required.
+                  </p>
+                )}
+                {hasSerialItems && cartItems.some((i) => !serialsValid(i)) && (
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#991b1b", fontWeight: 700 }}>
+                    Missing/invalid serials — one unique serial per unit.
+                  </p>
+                )}
               </div>
+
+              {/* EMI (electronics) — recorded on the order, charged via selected method */}
+              {(paymentMethod === "CARD" || hasSerialItems) && (
+                <div>
+                  <Label className="mb-1 block">EMI plan (optional)</Label>
+                  <select
+                    value={emiMonths}
+                    onChange={(e) => setEmiMonths(e.target.value)}
+                    style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", fontSize: 13, background: "white" }}
+                  >
+                    <option value="">Full payment</option>
+                    <option value="3">3 months</option>
+                    <option value="6">6 months</option>
+                    <option value="12">12 months</option>
+                  </select>
+                  {emiMonths && (
+                    <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
+                      ≈ {formatMoney(total / Number(emiMonths))} × {emiMonths} months
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Method selector */}
               <div>

@@ -330,7 +330,7 @@ const Landing = () => {
               </Button>
             </Link>
             <button onClick={() => scrollTo("features")}>
-              <Button size="lg" variant="outline" className="text-lg px-10 border-2 border-white text-white hover:bg-white/10">
+              <Button size="lg" variant="outline" className="text-lg px-10 border-2 border-white bg-transparent text-white hover:bg-white/10 hover:text-white">
                 See Features
               </Button>
             </button>
