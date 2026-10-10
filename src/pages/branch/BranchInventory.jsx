@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Search, Package, AlertTriangle, Truck } from "lucide-react";
 import { getInventoryByBranch } from "@/Redux Toolkit/Features/inventory/inventoryThunk";
+import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 import useBranchContext from "@/hooks/useBranchContext";
 import { getLowStockThreshold } from "@/util/adminSystemSettings";
 // REPLACED: plain threshold style + filter -> ROP with Safety Stock + Fuzzy Search
-import { getReorderSuggestion } from "@/util/inventoryAlgorithms";
+import { deriveDemandSeriesFromOrders, forecastAuto, forecastCroston, getReorderSuggestion } from "@/util/inventoryAlgorithms";
 import { fuzzySearchByKeys } from "@/util/searchAlgorithms";
 import { toast } from "sonner";
 
@@ -20,18 +21,25 @@ const s = {
   iconBtn:     { border: "1px solid #e5e7eb", background: "white", borderRadius: 6, padding: "4px 6px", cursor: "pointer", display: "flex", alignItems: "center" },
 };
 
+const productIdOf = (item) => {
+  const value = item?.productId ?? item?.product?.id ?? item?.product?._id ?? "";
+  return String(typeof value === "object" ? value?.id ?? value?._id ?? "" : value);
+};
+
 export default function BranchInventory() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { branchId } = useBranchContext();
 
   const { inventory, loading } = useSelector((s) => s.inventory);
+  const { orders = [] } = useSelector((s) => s.order);
   const [search, setSearch] = useState("");
   const lowStockThreshold = getLowStockThreshold();
 
   useEffect(() => {
     if (branchId && branchId !== "null") {
       dispatch(getInventoryByBranch({ branchId }));
+      dispatch(getOrdersByBranch({ branchId }));
     }
   }, [dispatch, branchId]);
 
@@ -41,12 +49,46 @@ export default function BranchInventory() {
     (item) => item.productSku ?? item.sku,
   ]);
 
-  // REPLACED BUILT-IN fixed-threshold count -> ROP with Safety Stock count
-  const ropOf = (qty) => {
-    const avg = Math.max(1, Math.ceil(lowStockThreshold / 7));
-    return getReorderSuggestion({ quantityOnHand: qty, avgDailyDemand: avg, dailyStdDev: avg * 0.3, leadTimeDays: 7 });
-  };
-  const lowStockCount  = filtered?.filter((item) => ropOf(item.quantity).shouldReorder && item.quantity > 0).length || 0;
+  // Forecast demand from actual branch orders; zero-sales days are included.
+  const demandForecasts = useMemo(() => {
+    const inventoryByProduct = new Map((inventory || []).map((item) => [productIdOf(item), item]).filter(([productId]) => productId));
+    const productIds = [...inventoryByProduct.keys()];
+    const branchOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
+      const orderBranch = order.branchId ?? order.branch?.id ?? order.branch?._id;
+      return Boolean(orderBranch) && String(orderBranch) === String(branchId);
+    });
+    const histories = deriveDemandSeriesFromOrders({ orders: branchOrders, productIds, days: 30 });
+    return new Map(productIds.map((productId) => {
+      const history = histories.get(productId) || [];
+      const nonZeroDays = history.filter((value) => value > 0).length;
+      const mean = history.reduce((sum, value) => sum + value, 0) / Math.max(history.length, 1);
+      const variance = history.reduce((sum, value) => sum + (value - mean) ** 2, 0) / Math.max(history.length, 1);
+      const intermittent = nonZeroDays >= 2 && nonZeroDays / history.length <= 0.4;
+      const method = intermittent ? "Croston SBA" : "Auto-selected (rolling MAE)";
+      const forecast = nonZeroDays < 2
+        ? null
+        : intermittent
+          ? forecastCroston({ history, variant: "sba" })
+          : forecastAuto({ history }).forecast;
+      const item = inventoryByProduct.get(productId);
+      const suggestion = forecast === null ? null : getReorderSuggestion({
+        quantityOnHand: Number(item?.quantity ?? item?.stock ?? 0),
+        avgDailyDemand: forecast,
+        dailyStdDev: Math.sqrt(variance),
+        leadTimeDays: 7,
+      });
+      return [productId, { history, nonZeroDays, forecast, method, suggestion }];
+    }));
+  }, [branchId, inventory, orders]);
+
+  const getInsight = (item) => demandForecasts.get(productIdOf(item));
+  // Use forecast-driven reorder points where there is enough history; fall
+  // back to the configured minimum-stock threshold for new/slowly observed SKUs.
+  const lowStockCount  = filtered?.filter((item) => {
+    const insight = getInsight(item);
+    const quantity = Number(item.quantity ?? item.stock ?? 0);
+    return quantity > 0 && (insight?.suggestion ? insight.suggestion.shouldReorder : quantity <= lowStockThreshold);
+  }).length || 0;
   const outOfStockCount = filtered?.filter(item => item.quantity === 0).length || 0;
 
   const getStockStyle = (qty) => {
@@ -130,13 +172,15 @@ export default function BranchInventory() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  {["Product", "SKU", "Category", "Stock", "Actions"].map((h, i) => (
-                    <th key={h} style={{ ...s.th, textAlign: i === 4 ? "right" : "left" }}>{h}</th>
+                  {["Product", "SKU", "Category", "Stock", "Forecast / day", "Reorder at", "Actions"].map((h, i) => (
+                    <th key={h} style={{ ...s.th, textAlign: i === 6 ? "right" : "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item, i) => (
+                {filtered.map((item, i) => {
+                  const insight = getInsight(item);
+                  return (
                   <tr key={item.id ?? item._id ?? i} style={{ background: "white" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"}
                     onMouseLeave={e => e.currentTarget.style.background = "white"}
@@ -149,6 +193,13 @@ export default function BranchInventory() {
                         {item.quantity ?? item.stock ?? 0} units
                       </span>
                     </td>
+                    <td style={{ ...s.td, color: insight?.forecast === null || !insight ? "#8a909c" : "#1a1d23" }} title={insight?.method || "Not enough recent sales history"}>
+                      {insight?.forecast === null || !insight ? "Need sales history" : `${insight.forecast} units`}
+                      {insight?.forecast !== null && insight && <div style={{ marginTop: 3, fontSize: 10, color: "#8a909c" }}>{insight.method}</div>}
+                    </td>
+                    <td style={{ ...s.td, color: insight?.suggestion?.shouldReorder ? "#b45309" : "#6b7280" }}>
+                      {insight?.suggestion ? `${insight.suggestion.reorderPoint} units` : "—"}
+                    </td>
                     <td style={{ ...s.td, textAlign: "right" }}>
                       <button
                         style={{ ...s.iconBtn, borderColor: "#d1d5db" }}
@@ -159,7 +210,8 @@ export default function BranchInventory() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

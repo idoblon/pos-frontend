@@ -120,6 +120,7 @@ export default function StoreWarehouseInventory() {
 
   const lowStockCount = filtered?.filter(item => item.quantity > 0 && item.quantity <= lowStockThreshold).length || 0;
   const outOfStockCount = filtered?.filter(item => item.quantity === 0).length || 0;
+  const warehouseOutOfStockItems = warehouseInventory.filter((item) => Number(item.quantity) <= 0);
   const totalValue = filtered?.reduce((sum, item) => sum + (item.quantity * (item.unitPrice || 0)), 0) || 0;
   const lowStockDisplay = serverLowStock !== null ? serverLowStock.length : lowStockCount;
 
@@ -243,6 +244,7 @@ export default function StoreWarehouseInventory() {
       toast.error(`Cannot distribute ${distributeQty} units. Only ${selected.quantity} available in warehouse.`);
       return;
     }
+    const remainingWarehouseQty = Number(selected.quantity) - distributeQty;
 
     // Atomic server transfer first (single transaction, audited movements).
     try {
@@ -253,6 +255,9 @@ export default function StoreWarehouseInventory() {
       })).unwrap();
       void result;
       toast.success(`Distributed ${distributeQty} units to branch successfully`);
+      if (remainingWarehouseQty <= 0) {
+        toast.warning(`${selected.productName || "This product"} is now out of stock in the warehouse. Restock the warehouse.`);
+      }
       setDistributeDialogOpen(false);
       dispatch(getInventoryByStore({ storeId }));
       return;
@@ -285,6 +290,9 @@ export default function StoreWarehouseInventory() {
             .unwrap()
             .then(() => {
               toast.success(`Distributed ${distributeQty} units to branch successfully`);
+              if (remainingWarehouseQty <= 0) {
+                toast.warning(`${selected.productName || "This product"} is now out of stock in the warehouse. Restock the warehouse.`);
+              }
               setDistributeDialogOpen(false);
               dispatch(getInventoryByStore({ storeId }));
             })
@@ -302,6 +310,9 @@ export default function StoreWarehouseInventory() {
             .unwrap()
             .then(() => {
               toast.success(`Distributed ${distributeQty} units to branch successfully`);
+              if (remainingWarehouseQty <= 0) {
+                toast.warning(`${selected.productName || "This product"} is now out of stock in the warehouse. Restock the warehouse.`);
+              }
               setDistributeDialogOpen(false);
               dispatch(getInventoryByStore({ storeId }));
             })
@@ -409,6 +420,32 @@ export default function StoreWarehouseInventory() {
           </div>
         </div>
       </div>
+
+      {activeTab === "warehouse" && warehouseOutOfStockItems.length > 0 && (
+        <div
+          role="alert"
+          style={{
+            ...s.card,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            padding: 16,
+            borderColor: "#fecaca",
+            background: "#fef2f2",
+            color: "#991b1b",
+          }}
+        >
+          <AlertTriangle size={19} color="#dc2626" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
+              Warehouse restock needed ({warehouseOutOfStockItems.length} {warehouseOutOfStockItems.length === 1 ? "product" : "products"} out of stock)
+            </p>
+            <p style={{ margin: "5px 0 0", fontSize: 12 }}>
+              {warehouseOutOfStockItems.map((item) => item.productName || "Unnamed product").join(", ")}. Replenish these items in your warehouse before supplying more stock to branches.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div style={s.card}>
         <div style={s.cardHeader}>

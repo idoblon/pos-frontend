@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { BarChart2, TrendingUp, RotateCcw, ShoppingBag, User, Clock } from "lucide-react";
+import { AlertTriangle, BarChart2, TrendingUp, RotateCcw, ShoppingBag, User, Clock } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -17,6 +17,7 @@ import { getOrdersByBranch } from "@/Redux Toolkit/Features/order/orderThunk";
 import { getRefundsByBranch } from "@/Redux Toolkit/Features/refund/refundThunk";
 import { findBranchEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getBranchAnalytics, getBranchDailyComparison } from "@/Redux Toolkit/Features/analytics/analyticsThunk";
+import { flagSalesAnomalies } from "@/util/analyticsAlgorithms";
 import useBranchContext from "@/hooks/useBranchContext";
 import { toast } from "sonner";
 
@@ -110,11 +111,12 @@ export default function BranchReports() {
     const revenue =
       orders
         ?.filter(
-          (o) => new Date(o.createdAt).toISOString().slice(0, 10) === dateStr,
+          (o) => o.createdAt && Number.isFinite(new Date(o.createdAt).getTime()) && new Date(o.createdAt).toISOString().slice(0, 10) === dateStr,
         )
-        .reduce((s, o) => s + (o.totalAmount ?? 0), 0) ?? 0;
-    return { label, revenue };
+        .reduce((s, o) => s + (Number(o.totalAmount ?? o.total ?? 0) || 0), 0) ?? 0;
+    return { label, date: dateStr, revenue };
   });
+  const anomalousDays = flagSalesAnomalies(trendData, 2.5, { method: "mad", window: 14 }).filter((day) => day.anomaly);
 
   // Use only API data - no mock data
   const displayShifts = shiftsByBranch || [];
@@ -267,6 +269,18 @@ export default function BranchReports() {
               <p style={{ margin: "4px 0 0", fontSize: 18, fontWeight: 700 }}>{value}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {anomalousDays.length > 0 && (
+        <div role="status" style={{ ...card, display: "flex", alignItems: "flex-start", gap: 10, borderColor: "#fcd34d", background: "#fffbeb" }}>
+          <AlertTriangle size={18} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#92400e" }}>Unusual daily sales detected</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#78350f" }}>
+              {anomalousDays.map((day) => `${day.label}: Rs ${Number(day.revenue).toLocaleString("en-IN")}`).join(" · ")}. These are statistical flags for review, not proof of an error.
+            </p>
+          </div>
         </div>
       )}
 

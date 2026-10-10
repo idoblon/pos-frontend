@@ -3,6 +3,8 @@
 // File: src/util/searchAlgorithms.js
 // Why best: cashier search runs on EVERY sale. Typo/barcode-tolerant
 // instant ranking = fastest checkout, fewer dead sales.
+// Ranking is a CONTINUOUS 0..100 similarity score (field-weighted edit +
+// trigram + Jaro-Winkler signals), not a fixed 100/80/60/40/15 ladder.
 // ============================================================
 
 // ------------------------------------------------------------
@@ -10,7 +12,11 @@
 // USE: Pre-step so "  Coca-Cola " == "coca cola".
 // ------------------------------------------------------------
 export function normalizeText(v = "") {
-  return String(v || "").toLowerCase().trim().replace(/\s+/g, " ");
+  return String(v || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[-_+/.,:;|]+/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 // ------------------------------------------------------------
@@ -43,42 +49,176 @@ export function levenshtein(a = "", b = "") {
 }
 
 // ------------------------------------------------------------
-// ALGORITHM NAME: Ranked Fuzzy Match (Exact > Prefix > Substring > Fuzzy)
-// USE: Worldwide POS/Google-style ranking: best match on top.
-// SCORES: exact SKU/ID=100, prefix=80, substring=60, fuzzy(lev<=2)=40-dist*10
+// ALGORITHM NAME: Optimal String Alignment (restricted Damerau-Levenshtein)
+// USE: Counts an adjacent transposition as 1 edit ("amdin"->"admin" = 1,
+// Levenshtein says 2). Strict superset of Levenshtein for ranking.
+// HOW: Levenshtein DP + transposition recurrence, O(m*n).
+// ------------------------------------------------------------
+export function optimalStringAlignmentDistance(a = "", b = "") {
+  const s = normalizeText(a);
+  const t = normalizeText(b);
+  const m = s.length;
+  const n = t.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const d = Array.from({ length: m + 1 }, (_, i) => [i, ...new Array(n).fill(0)]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && s[i - 1] === t[j - 2] && s[i - 2] === t[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1); // transposition
+      }
+    }
+  }
+  return d[m][n];
+}
+
+// Backward-compatible name used by the current product-ranking implementation.
+export const damerauLevenshtein = optimalStringAlignmentDistance;
+
+// ------------------------------------------------------------
+// ALGORITHM NAME: Jaro-Winkler Similarity (0..1)
+// USE: Prefix-biased typo signal blended into the continuous score.
+// ------------------------------------------------------------
+export function jaroWinkler(a = "", b = "") {
+  const s = normalizeText(a);
+  const t = normalizeText(b);
+  if (s === t) return 1;
+  const m = s.length;
+  const n = t.length;
+  if (!m || !n) return 0;
+  const range = Math.max(0, Math.floor(Math.max(m, n) / 2) - 1);
+  const sHit = new Array(m).fill(false);
+  const tHit = new Array(n).fill(false);
+  let matches = 0;
+  for (let i = 0; i < m; i++) {
+    const lo = Math.max(0, i - range);
+    const hi = Math.min(n - 1, i + range);
+    for (let j = lo; j <= hi; j++) {
+      if (!tHit[j] && s[i] === t[j]) {
+        sHit[i] = true;
+        tHit[j] = true;
+        matches++;
+        break;
+      }
+    }
+  }
+  if (!matches) return 0;
+  let k = 0;
+  let transpositions = 0;
+  for (let i = 0; i < m; i++) {
+    if (!sHit[i]) continue;
+    while (!tHit[k]) k++;
+    if (s[i] !== t[k]) transpositions++;
+    k++;
+  }
+  const jaro = (matches / m + matches / n + (matches - transpositions / 2) / matches) / 3;
+  let prefix = 0;
+  for (let i = 0; i < Math.min(4, m, n); i++) {
+    if (s[i] === t[i]) prefix++;
+    else break;
+  }
+  return jaro + prefix * 0.1 * (1 - jaro);
+}
+
+// ------------------------------------------------------------
+// ALGORITHM NAME: Char-Trigram Dice Similarity (0..1)
+// USE: Handles missing spaces ("cocacola"~"coca cola") and partial words
+// where edit distance on whole strings fails. Dice = 2|intersection|/(|A|+|B|).
+// ------------------------------------------------------------
+export function trigrams(s = "") {
+  const t = `  ${normalizeText(s)}  `;
+  const out = [];
+  for (let i = 0; i + 3 <= t.length; i++) out.push(t.slice(i, i + 3));
+  return out;
+}
+
+export function trigramDice(a = "", b = "") {
+  const A = trigrams(a);
+  const B = trigrams(b);
+  if (!A.length || !B.length) return 0;
+  const counts = new Map();
+  for (const g of A) counts.set(g, (counts.get(g) || 0) + 1);
+  let inter = 0;
+  for (const g of B) {
+    const c = counts.get(g) || 0;
+    if (c > 0) {
+      inter++;
+      counts.set(g, c - 1);
+    }
+  }
+  return (2 * inter) / (A.length + B.length);
+}
+
+// ------------------------------------------------------------
+// ALGORITHM NAME: Continuous Field Similarity (0..1, blended)
+// HOW: single number from three signals —
+//   edit  = 1 - damerau/bestWordLen   (typos, transpositions)
+//   tri   = trigram Dice              (spacing/partial)
+//   jw    = Jaro-Winkler              (prefix-biased)
+// blend = 0.5*edit + 0.3*tri + 0.2*jw, computed on the best-matching word
+// (or whole value for short SKUs). Prefix/substring coverage scales the
+// result instead of jumping between fixed buckets.
+// ------------------------------------------------------------
+function fieldSimilarity(query, value) {
+  const q = normalizeText(query);
+  const v = normalizeText(value);
+  if (!q || !v) return 0;
+  if (v === q) return 1;
+  const coverage = q.length / v.length; // 0..>1
+  if (v.startsWith(q)) return Math.min(1, 0.82 + 0.18 * Math.min(1, coverage));
+  if (v.includes(q)) return Math.min(1, 0.58 + 0.22 * Math.min(1, coverage));
+  // Word-level fuzzy: compare against each token, keep the best blend.
+  const tokens = v.split(" ").filter(Boolean);
+  let best = 0;
+  const candidates = tokens.length && q.length >= 3 ? [...tokens, v] : [v];
+  for (const tok of candidates) {
+    if (Math.abs(tok.length - q.length) > Math.max(3, Math.floor(q.length / 2))) continue;
+    const maxLen = Math.max(tok.length, q.length) || 1;
+    const edit = 1 - damerauLevenshtein(tok, q) / maxLen;
+    const tri = trigramDice(tok, q);
+    const jw = jaroWinkler(tok, q);
+    const blend = 0.5 * edit + 0.3 * tri + 0.2 * jw;
+    if (blend > best) best = blend;
+  }
+  return best;
+}
+
+// Noise gate: similarities below this are indistinguishable from random.
+const NOISE_FLOOR = 0.42;
+
+// ------------------------------------------------------------
+// ALGORITHM NAME: Continuous Product Rank (0..100, field-weighted max)
+// USE: score = 100 * max over fields(fieldSim * fieldWeight), floored at 0.
+// Weights: SKU/ID 1.2 (barcode precision matters), name 1.0, category 0.5.
+// Exact identity still returns 100 (scanner fast path, not a rank bucket).
 // ------------------------------------------------------------
 export function scoreProduct(query, p) {
-  if (!p) return 0; // null-guard: callers map raw lists that may hold nulls
+  if (!p) return 0;
   const q = normalizeText(query);
   if (!q) return 1; // empty query = show all
   const name = normalizeText(p.name);
   const sku = normalizeText(p.sku);
   const cat = normalizeText(p.category?.name || p.category);
   const id = normalizeText(p.id ?? p._id);
-
-  // ALGORITHM: Exact-Match fast path (barcode scanner)
-  if (sku === q || id === q) return 100;
-  // ALGORITHM: Prefix Match (Trie-like behavior without the tree)
-  if (name.startsWith(q) || sku.startsWith(q)) return 80;
-  // ALGORITHM: Substring Match (Linear Search)
-  if (name.includes(q) || sku.includes(q) || cat.includes(q)) return 60;
-
-  // ALGORITHM: Fuzzy Match via Levenshtein on each word (typo tolerance)
-  if (q.length >= 3) {
-    const words = name.split(" ");
-    let best = Infinity;
-    for (const w of words) {
-      if (!w) continue;
-      // only compare similar-length words to keep it fast
-      if (Math.abs(w.length - q.length) > 2) continue;
-      const d = levenshtein(w, q);
-      if (d < best) best = d;
-    }
-    const skuDist = sku ? levenshtein(sku, q) : Infinity;
-    best = Math.min(best, skuDist);
-    if (best <= 2) return 40 - best * 10; // dist 0->40, 1->30, 2->20
+  if ((sku && sku === q) || (id && id === q) || (name && name === q)) return 100;
+  const fields = [
+    [name, 1.0],
+    [sku, 1.2],
+    [id, 1.2],
+    [cat, 0.5],
+  ];
+  let best = 0;
+  for (const [val, w] of fields) {
+    if (!val) continue;
+    const s = fieldSimilarity(q, val) * w;
+    if (s > best) best = s;
   }
-  return 0;
+  best = Math.min(1, best);
+  if (best < NOISE_FLOOR) return 0;
+  return Math.round(best * 100);
 }
 
 // ------------------------------------------------------------
@@ -93,16 +233,15 @@ export function fuzzySearchProducts(products = [], query = "", limit = 200) {
   return (products || [])
     .map((p) => ({ p, score: scoreProduct(q, p) }))
     .filter((r) => r.score > 0)
-    .sort((a, b) => b.score - a.score) // ALGORITHM: Descending Sort for ranking
+    .sort((a, b) => b.score - a.score)
     .slice(0, topK)
     .map((r) => r.p);
 }
 
 // ------------------------------------------------------------
-// ALGORITHM NAME: Generic Ranked Fuzzy Search (any keys)
-// USE: Best-suited replacement for plain `filter(includes)` lists:
-// customers (fullName/email/phone), orders (id/customerName), inventory.
-// keys: e.g. [(c)=>c.fullName,(c)=>c.email,(c)=>c.phone]
+// ALGORITHM NAME: Generic Continuous Ranked Search (any keys)
+// USE: Same continuous similarity per key fn, max across keys. Replaces
+// plain `filter(includes)` for customers/orders/inventory.
 // ------------------------------------------------------------
 export function fuzzySearchByKeys(items = [], query = "", keyFns = [], limit = 500) {
   const topK = Math.max(1, Math.floor(Number(limit) || 500));
@@ -114,21 +253,14 @@ export function fuzzySearchByKeys(items = [], query = "", keyFns = [], limit = 5
     for (const fn of keyFns) {
       const val = normalizeText(fn(item));
       if (!val) continue;
-      if (val === q) best = Math.max(best, 100); // exact
-      else if (val.startsWith(q)) best = Math.max(best, 80); // prefix
-      else if (val.includes(q)) best = Math.max(best, 60); // substring
-      else if (q.length >= 3) {
-        // fuzzy per word, Levenshtein <= 2
-        for (const w of val.split(" ")) {
-          if (!w || Math.abs(w.length - q.length) > 2) continue;
-          const d = levenshtein(w, q);
-          if (d <= 2) best = Math.max(best, 40 - d * 10);
-        }
+      if (val === q) {
+        best = 100;
+        break;
       }
-      if (best === 100) break;
+      const s = fieldSimilarity(q, val);
+      if (s * 100 > best) best = Math.round(Math.min(1, s) * 100);
     }
-    if (best > 0) scored.push({ item, score: best });
+    if (best > 0 && best / 100 >= NOISE_FLOOR) scored.push({ item, score: best });
   }
-  // ALGORITHM: Descending Sort for ranking + Top-K
   return scored.sort((a, b) => b.score - a.score).slice(0, topK).map((r) => r.item);
 }

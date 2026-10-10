@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { AlertTriangle, CircleAlert, HeartPulse, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CircleAlert, HeartPulse, ShieldAlert, Users } from "lucide-react";
 import { getBranchesByStore } from "@/Redux Toolkit/Features/branch/branchThunk";
 import { findStoreEmployee } from "@/Redux Toolkit/Features/Employee/employeeThunk";
 import { getOrdersByStore } from "@/Redux Toolkit/Features/order/orderThunk";
 import { getRefundsByStore } from "@/Redux Toolkit/Features/refund/refundThunk";
 import { getShiftsByStore } from "@/Redux Toolkit/Features/shiftReport/shiftReportThunk";
+import { erlangStaff } from "@/util/staffingAlgorithms";
 import secureStorage from "@/util/secureStorage";
 
 const collection = (value) => Array.isArray(value) ? value : value?.content || value?.data || [];
@@ -49,6 +50,7 @@ export default function OperationsCenter() {
   const { refundsByStore } = useSelector((state) => state.refund);
   const { shiftsByStore } = useSelector((state) => state.shiftReport);
   const [loading, setLoading] = useState(true);
+  const [serviceMinutes, setServiceMinutes] = useState(3);
 
   useEffect(() => {
     if (!storeId) return;
@@ -108,6 +110,29 @@ export default function OperationsCenter() {
     }).filter((item) => item.reasons.length).sort((a, b) => b.refunded - a.refunded);
   }, [data]);
 
+  const staffing = useMemo(() => data.branches.map((branch) => {
+    const currentBranchId = id(branch);
+    const hourlyOrders = new Map();
+    data.orders.forEach((order) => {
+      if (branchId(order) !== currentBranchId || !order.createdAt) return;
+      if (["CANCELLED", "CANCELED", "VOID", "REFUNDED"].includes(String(order.status || "").toUpperCase())) return;
+      const date = new Date(order.createdAt);
+      if (Number.isNaN(date.getTime())) return;
+      const key = `${date.toISOString().slice(0, 10)}-${date.getUTCHours()}`;
+      hourlyOrders.set(key, (hourlyOrders.get(key) || 0) + 1);
+    });
+    const peakArrivals = Math.max(0, ...hourlyOrders.values());
+    const activeCashiers = data.shifts.filter((shift) => branchId(shift) === currentBranchId && !(shift.endTime || shift.shiftEnd)).length;
+    return {
+      branch,
+      peakArrivals,
+      activeCashiers,
+      recommendation: peakArrivals > 0
+        ? erlangStaff({ arrivalsPerHour: peakArrivals, serviceMinutes, maxWaitSec: 60, target: 0.2, maxC: 30 })
+        : null,
+    };
+  }), [data, serviceMinutes]);
+
   if (!storeId) return <p className="p-6 text-sm text-gray-500">Your account is not linked to a store.</p>;
   return (
     <div className="space-y-5 p-5">
@@ -119,6 +144,20 @@ export default function OperationsCenter() {
             {health.map((row) => <tr key={id(row.branch)} className="border-t"><td className="p-3 font-medium">{row.branch.name || `Branch ${id(row.branch)}`}</td><td className="p-3"><Score value={row.score} /></td><td className="p-3">{money(row.sales)}</td><td className="p-3">{row.target ? money(row.target) : "Not set"}</td><td className="p-3"><TargetStatus target={row.target} sales={row.sales} /></td><td className="p-3">{row.orders}</td><td className="p-3 text-red-700">{money(row.refunded)}</td><td className="p-3 text-xs text-gray-600">{row.reasons.join(" · ") || "Operating normally"}</td></tr>)}
             {!health.length && <tr><td colSpan="8" className="p-8 text-center text-gray-500">No branch data found.</td></tr>}
           </tbody></table></div>
+        </section>
+        <section className="rounded-xl border bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+            <div className="flex items-center gap-2"><Users size={18} /><div><h2 className="font-semibold">Cashier coverage estimate (Erlang C)</h2><p className="text-xs text-gray-500">Uses each branch’s peak observed hourly orders from the last 30 days as a customer-arrival proxy.</p></div></div>
+            <label className="flex items-center gap-2 text-xs text-gray-600">
+              Avg service (min/order)
+              <input type="number" min="0.5" max="60" step="0.5" value={serviceMinutes} onChange={(event) => setServiceMinutes(Math.max(0.5, Number(event.target.value) || 3))} className="w-20 rounded-md border px-2 py-1 text-sm" />
+            </label>
+          </div>
+          <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50 text-left text-xs text-gray-500"><tr><th className="p-3">Branch</th><th className="p-3">Peak orders / hour</th><th className="p-3">Active cashiers now</th><th className="p-3">Recommended minimum</th><th className="p-3">Wait target (≤ 60 sec)</th></tr></thead><tbody>
+            {staffing.map((row) => <tr key={id(row.branch)} className="border-t"><td className="p-3 font-medium">{row.branch.name || `Branch ${id(row.branch)}`}</td><td className="p-3">{row.peakArrivals || "No order history"}</td><td className="p-3">{row.activeCashiers}</td><td className="p-3 font-semibold">{row.recommendation ? `${row.recommendation.cashiers} cashier${row.recommendation.cashiers === 1 ? "" : "s"}` : "—"}</td><td className="p-3">{!row.recommendation ? "Need order history" : row.recommendation.targetMet ? `Met (${(row.recommendation.pLong * 100).toFixed(1)}% exceed target)` : `Not met at cap (${(row.recommendation.pLong * 100).toFixed(1)}%)`}</td></tr>)}
+            {!staffing.length && <tr><td colSpan="5" className="p-6 text-center text-gray-500">No branches found.</td></tr>}
+          </tbody></table></div>
+          <p className="px-4 pb-4 text-xs text-gray-500">This is a planning estimate, not a live queue count. Order transactions approximate arrivals; set service time to your measured average. Erlang C assumes a shared queue and consistent service rates.</p>
         </section>
         <section className="rounded-xl border bg-white">
           <div className="flex items-center gap-2 border-b p-4"><ShieldAlert size={18} /><div><h2 className="font-semibold">Cashier exceptions</h2><p className="text-xs text-gray-500">Flags staff with three or more refunds, or refund value above 10% of their recorded sales.</p></div></div>
